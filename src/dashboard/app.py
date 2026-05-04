@@ -209,7 +209,11 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="nav-section">Configuración</div>', unsafe_allow_html=True)
-    store = st.text_input("Subdominio de tienda", value="simla-es", placeholder="ej. mitienda")
+    sc1, sc2 = st.columns([3, 2])
+    with sc1:
+        store = st.text_input("Subdominio", value="simla-es", placeholder="mitienda")
+    with sc2:
+        st.markdown("<div style='padding-top:1.85rem;color:#94A3B8;font-size:0.78rem'>.simla.com</div>", unsafe_allow_html=True)
     api_key = st.text_input("API Key", type="password", placeholder="Ingresa tu API Key")
 
     st.divider()
