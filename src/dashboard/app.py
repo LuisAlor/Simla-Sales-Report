@@ -81,7 +81,18 @@ if not store or not api_key:
     st.error("Store subdomain and API Key are required.")
     st.stop()
 
-st.info("Fetching orders from Simla…")
+@st.cache_data(show_spinner=False, ttl=300)
+def load_orders(store, api_key, date_from, date_to, status, manager_id):
+    client = SimlaClient(store=store, api_key=api_key)
+    return fetch_orders(
+        client,
+        date_from=date_from,
+        date_to=date_to,
+        status=status or None,
+        manager_id=manager_id,
+    )
+
+
 progress_bar = st.progress(0, text="Starting…")
 
 try:
@@ -89,7 +100,7 @@ try:
 
     def on_progress(current: int, total: int) -> None:
         pct = int(current / max(total, 1) * 100)
-        progress_bar.progress(pct, text=f"Page {current} of {total}…")
+        progress_bar.progress(pct, text=f"Fetching page {current} of {total} ({pct}%)…")
 
     raw_orders = fetch_orders(
         client,

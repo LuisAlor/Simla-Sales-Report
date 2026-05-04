@@ -1,32 +1,22 @@
 """
 Fetch and flatten orders from Simla REST v5 /api/v5/orders.
 Handles full pagination transparently; callers receive a flat list of dicts.
+Pages are fetched in parallel batches for speed.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
-from typing import Iterator
 
 from .client import SimlaClient
 
-_PAGE_LIMIT = 100  # max allowed by Simla API
+_PAGE_LIMIT = 100   # max allowed by Simla API
+_WORKERS = 10       # concurrent requests
 
 
-def _iter_pages(
-    client: SimlaClient,
-    params: dict,
-) -> Iterator[tuple[list[dict], int, int]]:
-    """Yield (orders, current_page, total_pages) for each page."""
-    page = 1
-    while True:
-        resp = client.get("orders", {**params, "page": page, "limit": _PAGE_LIMIT})
-        orders = resp.get("orders", [])
-        total_pages = resp.get("pagination", {}).get("totalPageCount", 1)
-        yield orders, page, total_pages
-
-        if page >= total_pages or not orders:
-            break
-        page += 1
+def _fetch_page(client: SimlaClient, params: dict, page: int) -> list[dict]:
+    resp = client.get("orders", {**params, "page": page, "limit": _PAGE_LIMIT})
+    return resp.get("orders", [])
 
 
 def fetch_orders(
@@ -38,9 +28,9 @@ def fetch_orders(
     manager_id: int | None = None,
     progress_callback=None,
 ) -> list[dict]:
-    """Return a flat list of all matching orders (all pages).
+    """Return a flat list of all matching orders (all pages, fetched in parallel).
 
-    progress_callback: optional callable(current_page, total_pages).
+    progress_callback: optional callable(pages_done, total_pages).
     """
     params: dict = {}
     if date_from:
@@ -54,11 +44,30 @@ def fetch_orders(
     if manager_id:
         params["managerId"] = manager_id
 
+    # Page 1 first to learn total_pages
+    resp1 = client.get("orders", {**params, "page": 1, "limit": _PAGE_LIMIT})
+    total_pages = resp1.get("pagination", {}).get("totalPageCount", 1)
+    results: dict[int, list[dict]] = {1: resp1.get("orders", [])}
+
+    if progress_callback:
+        progress_callback(1, total_pages)
+
+    if total_pages > 1:
+        remaining = list(range(2, total_pages + 1))
+        done = 1
+        with ThreadPoolExecutor(max_workers=_WORKERS) as pool:
+            futures = {pool.submit(_fetch_page, client, params, p): p for p in remaining}
+            for future in as_completed(futures):
+                page_num = futures[future]
+                results[page_num] = future.result()
+                done += 1
+                if progress_callback:
+                    progress_callback(done, total_pages)
+
+    # Reassemble in page order
     orders: list[dict] = []
-    for page_orders, current, total in _iter_pages(client, params):
-        orders.extend(page_orders)
-        if progress_callback:
-            progress_callback(current, total)
+    for p in range(1, total_pages + 1):
+        orders.extend(results.get(p, []))
     return orders
 
 
