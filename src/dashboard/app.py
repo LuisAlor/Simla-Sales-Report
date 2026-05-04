@@ -199,14 +199,27 @@ st.markdown("""
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.markdown("""
-    <div class="brand-header">
-        <div>
-            <div class="brand-title">📊 Simla Analíticas</div>
-            <div class="brand-sub">Panel de ventas · CRM License</div>
+    # Logo + brand
+    _logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "logo.png")
+    if os.path.exists(_logo_path):
+        col_logo, col_brand = st.columns([1, 3])
+        with col_logo:
+            st.image(_logo_path, width=48)
+        with col_brand:
+            st.markdown("""
+            <div style='padding-top:6px'>
+                <div class='brand-title'>Simla Analíticas</div>
+                <div class='brand-sub'>Panel de ventas · CRM License</div>
+            </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="brand-header">
+            <div>
+                <div class="brand-title">📊 Simla Analíticas</div>
+                <div class="brand-sub">Panel de ventas · CRM License</div>
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="nav-section">Configuración</div>', unsafe_allow_html=True)
     api_key = st.text_input("API Key", type="password", placeholder="Ingresa tu API Key")
