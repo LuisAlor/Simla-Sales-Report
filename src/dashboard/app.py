@@ -209,12 +209,21 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="nav-section">Configuración</div>', unsafe_allow_html=True)
-    sc1, sc2 = st.columns([3, 2])
-    with sc1:
-        store = st.text_input("Subdominio", value="simla-es", placeholder="mitienda")
-    with sc2:
-        st.markdown("<div style='padding-top:1.85rem;color:#94A3B8;font-size:0.78rem'>.simla.com</div>", unsafe_allow_html=True)
     api_key = st.text_input("API Key", type="password", placeholder="Ingresa tu API Key")
+
+    # Fetch order types as soon as an API key is present
+    if api_key:
+        if st.session_state.get("_last_api_key") != api_key:
+            try:
+                _client = SimlaClient(store="base", api_key=api_key)
+                _raw_types = _client.get_order_types()
+                st.session_state["order_type_options"] = {
+                    t.get("name", t.get("code", "")): t.get("code", "")
+                    for t in _raw_types
+                }
+                st.session_state["_last_api_key"] = api_key
+            except Exception:
+                st.session_state["order_type_options"] = {}
 
     st.divider()
     st.markdown('<div class="nav-section">Filtros</div>', unsafe_allow_html=True)
@@ -229,12 +238,24 @@ with st.sidebar:
     freq_label = st.selectbox("Granularidad", list(freq_map))
     freq = freq_map[freq_label]
 
+    # Order type multiselect
+    type_options = st.session_state.get("order_type_options", {})
+    if type_options:
+        default_names = [n for n, c in type_options.items() if c == "crm-license"]
+        selected_names = st.multiselect(
+            "Tipo de pedido",
+            options=list(type_options.keys()),
+            default=default_names,
+        )
+        selected_types = [type_options[n] for n in selected_names]
+    else:
+        st.caption("Introduce tu API Key para cargar los tipos de pedido.")
+        selected_types = ["crm-license"]
+
     manager_filter = st.text_input("ID de asesor (opcional)", placeholder="ej. 42")
 
     st.divider()
     load = st.button("Cargar datos", type="primary", use_container_width=True)
-
-    order_type = st.text_input("Tipo de pedido", value="crm-license", placeholder="ej. crm-license")
 
 # ---------------------------------------------------------------------------
 # Main content
@@ -247,8 +268,8 @@ if not load:
     st.info("Introduce tu API Key en el panel lateral y pulsa **Cargar datos**.")
     st.stop()
 
-if not store or not api_key:
-    st.error("El subdominio y la API Key son obligatorios.")
+if not api_key:
+    st.error("La API Key es obligatoria.")
     st.stop()
 
 # ---------------------------------------------------------------------------
@@ -258,20 +279,29 @@ if not store or not api_key:
 progress_bar = st.progress(0, text="Iniciando…")
 
 try:
-    client = SimlaClient(store=store, api_key=api_key)
+    client = SimlaClient(store="base", api_key=api_key)
+    raw_orders: list[dict] = []
 
-    def on_progress(current: int, total: int) -> None:
-        pct = int(current / max(total, 1) * 100)
-        progress_bar.progress(pct, text=f"Cargando página {current} de {total} ({pct}%)…")
+    types_to_fetch = selected_types if selected_types else [None]
+    for idx, otype in enumerate(types_to_fetch):
+        label = otype or "todos"
 
-    raw_orders = fetch_orders(
-        client,
-        date_from=date_from,
-        date_to=date_to,
-        order_type=order_type or None,
-        manager_id=int(manager_filter) if manager_filter.strip() else None,
-        progress_callback=on_progress,
-    )
+        def on_progress(current: int, total: int, _label: str = label, _idx: int = idx, _total_types: int = len(types_to_fetch)) -> None:
+            pct = int(current / max(total, 1) * 100)
+            progress_bar.progress(
+                int((_idx * 100 + pct) / _total_types),
+                text=f"[{_label}] Página {current} de {total} ({pct}%)…",
+            )
+
+        raw_orders += fetch_orders(
+            client,
+            date_from=date_from,
+            date_to=date_to,
+            order_type=otype,
+            manager_id=int(manager_filter) if manager_filter.strip() else None,
+            progress_callback=on_progress,
+        )
+
     progress_bar.empty()
 except Exception as exc:
     progress_bar.empty()
