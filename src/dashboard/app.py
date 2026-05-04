@@ -81,19 +81,29 @@ if not store or not api_key:
     st.error("Store subdomain and API Key are required.")
     st.stop()
 
-with st.spinner("Fetching orders from Simla…"):
-    try:
-        client = SimlaClient(store=store, api_key=api_key)
-        raw_orders = fetch_orders(
-            client,
-            date_from=date_from,
-            date_to=date_to,
-            status=status_filter or None,
-            manager_id=int(manager_filter) if manager_filter.strip() else None,
-        )
-    except Exception as exc:
-        st.error(f"API error: {exc}")
-        st.stop()
+st.info("Fetching orders from Simla…")
+progress_bar = st.progress(0, text="Starting…")
+
+try:
+    client = SimlaClient(store=store, api_key=api_key)
+
+    def on_progress(current: int, total: int) -> None:
+        pct = int(current / max(total, 1) * 100)
+        progress_bar.progress(pct, text=f"Page {current} of {total}…")
+
+    raw_orders = fetch_orders(
+        client,
+        date_from=date_from,
+        date_to=date_to,
+        status=status_filter or None,
+        manager_id=int(manager_filter) if manager_filter.strip() else None,
+        progress_callback=on_progress,
+    )
+    progress_bar.empty()
+except Exception as exc:
+    progress_bar.empty()
+    st.error(f"API error: {exc}")
+    st.stop()
 
 if not raw_orders:
     st.warning("No orders found for the selected filters.")

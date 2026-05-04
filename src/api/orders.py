@@ -15,15 +15,15 @@ _PAGE_LIMIT = 100  # max allowed by Simla API
 def _iter_pages(
     client: SimlaClient,
     params: dict,
-) -> Iterator[list[dict]]:
-    """Yield one page of raw order dicts at a time."""
+) -> Iterator[tuple[list[dict], int, int]]:
+    """Yield (orders, current_page, total_pages) for each page."""
     page = 1
     while True:
         resp = client.get("orders", {**params, "page": page, "limit": _PAGE_LIMIT})
         orders = resp.get("orders", [])
-        yield orders
-
         total_pages = resp.get("pagination", {}).get("totalPageCount", 1)
+        yield orders, page, total_pages
+
         if page >= total_pages or not orders:
             break
         page += 1
@@ -36,8 +36,12 @@ def fetch_orders(
     status: str | None = None,
     order_type: str | None = None,
     manager_id: int | None = None,
+    progress_callback=None,
 ) -> list[dict]:
-    """Return a flat list of all matching orders (all pages)."""
+    """Return a flat list of all matching orders (all pages).
+
+    progress_callback: optional callable(current_page, total_pages).
+    """
     params: dict = {}
     if date_from:
         params["createdAtFrom"] = date_from.strftime("%Y-%m-%d 00:00:00")
@@ -51,8 +55,10 @@ def fetch_orders(
         params["managerId"] = manager_id
 
     orders: list[dict] = []
-    for page in _iter_pages(client, params):
-        orders.extend(page)
+    for page_orders, current, total in _iter_pages(client, params):
+        orders.extend(page_orders)
+        if progress_callback:
+            progress_callback(current, total)
     return orders
 
 
