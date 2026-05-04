@@ -209,6 +209,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="nav-section">Configuración</div>', unsafe_allow_html=True)
+    store = st.text_input("Subdominio de tienda", value="simla-es", placeholder="ej. mitienda")
     api_key = st.text_input("API Key", type="password", placeholder="Ingresa tu API Key")
 
     st.divider()
@@ -229,12 +230,7 @@ with st.sidebar:
     st.divider()
     load = st.button("Cargar datos", type="primary", use_container_width=True)
 
-    st.markdown("""
-    <div style='margin-top:2rem; color:#3D4568; font-size:0.72rem;'>
-        Tienda: <strong style='color:#CBD5E1'>simla-es</strong><br>
-        Tipo: <strong style='color:#CBD5E1'>crm-license</strong>
-    </div>
-    """, unsafe_allow_html=True)
+    order_type = st.text_input("Tipo de pedido", value="crm-license", placeholder="ej. crm-license")
 
 # ---------------------------------------------------------------------------
 # Main content
@@ -247,8 +243,8 @@ if not load:
     st.info("Introduce tu API Key en el panel lateral y pulsa **Cargar datos**.")
     st.stop()
 
-if not api_key:
-    st.error("La API Key es obligatoria.")
+if not store or not api_key:
+    st.error("El subdominio y la API Key son obligatorios.")
     st.stop()
 
 # ---------------------------------------------------------------------------
@@ -258,7 +254,7 @@ if not api_key:
 progress_bar = st.progress(0, text="Iniciando…")
 
 try:
-    client = SimlaClient(store="simla-es", api_key=api_key)
+    client = SimlaClient(store=store, api_key=api_key)
 
     def on_progress(current: int, total: int) -> None:
         pct = int(current / max(total, 1) * 100)
@@ -268,7 +264,7 @@ try:
         client,
         date_from=date_from,
         date_to=date_to,
-        order_type="crm-license",
+        order_type=order_type or None,
         manager_id=int(manager_filter) if manager_filter.strip() else None,
         progress_callback=on_progress,
     )
