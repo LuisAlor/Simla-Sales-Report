@@ -42,9 +42,10 @@ export interface OrderType {
 // ---------------------------------------------------------------------------
 
 function apiUrl(path: string, params: Record<string, string | number>): string {
-  const qs = new URLSearchParams(
-    Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
-  ).toString();
+  // encodeURIComponent encodes spaces as %20 (not +), which Simla requires for date params
+  const qs = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join("&");
   return `${BASE}/${path}?${qs}`;
 }
 
