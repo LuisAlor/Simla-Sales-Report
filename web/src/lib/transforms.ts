@@ -70,7 +70,7 @@ export interface ManagerRow {
 export function ordersByManager(records: OrderRecord[]): ManagerRow[] {
   const map = new Map<string, ManagerRow>();
   for (const r of records) {
-    const key = r.managerName || "(sin asesor)";
+    const key = r.managerSd || r.managerName || "(sin asesor)";
     const existing = map.get(key) ?? { managerId: r.managerId, managerName: key, orders: 0, revenue: 0, avgOrder: 0 };
     const updated = { ...existing, orders: existing.orders + 1, revenue: existing.revenue + r.totalSumm };
     updated.avgOrder = updated.revenue / updated.orders;

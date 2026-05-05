@@ -1,3 +1,15 @@
+export interface FilterTemplate {
+  id: string;
+  name: string;
+  dateFrom: string;
+  dateTo: string;
+  freq: string;
+  selectedTypes: string[];
+  managerIds: string[];
+  utmSources: string[];
+  utmMediums: string[];
+}
+
 export interface User {
   id: string;
   email: string;
@@ -9,6 +21,7 @@ export interface User {
   apiKey?: string;
   savedFilters?: Record<string, unknown>;
   savedUtms?: { sources: string[]; mediums: string[] };
+  savedFilterTemplates?: FilterTemplate[];
 }
 
 const STORAGE_KEY = "simla_users";

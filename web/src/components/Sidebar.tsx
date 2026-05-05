@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { BarChart3, TrendingDown, Filter, ShieldCheck, LogOut } from "lucide-react";
 import type { Freq } from "@/lib/transforms";
-import type { SimlaUser } from "@/lib/api";
+import type { FilterTemplate } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { MultiSelect } from "@/components/MultiSelect";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { FilterTemplates } from "@/components/FilterTemplates";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface Filters {
@@ -24,10 +25,15 @@ interface AvailableUtms {
 
 interface Props {
   filters: Filters;
-  managers: SimlaUser[];
+  managers: { value: string; label: string }[];
   availableUtms: AvailableUtms;
+  filterTemplates: FilterTemplate[];
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
+  onSaveTemplate: (name: string) => void;
+  onApplyTemplate: (t: FilterTemplate) => void;
+  onDeleteTemplate: (id: string) => void;
+  onReorderTemplates: (templates: FilterTemplate[]) => void;
   loading: boolean;
 }
 
@@ -63,17 +69,11 @@ function CheckList({
         : [...selected, value]
     );
   }
-
   return (
     <div className="flex flex-col gap-1 max-h-24 overflow-y-auto pr-1">
       {items.map(({ value, label }) => (
         <label key={value} className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={selected.includes(value)}
-            onChange={() => toggle(value)}
-            className="accent-teal"
-          />
+          <input type="checkbox" checked={selected.includes(value)} onChange={() => toggle(value)} className="accent-teal" />
           <span className="truncate">{label}</span>
         </label>
       ))}
@@ -81,7 +81,10 @@ function CheckList({
   );
 }
 
-export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onLoad, loading }: Props) {
+export function Sidebar({
+  filters, managers, availableUtms, filterTemplates,
+  onFiltersChange, onLoad, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading,
+}: Props) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -96,11 +99,7 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
           <p className="text-slate-500 text-xs">Panel de ventas · CRM</p>
         </div>
         {user?.role === "admin" && (
-          <button
-            onClick={() => navigate("/admin")}
-            title="Panel de administración"
-            className="text-slate-500 hover:text-white transition-colors shrink-0"
-          >
+          <button onClick={() => navigate("/admin")} title="Panel de administración" className="text-slate-500 hover:text-white transition-colors shrink-0">
             <ShieldCheck size={16} />
           </button>
         )}
@@ -110,14 +109,10 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
       <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
           <NavLink
-            key={to}
-            to={to}
-            end
+            key={to} to={to} end
             className={({ isActive }) =>
               `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                isActive
-                  ? "bg-brand-blue text-white font-semibold"
-                  : "text-slate-400 hover:bg-navy-border hover:text-white"
+                isActive ? "bg-brand-blue text-white font-semibold" : "text-slate-400 hover:bg-navy-border hover:text-white"
               }`
             }
           >
@@ -165,19 +160,17 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-slate-400 text-xs">Asesores</label>
+            <label className="text-slate-400 text-xs">Asesores (Manager SD)</label>
             {filters.managerIds.length > 0 && (
-              <button onClick={() => onFiltersChange({ managerIds: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">
-                Limpiar
-              </button>
+              <button onClick={() => onFiltersChange({ managerIds: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
             )}
           </div>
           <MultiSelect
-            options={managers.map((m) => ({ value: String(m.id), label: `${m.firstName} ${m.lastName}` }))}
+            options={managers}
             selected={filters.managerIds}
             onChange={(next) => onFiltersChange({ managerIds: next })}
             placeholder="Todos los asesores"
-            emptyLabel="Cargando asesores…"
+            emptyLabel="Carga datos para ver asesores"
           />
         </div>
 
@@ -185,9 +178,7 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
           <div className="flex items-center justify-between mb-1">
             <label className="text-slate-400 text-xs">UTM Source</label>
             {filters.utmSources.length > 0 && (
-              <button onClick={() => onFiltersChange({ utmSources: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">
-                Limpiar
-              </button>
+              <button onClick={() => onFiltersChange({ utmSources: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
             )}
           </div>
           <MultiSelect
@@ -203,9 +194,7 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
           <div className="flex items-center justify-between mb-1">
             <label className="text-slate-400 text-xs">UTM Medium</label>
             {filters.utmMediums.length > 0 && (
-              <button onClick={() => onFiltersChange({ utmMediums: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">
-                Limpiar
-              </button>
+              <button onClick={() => onFiltersChange({ utmMediums: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
             )}
           </div>
           <MultiSelect
@@ -217,6 +206,24 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
           />
         </div>
       </div>
+
+      {/* Filter Templates */}
+      {(filterTemplates.length > 0 || true) && (
+        <>
+          <hr className="border-navy-border" />
+          <div>
+            <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest mb-2">Plantillas</p>
+            <FilterTemplates
+              templates={filterTemplates}
+              currentFilters={filters}
+              onApply={onApplyTemplate}
+              onSave={onSaveTemplate}
+              onDelete={onDeleteTemplate}
+              onReorder={onReorderTemplates}
+            />
+          </div>
+        </>
+      )}
 
       {/* Bottom: load + profile */}
       <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-navy-border">
@@ -241,12 +248,7 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
               className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors min-w-0"
               onClick={() => navigate("/profile")}
             >
-              <Avatar
-                firstName={user.firstName}
-                lastName={user.lastName}
-                avatarDataUrl={user.avatarDataUrl}
-                size={28}
-              />
+              <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={28} />
               <div className="overflow-hidden">
                 <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
                 <p className="text-slate-500 text-[10px] truncate">{user.email}</p>

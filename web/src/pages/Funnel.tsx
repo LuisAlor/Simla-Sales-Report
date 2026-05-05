@@ -85,10 +85,10 @@ export function Funnel({ records, freq }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-0.5">Этапы воронки</h2>
+      <h2 className="text-2xl font-bold text-slate-800 mb-0.5">Etapas del embudo</h2>
       <p className="text-slate-500 text-sm mb-4">Análisis del embudo de ventas · crm-license</p>
 
-      <SectionHeader>Кол-во регистраций CRM</SectionHeader>
+      <SectionHeader>Registros CRM</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
         <KpiCard label="Total registros"   value={fmtInt(totalRegs)} />
         <KpiCard label="Hecho de registro" value={fmtInt(totalRegs)} />
@@ -96,7 +96,7 @@ export function Funnel({ records, freq }: Props) {
         <KpiCard label="👍 Recomendados"   value={fmtInt(recommended)} />
       </div>
 
-      <SectionHeader>Общие показатели продаж</SectionHeader>
+      <SectionHeader>Indicadores generales de ventas</SectionHeader>
       <div className="flex flex-wrap gap-3 mt-2">
         <DarkKpiCard label="Total Sales (#)" value={fmtInt(fk.totalSales)} color="#F59E0B" />
         <DarkKpiCard label="MRR"             value={fmtUsd(fk.mrr)}        color="#F59E0B" />
@@ -106,27 +106,27 @@ export function Funnel({ records, freq }: Props) {
       </div>
 
       <FunnelSection
-        title="Ключевые этапы воронки"
+        title="Etapas clave del embudo"
         rows={keyRows}
         tsData={keyTs}
-        chartTitle="Ключевые этапы воронки"
+        chartTitle="Etapas clave del embudo"
       />
 
       <FunnelSection
-        title="Негативные этапы воронки"
+        title="Etapas negativas del embudo"
         rows={negRows}
         tsData={negTs}
-        chartTitle="Негативные этапы воронки"
+        chartTitle="Etapas negativas del embudo"
       />
 
       <FunnelSection
-        title="Постпродажные этапы воронки"
+        title="Etapas posventa del embudo"
         rows={psRows}
         tsData={psTs}
-        chartTitle="Постпродажные этапы воронки"
+        chartTitle="Etapas posventa del embudo"
       />
 
-      <SectionHeader>Источники лидов по платформам</SectionHeader>
+      <SectionHeader>Fuentes de leads por plataforma</SectionHeader>
       {plat.length > 0 ? (
         <div className="bg-navy-light border border-navy-border rounded-lg p-3 mt-2">
           <PlatformsDonutChart data={plat} />

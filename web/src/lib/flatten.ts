@@ -67,6 +67,7 @@ export interface OrderRecord {
   cfPaymentPeriod: number;
   cfRefunded: number;
   popadalVStatusy: string[];
+  managerSd: string | null;
 }
 
 export function flattenOrder(o: RawOrder): OrderRecord {
@@ -112,6 +113,7 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfPaymentPeriod:  cfFloat(cf, "payment_first_period_license"),
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
+    managerSd:        cfStr(cf, "manager_sd"),
   };
 }
 

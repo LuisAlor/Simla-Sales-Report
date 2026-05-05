@@ -9,12 +9,14 @@ import { Login } from "@/pages/Login";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Profile } from "@/pages/Profile";
 import { ApiSetup } from "@/pages/ApiSetup";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { fetchOrders, fetchUsers, fetchStatuses } from "@/lib/api";
+import { fetchOrders, fetchStatuses } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
+import type { FilterTemplate } from "@/lib/auth";
 
 function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
   return {
@@ -48,15 +50,6 @@ function AppInner() {
     setFilters((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Auto-load managers when API key available
-  const { data: managers = [] } = useQuery({
-    queryKey: ["users", apiKey],
-    queryFn: () => fetchUsers(apiKey),
-    enabled: apiKey.length > 0,
-    staleTime: Infinity,
-    retry: false,
-  });
-
   // Auto-load statuses when API key available
   const { data: statuses = [] } = useQuery({
     queryKey: ["statuses", apiKey],
@@ -84,7 +77,6 @@ function AppInner() {
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           orderType: otype,
-          managerIds: filters.managerIds.length > 0 ? filters.managerIds.map(Number) : undefined,
           onProgress: (done, total) => setProgress({ done, total }),
         });
         allOrders.push(...fetched);
@@ -103,21 +95,29 @@ function AppInner() {
     setProgress(null);
     setLoadKey((k) => k + 1);
     if (user) {
-      const savedFilters: Record<string, unknown> = {
-        dateFrom: filters.dateFrom,
-        dateTo: filters.dateTo,
-        freq: filters.freq,
-        selectedTypes: filters.selectedTypes,
-        managerIds: filters.managerIds,
-        utmSources: filters.utmSources,
-        utmMediums: filters.utmMediums,
-      };
-      updateUser({ ...user, savedFilters });
+      updateUser({
+        ...user,
+        savedFilters: {
+          dateFrom: filters.dateFrom,
+          dateTo: filters.dateTo,
+          freq: filters.freq,
+          selectedTypes: filters.selectedTypes,
+          managerIds: filters.managerIds,
+          utmSources: filters.utmSources,
+          utmMediums: filters.utmMediums,
+        },
+      });
     }
   }, [filters, apiKey, queryClient, user, updateUser]);
 
   const allRecords = data?.records ?? [];
   const items = data?.items ?? [];
+
+  // Build manager list from managerSd custom field in loaded orders
+  const managerOptions = useMemo((): { value: string; label: string }[] => {
+    const names = [...new Set(allRecords.map((r) => r.managerSd).filter(Boolean))] as string[];
+    return names.sort().map((n) => ({ value: n, label: n }));
+  }, [allRecords]);
 
   // Extract available UTMs from loaded orders; fall back to saved UTMs
   const availableUtms = useMemo(() => {
@@ -125,7 +125,6 @@ function AppInner() {
       sources: [...new Set(allRecords.map((r) => r.utmSource).filter(Boolean))] as string[],
       mediums: [...new Set(allRecords.map((r) => r.utmMedium).filter(Boolean))] as string[],
     };
-    // Persist newly discovered UTMs into user profile
     if (user && (fromOrders.sources.length > 0 || fromOrders.mediums.length > 0)) {
       const merged = {
         sources: [...new Set([...(user.savedUtms?.sources ?? []), ...fromOrders.sources])],
@@ -143,9 +142,12 @@ function AppInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allRecords]);
 
-  // Apply client-side UTM filters
+  // Apply client-side manager + UTM filters
   const records = useMemo(() => {
     let result = allRecords;
+    if (filters.managerIds.length > 0) {
+      result = result.filter((r) => r.managerSd && filters.managerIds.includes(r.managerSd));
+    }
     if (filters.utmSources.length > 0) {
       result = result.filter((r) => r.utmSource && filters.utmSources.includes(r.utmSource));
     }
@@ -153,18 +155,63 @@ function AppInner() {
       result = result.filter((r) => r.utmMedium && filters.utmMediums.includes(r.utmMedium));
     }
     return result;
-  }, [allRecords, filters.utmSources, filters.utmMediums]);
+  }, [allRecords, filters.managerIds, filters.utmSources, filters.utmMediums]);
+
+  // Filter template handlers
+  const filterTemplates = user?.savedFilterTemplates ?? [];
+
+  const handleSaveTemplate = useCallback((name: string) => {
+    if (!user) return;
+    const newTemplate: FilterTemplate = {
+      id: Date.now().toString(),
+      name,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      freq: filters.freq,
+      selectedTypes: filters.selectedTypes,
+      managerIds: filters.managerIds,
+      utmSources: filters.utmSources,
+      utmMediums: filters.utmMediums,
+    };
+    updateUser({ ...user, savedFilterTemplates: [...filterTemplates, newTemplate] });
+  }, [user, filters, filterTemplates, updateUser]);
+
+  const handleApplyTemplate = useCallback((t: FilterTemplate) => {
+    setFilters({
+      dateFrom: t.dateFrom,
+      dateTo: t.dateTo,
+      freq: t.freq as Filters["freq"],
+      selectedTypes: t.selectedTypes,
+      managerIds: t.managerIds,
+      utmSources: t.utmSources,
+      utmMediums: t.utmMediums,
+    });
+  }, []);
+
+  const handleDeleteTemplate = useCallback((id: string) => {
+    if (!user) return;
+    updateUser({ ...user, savedFilterTemplates: filterTemplates.filter((t) => t.id !== id) });
+  }, [user, filterTemplates, updateUser]);
+
+  const handleReorderTemplates = useCallback((reordered: FilterTemplate[]) => {
+    if (!user) return;
+    updateUser({ ...user, savedFilterTemplates: reordered });
+  }, [user, updateUser]);
 
   const layoutProps = {
     filters,
-    managers,
+    managers: managerOptions,
     availableUtms,
+    filterTemplates,
     onFiltersChange: handleFiltersChange,
     onLoad: handleLoad,
+    onSaveTemplate: handleSaveTemplate,
+    onApplyTemplate: handleApplyTemplate,
+    onDeleteTemplate: handleDeleteTemplate,
+    onReorderTemplates: handleReorderTemplates,
     loading: isFetching,
   };
 
-  // Block access until API key is configured (after login)
   if (!apiKey) {
     return (
       <Routes>
@@ -234,21 +281,7 @@ interface ShellProps {
 }
 
 function PageShell({ loading, progress, error, hasData, loaded, children }: ShellProps) {
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="w-full max-w-sm bg-slate-200 rounded-full h-2">
-          <div
-            className="bg-teal h-2 rounded-full transition-all duration-300"
-            style={{ width: progress ? `${Math.round((progress.done / progress.total) * 100)}%` : "20%" }}
-          />
-        </div>
-        <p className="text-slate-500 text-sm">
-          {progress ? `Página ${progress.done} de ${progress.total}…` : "Iniciando…"}
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen progress={progress} />;
 
   if (error) {
     return (

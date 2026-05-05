@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar, type Filters } from "./Sidebar";
-import type { SimlaUser } from "@/lib/api";
+import type { FilterTemplate } from "@/lib/auth";
 
 interface AvailableUtms {
   sources: string[];
@@ -9,10 +9,15 @@ interface AvailableUtms {
 
 interface Props {
   filters: Filters;
-  managers: SimlaUser[];
+  managers: { value: string; label: string }[];
   availableUtms: AvailableUtms;
+  filterTemplates: FilterTemplate[];
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
+  onSaveTemplate: (name: string) => void;
+  onApplyTemplate: (t: FilterTemplate) => void;
+  onDeleteTemplate: (id: string) => void;
+  onReorderTemplates: (templates: FilterTemplate[]) => void;
   loading: boolean;
 }
 

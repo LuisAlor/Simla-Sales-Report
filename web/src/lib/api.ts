@@ -145,12 +145,10 @@ export interface FetchOrdersParams {
   dateFrom: string;
   dateTo: string;
   orderType?: string;
-  managerIds?: number[];
   onProgress?: (done: number, total: number) => void;
 }
 
 export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
-  // Filter fields go under filter[...] bracket notation — flat params are ignored by Simla
   const filter: Record<string, string | number> = {
     createdAtFrom: `${p.dateFrom} 00:00:00`,
     createdAtTo: `${p.dateTo} 23:59:59`,
@@ -158,9 +156,6 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
   if (p.orderType) filter["orderType"] = p.orderType;
 
   const arrayFilter: Record<string, string[]> = {};
-  if (p.managerIds && p.managerIds.length > 0) {
-    arrayFilter["assignedIds"] = p.managerIds.map(String);
-  }
 
   const topLevel: Record<string, string | number> = { limit: PAGE_LIMIT };
 
