@@ -12,7 +12,7 @@ export function LoadingScreen({ progress }: Props) {
   const dashOffset = circumference * (1 - fillRatio);
 
   return (
-    <div className="flex flex-col items-center justify-center h-[65vh] gap-6 select-none">
+    <div className="flex flex-col items-center justify-center flex-1 min-h-[70vh] gap-6 select-none">
 
       {/* Animated bar chart */}
       <div className="flex items-end gap-1.5 h-20">
@@ -78,18 +78,6 @@ export function LoadingScreen({ progress }: Props) {
             {progress.done} / {progress.total} páginas · {pct}% completado
           </p>
         )}
-      </div>
-
-      {/* Linear progress bar */}
-      <div className="w-64 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${progress ? pct : 12}%`,
-            background: "linear-gradient(to right, #0EA5E9, #14B8A6)",
-            transition: "width 0.4s ease",
-          }}
-        />
       </div>
     </div>
   );

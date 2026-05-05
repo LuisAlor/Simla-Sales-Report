@@ -17,6 +17,17 @@ function cfStr(cf: Record<string, unknown>, key: string): string | null {
   return String(v);
 }
 
+// For select-type custom fields that return {code, name} objects
+function cfSelectName(cf: Record<string, unknown>, key: string): string | null {
+  const v = cf[key];
+  if (v === null || v === undefined) return null;
+  if (typeof v === "object") {
+    const obj = v as Record<string, string>;
+    return obj["name"] ?? obj["code"] ?? null;
+  }
+  return String(v);
+}
+
 function cfList(cf: Record<string, unknown>, key: string): string[] {
   const v = cf[key];
   if (!v) return [];
@@ -113,7 +124,7 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfPaymentPeriod:  cfFloat(cf, "payment_first_period_license"),
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
-    managerSd:        cfStr(cf, "manager_sd"),
+    managerSd:        cfSelectName(cf, "manager_sd"),
   };
 }
 
