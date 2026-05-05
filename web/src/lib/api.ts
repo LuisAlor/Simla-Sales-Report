@@ -21,6 +21,7 @@ export interface RawOrder {
   customer?: { id: number; firstName: string; lastName: string; email?: string };
   items?: RawItem[];
   customFields?: Record<string, unknown>;
+  source?: { source?: string; medium?: string; campaign?: string; keyword?: string; content?: string };
 }
 
 export interface RawItem {
@@ -37,15 +38,31 @@ export interface OrderType {
   name: string;
 }
 
+export interface SimlaUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  groups?: { code: string }[];
+}
+
+export interface SimlaStatus {
+  code: string;
+  name: string;
+  color?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 // Build a query string. Top-level keys are sent as-is; nested filter fields
 // must use PHP bracket notation: filter[createdAtFrom]=... so the API parses them.
+// arrayFilter supports PHP bracket array notation: filter[key][]=val
 function buildQs(
   topLevel: Record<string, string | number>,
-  filter: Record<string, string | number> = {}
+  filter: Record<string, string | number> = {},
+  arrayFilter: Record<string, string[]> = {}
 ): string {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(topLevel)) {
@@ -55,6 +72,11 @@ function buildQs(
     // Brackets must NOT be encoded — PHP/Simla expects literal filter[key]
     parts.push(`filter[${k}]=${encodeURIComponent(String(v))}`);
   }
+  for (const [k, vals] of Object.entries(arrayFilter)) {
+    for (const v of vals) {
+      parts.push(`filter[${k}][]=${encodeURIComponent(String(v))}`);
+    }
+  }
   return parts.join("&");
 }
 
@@ -62,9 +84,10 @@ async function getJson<T>(
   path: string,
   apiKey: string,
   topLevel: Record<string, string | number> = {},
-  filter: Record<string, string | number> = {}
+  filter: Record<string, string | number> = {},
+  arrayFilter: Record<string, string[]> = {}
 ): Promise<T> {
-  const qs = buildQs({ ...topLevel, apiKey }, filter);
+  const qs = buildQs({ ...topLevel, apiKey }, filter, arrayFilter);
   const url = `${BASE}/${path}?${qs}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`);
@@ -90,12 +113,40 @@ export async function fetchOrderTypes(apiKey: string): Promise<OrderType[]> {
   return data.orderTypes ?? [];
 }
 
+// GET /api/v5/users with filter[groups][]=sales
+export async function fetchUsers(apiKey: string): Promise<SimlaUser[]> {
+  const data = await getJson<{ users: SimlaUser[] }>(
+    "users",
+    apiKey,
+    {},
+    {},
+    { groups: ["sales"] }
+  );
+  return data.users ?? [];
+}
+
+// GET /api/v5/statuses
+export async function fetchStatuses(apiKey: string): Promise<SimlaStatus[]> {
+  const data = await getJson<{ statuses: SimlaStatus[] | Record<string, SimlaStatus> }>(
+    "statuses",
+    apiKey,
+    {},
+    {}
+  );
+  const raw = data.statuses;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return Object.values(raw);
+}
+
 export interface FetchOrdersParams {
   apiKey: string;
   dateFrom: string;
   dateTo: string;
   orderType?: string;
   managerId?: number;
+  utmSource?: string;
+  utmMedium?: string;
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -107,6 +158,8 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
   };
   if (p.orderType) filter["orderType"] = p.orderType;
   if (p.managerId) filter["managerId"] = p.managerId;
+  if (p.utmSource) filter["utmSource"] = p.utmSource;
+  if (p.utmMedium) filter["utmMedium"] = p.utmMedium;
 
   const topLevel: Record<string, string | number> = { limit: PAGE_LIMIT };
 

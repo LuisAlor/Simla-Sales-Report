@@ -50,6 +50,8 @@ export interface OrderRecord {
   customerName: string;
   customerEmail: string | null;
   itemCount: number;
+  utmSource: string | null;
+  utmMedium: string | null;
   // custom fields
   cfNumUsers: string | null;
   cfClientBase: string | null;
@@ -94,6 +96,8 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     customerName: [custFirstName, custLastName].filter(Boolean).join(" "),
     customerEmail: (cust as { email?: string }).email ?? null,
     itemCount: (o.items ?? []).length,
+    utmSource: o.source?.source ?? null,
+    utmMedium: o.source?.medium ?? null,
     cfNumUsers:       cfStr(cf, "crm_num_of_users_new"),
     cfClientBase:     cfStr(cf, "tamano_de_base_de_clientes"),
     cfLeadsPerDay:    cfStr(cf, "leads_por_dia"),
