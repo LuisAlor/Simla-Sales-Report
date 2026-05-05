@@ -110,7 +110,7 @@ async function fetchPage(
 // ---------------------------------------------------------------------------
 
 export async function fetchOrderTypes(apiKey: string): Promise<OrderType[]> {
-  const data = await getJson<{ orderTypes: OrderType[] }>("order-types", apiKey, {}, {});
+  const data = await getJson<{ orderTypes: OrderType[] }>("reference/order-types", apiKey, {}, {});
   return data.orderTypes ?? [];
 }
 
@@ -126,10 +126,10 @@ export async function fetchUsers(apiKey: string): Promise<SimlaUser[]> {
   return data.users ?? [];
 }
 
-// GET /api/v5/statuses
+// GET /api/v5/reference/statuses
 export async function fetchStatuses(apiKey: string): Promise<SimlaStatus[]> {
   const data = await getJson<{ statuses: SimlaStatus[] | Record<string, SimlaStatus> }>(
-    "statuses",
+    "reference/statuses",
     apiKey,
     {},
     {}
