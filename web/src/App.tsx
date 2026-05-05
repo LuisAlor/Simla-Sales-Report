@@ -12,7 +12,7 @@ import { ApiSetup } from "@/pages/ApiSetup";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { fetchOrders, fetchStatuses } from "@/lib/api";
+import { fetchOrders, fetchStatuses, fetchCustomFieldOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
@@ -78,6 +78,15 @@ function AppInner() {
     return map;
   }, [statuses]);
 
+  // Fetch manager_sd custom field options to resolve code → display name
+  const { data: managerSdMap = {} } = useQuery({
+    queryKey: ["customField", "orders", "manager_sd", apiKey],
+    queryFn: () => fetchCustomFieldOptions(apiKey, "orders", "manager_sd"),
+    enabled: apiKey.length > 0,
+    staleTime: Infinity,
+    retry: false,
+  });
+
   // Main data query — triggered by loadKey
   const { data, isFetching, error } = useQuery<LoadedData>({
     queryKey: ["orders", loadKey],
@@ -123,10 +132,19 @@ function AppInner() {
     }
   }, [filters, apiKey, queryClient, user, updateUser]);
 
-  const allRecords = data?.records ?? [];
+  const rawRecords = data?.records ?? [];
   const items = data?.items ?? [];
 
-  // Build manager list from managerSd custom field in loaded orders
+  // Resolve managerSd codes to display names using the custom field definition
+  const allRecords = useMemo(() => {
+    if (Object.keys(managerSdMap).length === 0) return rawRecords;
+    return rawRecords.map((r) => ({
+      ...r,
+      managerSd: r.managerSd ? (managerSdMap[r.managerSd] ?? r.managerSd) : null,
+    }));
+  }, [rawRecords, managerSdMap]);
+
+  // Build manager list from resolved managerSd display names
   const managerOptions = useMemo((): { value: string; label: string }[] => {
     const names = [...new Set(allRecords.map((r) => r.managerSd).filter(Boolean))] as string[];
     return names.sort().map((n) => ({ value: n, label: n }));

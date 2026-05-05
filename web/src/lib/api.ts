@@ -109,6 +109,31 @@ async function fetchPage(
 // Public API
 // ---------------------------------------------------------------------------
 
+export interface CustomFieldOption {
+  code: string;
+  name: string;
+}
+
+// GET /api/v5/custom-fields/{entity}/{code} — returns select field options
+export async function fetchCustomFieldOptions(
+  apiKey: string,
+  entity: string,
+  fieldCode: string
+): Promise<Record<string, string>> {
+  try {
+    const data = await getJson<{
+      customField?: { values?: CustomFieldOption[] };
+    }>(`custom-fields/${entity}/${fieldCode}`, apiKey, {}, {});
+    const map: Record<string, string> = {};
+    for (const v of data.customField?.values ?? []) {
+      map[v.code] = v.name;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function fetchOrderTypes(apiKey: string): Promise<OrderType[]> {
   const data = await getJson<{ orderTypes: OrderType[] }>("reference/order-types", apiKey, {}, {});
   return data.orderTypes ?? [];
