@@ -1,8 +1,10 @@
-import { NavLink } from "react-router-dom";
-import { BarChart3, TrendingDown, Settings, Filter } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { BarChart3, TrendingDown, Settings, Filter, ShieldCheck } from "lucide-react";
 import dayjs from "dayjs";
 import type { Freq } from "@/lib/transforms";
-import type { OrderType } from "@/lib/api";
+import type { SimlaUser } from "@/lib/api";
+import { Avatar } from "@/components/Avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Filters {
   apiKey: string;
@@ -11,19 +13,32 @@ export interface Filters {
   freq: Freq;
   selectedTypes: string[];
   managerId: string;
+  utmSource: string;
+  utmMedium: string;
+}
+
+interface AvailableUtms {
+  sources: string[];
+  mediums: string[];
 }
 
 interface Props {
   filters: Filters;
-  orderTypes: OrderType[];
+  managers: SimlaUser[];
+  availableUtms: AvailableUtms;
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
   loading: boolean;
 }
 
+const HARDCODED_ORDER_TYPES = [
+  { code: "crm-license", label: "💡 SYSTEM LICENSE" },
+  { code: "sales-and-marketing", label: "🎯 SALES AND MARKETING" },
+];
+
 const NAV_ITEMS = [
   { to: "/", label: "Analíticas generales", icon: BarChart3 },
-  { to: "/funnel", label: "Этапы воронки", icon: TrendingDown },
+  { to: "/funnel", label: "Etapas del embudo", icon: TrendingDown },
 ];
 
 const FREQ_OPTIONS: { label: string; value: Freq }[] = [
@@ -32,7 +47,10 @@ const FREQ_OPTIONS: { label: string; value: Freq }[] = [
   { label: "Mensual", value: "ME" },
 ];
 
-export function Sidebar({ filters, orderTypes, onFiltersChange, onLoad, loading }: Props) {
+export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onLoad, loading }: Props) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <aside className="w-64 min-h-screen bg-navy flex flex-col p-4 gap-4 shrink-0">
       {/* Brand */}
@@ -67,6 +85,21 @@ export function Sidebar({ filters, orderTypes, onFiltersChange, onLoad, loading 
               {label}
             </NavLink>
           ))}
+          {user?.role === "admin" && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  isActive
+                    ? "bg-brand-blue text-white font-semibold"
+                    : "text-slate-400 hover:bg-navy-border hover:text-white"
+                }`
+              }
+            >
+              <ShieldCheck size={15} />
+              Panel de administración
+            </NavLink>
+          )}
         </nav>
       </div>
 
@@ -132,47 +165,78 @@ export function Sidebar({ filters, orderTypes, onFiltersChange, onLoad, loading 
           </select>
         </div>
 
-        {orderTypes.length > 0 && (
-          <div>
-            <label className="block text-slate-400 text-xs mb-1">Tipo de pedido</label>
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
-              {orderTypes.map((t) => (
-                <label key={t.code} className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.selectedTypes.includes(t.code)}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...filters.selectedTypes, t.code]
-                        : filters.selectedTypes.filter((c) => c !== t.code);
-                      onFiltersChange({ selectedTypes: next });
-                    }}
-                    className="accent-teal"
-                  />
-                  {t.name}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {orderTypes.length === 0 && (
-          <p className="text-slate-600 text-xs">Introduce tu API Key para cargar los tipos de pedido.</p>
-        )}
-
+        {/* Hardcoded order type checkboxes */}
         <div>
-          <label className="block text-slate-400 text-xs mb-1">ID de asesor (opcional)</label>
-          <input
-            type="text"
+          <label className="block text-slate-400 text-xs mb-1">Tipo de pedido</label>
+          <div className="flex flex-col gap-1">
+            {HARDCODED_ORDER_TYPES.map((t) => (
+              <label key={t.code} className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.selectedTypes.includes(t.code)}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                      ? [...filters.selectedTypes, t.code]
+                      : filters.selectedTypes.filter((c) => c !== t.code);
+                    onFiltersChange({ selectedTypes: next });
+                  }}
+                  className="accent-teal"
+                />
+                {t.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Manager dropdown */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1">Asesor</label>
+          <select
             value={filters.managerId}
             onChange={(e) => onFiltersChange({ managerId: e.target.value })}
-            placeholder="ej. 42"
-            className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal placeholder:text-slate-600"
-          />
+            className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal"
+          >
+            <option value="">Todos los asesores</option>
+            {managers.map((m) => (
+              <option key={m.id} value={String(m.id)}>
+                {m.firstName} {m.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* UTM Source */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1">UTM Source</label>
+          <select
+            value={filters.utmSource}
+            onChange={(e) => onFiltersChange({ utmSource: e.target.value })}
+            className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal"
+          >
+            <option value="">Todas las fuentes</option>
+            {availableUtms.sources.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* UTM Medium */}
+        <div>
+          <label className="block text-slate-400 text-xs mb-1">UTM Medium</label>
+          <select
+            value={filters.utmMedium}
+            onChange={(e) => onFiltersChange({ utmMedium: e.target.value })}
+            className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal"
+          >
+            <option value="">Todos los medios</option>
+            {availableUtms.mediums.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-3">
         <button
           onClick={onLoad}
           disabled={loading || !filters.apiKey}
@@ -180,6 +244,25 @@ export function Sidebar({ filters, orderTypes, onFiltersChange, onLoad, loading 
         >
           {loading ? "Cargando…" : "Cargar datos"}
         </button>
+
+        {/* Profile avatar */}
+        {user && (
+          <div
+            className="flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors"
+            onClick={() => navigate("/profile")}
+          >
+            <Avatar
+              firstName={user.firstName}
+              lastName={user.lastName}
+              avatarDataUrl={user.avatarDataUrl}
+              size={32}
+            />
+            <div className="overflow-hidden">
+              <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
+              <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

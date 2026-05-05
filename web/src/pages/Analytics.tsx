@@ -25,6 +25,7 @@ interface Props {
   records: OrderRecord[];
   items: ItemRecord[];
   freq: Freq;
+  statusLabels: Record<string, string>;
 }
 
 const colMgr = createColumnHelper<ManagerRow>();
@@ -43,7 +44,7 @@ const customerCols = [
   colCust.accessor("revenue", { header: "Ingresos", cell: (i) => fmtUsd(i.getValue()) }),
 ];
 
-export function Analytics({ records, items, freq }: Props) {
+export function Analytics({ records, items, freq, statusLabels }: Props) {
   const [openSection, setOpenSection] = useState<string | null>(null);
 
   const totalRevenue = useMemo(() => records.reduce((s, r) => s + r.totalSumm, 0), [records]);
@@ -65,7 +66,7 @@ export function Analytics({ records, items, freq }: Props) {
   return (
     <div>
       <h2 className="text-2xl font-bold text-slate-800 mb-0.5">Analíticas · Pedidos</h2>
-      <p className="text-slate-500 text-sm mb-4">Estadísticas de todas las tiendas · Datos de pedidos recibidos · crm-license</p>
+      <p className="text-slate-500 text-sm mb-4">Estadísticas de todas las tiendas · Datos de pedidos recibidos</p>
 
       <SectionHeader>Resumen</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
@@ -88,7 +89,7 @@ export function Analytics({ records, items, freq }: Props) {
       <SectionHeader>Distribución</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-          <StatusPieChart data={statusData} />
+          <StatusPieChart data={statusData} statusLabels={statusLabels} />
         </div>
         <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
           <ManagerBarChart data={managerData} />

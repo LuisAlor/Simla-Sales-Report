@@ -1,31 +1,44 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { Layout } from "@/components/Layout";
 import { Analytics } from "@/pages/Analytics";
 import { Funnel } from "@/pages/Funnel";
-import { fetchOrders, fetchOrderTypes } from "@/lib/api";
+import { Login } from "@/pages/Login";
+import { AdminPanel } from "@/pages/AdminPanel";
+import { Profile } from "@/pages/Profile";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { fetchOrders, fetchUsers, fetchStatuses } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 
-const DEFAULT_FILTERS: Filters = {
-  apiKey: "",
-  dateFrom: dayjs().subtract(30, "day").format("YYYY-MM-DD"),
-  dateTo: dayjs().format("YYYY-MM-DD"),
-  freq: "D",
-  selectedTypes: ["crm-license"],
-  managerId: "",
-};
+function getDefaultFilters(savedFilters?: Record<string, unknown>, apiKey?: string): Filters {
+  return {
+    apiKey: apiKey ?? "",
+    dateFrom: (savedFilters?.dateFrom as string) ?? dayjs().subtract(30, "day").format("YYYY-MM-DD"),
+    dateTo: (savedFilters?.dateTo as string) ?? dayjs().format("YYYY-MM-DD"),
+    freq: (savedFilters?.freq as Filters["freq"]) ?? "D",
+    selectedTypes: (savedFilters?.selectedTypes as string[]) ?? ["crm-license"],
+    managerId: (savedFilters?.managerId as string) ?? "",
+    utmSource: (savedFilters?.utmSource as string) ?? "",
+    utmMedium: (savedFilters?.utmMedium as string) ?? "",
+  };
+}
 
 interface LoadedData {
   records: OrderRecord[];
   items: ItemRecord[];
 }
 
-export default function App() {
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+function AppInner() {
+  const { user, updateUser } = useAuth();
+
+  const [filters, setFilters] = useState<Filters>(() =>
+    getDefaultFilters(user?.savedFilters, user?.apiKey)
+  );
   const [loadKey, setLoadKey] = useState(0);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const queryClient = useQueryClient();
@@ -34,14 +47,32 @@ export default function App() {
     setFilters((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Fetch order types when API key is available
-  const { data: orderTypes = [] } = useQuery({
-    queryKey: ["orderTypes", filters.apiKey],
-    queryFn: () => fetchOrderTypes(filters.apiKey),
+  // Fetch managers when API key is available
+  const { data: managers = [] } = useQuery({
+    queryKey: ["users", filters.apiKey],
+    queryFn: () => fetchUsers(filters.apiKey),
     enabled: filters.apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
   });
+
+  // Fetch statuses when API key is available
+  const { data: statuses = [] } = useQuery({
+    queryKey: ["statuses", filters.apiKey],
+    queryFn: () => fetchStatuses(filters.apiKey),
+    enabled: filters.apiKey.length > 0,
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  // Build statusLabels map
+  const statusLabels = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const s of statuses) {
+      map[s.code] = s.name;
+    }
+    return map;
+  }, [statuses]);
 
   // Main data query — triggered by loadKey
   const {
@@ -60,6 +91,8 @@ export default function App() {
           dateTo: filters.dateTo,
           orderType: otype,
           managerId: filters.managerId ? parseInt(filters.managerId) : undefined,
+          utmSource: filters.utmSource || undefined,
+          utmMedium: filters.utmMedium || undefined,
           onProgress: (done, total) => setProgress({ done, total }),
         });
         allOrders.push(...fetched);
@@ -78,43 +111,87 @@ export default function App() {
     queryClient.removeQueries({ queryKey: ["orders"] });
     setProgress(null);
     setLoadKey((k) => k + 1);
-  }, [filters, queryClient]);
+
+    // Save filters and apiKey to user profile
+    if (user) {
+      const savedFilters: Record<string, unknown> = {
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        freq: filters.freq,
+        selectedTypes: filters.selectedTypes,
+        managerId: filters.managerId,
+        utmSource: filters.utmSource,
+        utmMedium: filters.utmMedium,
+      };
+      updateUser({ ...user, apiKey: filters.apiKey, savedFilters });
+    }
+  }, [filters, queryClient, user, updateUser]);
 
   const records = data?.records ?? [];
   const items = data?.items ?? [];
 
+  // Extract available UTMs from loaded orders
+  const availableUtms = useMemo(() => {
+    const sources = [...new Set(records.map((r) => r.utmSource).filter(Boolean))] as string[];
+    const mediums = [...new Set(records.map((r) => r.utmMedium).filter(Boolean))] as string[];
+    return { sources, mediums };
+  }, [records]);
+
+  const layoutProps = {
+    filters,
+    managers,
+    availableUtms,
+    onFiltersChange: handleFiltersChange,
+    onLoad: handleLoad,
+    loading: isFetching,
+  };
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout {...layoutProps} />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          index
+          element={
+            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
+              <Analytics records={records} items={items} freq={filters.freq} statusLabels={statusLabels} />
+            </PageShell>
+          }
+        />
+        <Route
+          path="/funnel"
+          element={
+            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
+              <Funnel records={records} freq={filters.freq} />
+            </PageShell>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          element={
-            <Layout
-              filters={filters}
-              orderTypes={orderTypes}
-              onFiltersChange={handleFiltersChange}
-              onLoad={handleLoad}
-              loading={isFetching}
-            />
-          }
-        >
-          <Route
-            index
-            element={
-              <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
-                <Analytics records={records} items={items} freq={filters.freq} />
-              </PageShell>
-            }
-          />
-          <Route
-            path="/funnel"
-            element={
-              <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
-                <Funnel records={records} freq={filters.freq} />
-              </PageShell>
-            }
-          />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

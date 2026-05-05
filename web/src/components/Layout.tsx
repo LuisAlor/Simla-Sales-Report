@@ -1,10 +1,16 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar, type Filters } from "./Sidebar";
-import type { OrderType } from "@/lib/api";
+import type { SimlaUser } from "@/lib/api";
+
+interface AvailableUtms {
+  sources: string[];
+  mediums: string[];
+}
 
 interface Props {
   filters: Filters;
-  orderTypes: OrderType[];
+  managers: SimlaUser[];
+  availableUtms: AvailableUtms;
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
   loading: boolean;
