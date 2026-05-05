@@ -40,7 +40,7 @@ function AppInner() {
   const [filters, setFilters] = useState<Filters>(() =>
     getDefaultFilters(user?.savedFilters)
   );
-  const [loadKey, setLoadKey] = useState(0);
+  const [loadKey, setLoadKey] = useState(1);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const queryClient = useQueryClient();
 
