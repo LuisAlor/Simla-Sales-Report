@@ -16,6 +16,7 @@ import streamlit as st
 
 from src.api.client import SimlaClient
 from src.api.orders import fetch_orders, line_items_to_records, orders_to_records
+from src.dashboard import funnel as funnel_page
 from src.dashboard.charts import (
     manager_bar,
     orders_count_bar,
@@ -221,6 +222,14 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown('<div class="nav-section">Navegación</div>', unsafe_allow_html=True)
+    page = st.radio(
+        "page",
+        ["📊 Analíticas generales", "🔻 Этапы воронки"],
+        label_visibility="collapsed",
+    )
+
+    st.divider()
     st.markdown('<div class="nav-section">Configuración</div>', unsafe_allow_html=True)
     api_key = st.text_input("API Key", type="password", placeholder="Ingresa tu API Key")
 
@@ -274,7 +283,8 @@ with st.sidebar:
 # Main content
 # ---------------------------------------------------------------------------
 
-st.markdown("<h2 style='color:#1E293B;margin-bottom:0'>Analíticas · Pedidos</h2>", unsafe_allow_html=True)
+_page_title = "Этапы воронки" if "воронки" in page else "Analíticas · Pedidos"
+st.markdown(f"<h2 style='color:#1E293B;margin-bottom:0'>{_page_title}</h2>", unsafe_allow_html=True)
 st.caption("Estadísticas de todas las tiendas · Datos de pedidos recibidos · crm-license")
 
 if not load:
@@ -331,6 +341,14 @@ df = to_orders_df(records)
 items_df = pd.DataFrame(items_records)
 if not items_df.empty:
     items_df["created_at"] = pd.to_datetime(items_df["created_at"])
+
+# ---------------------------------------------------------------------------
+# Route to funnel page
+# ---------------------------------------------------------------------------
+
+if "воронки" in page:
+    funnel_page.render(df, freq=freq)
+    st.stop()
 
 # ---------------------------------------------------------------------------
 # KPI tiles

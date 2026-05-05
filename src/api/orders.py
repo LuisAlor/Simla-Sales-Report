@@ -71,13 +71,45 @@ def fetch_orders(
     return orders
 
 
+def _cf(custom_fields: dict, key: str, default=None):
+    """Safely read a custom field value."""
+    return custom_fields.get(key, default)
+
+
+def _cf_float(custom_fields: dict, key: str) -> float:
+    try:
+        return float(custom_fields.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _cf_list(custom_fields: dict, key: str) -> list[str]:
+    """Return a multi-select custom field as a list of code strings."""
+    val = custom_fields.get(key)
+    if val is None:
+        return []
+    if isinstance(val, list):
+        # May be list of strings or list of dicts with 'code'
+        result = []
+        for item in val:
+            if isinstance(item, dict):
+                result.append(item.get("code", ""))
+            else:
+                result.append(str(item))
+        return [r for r in result if r]
+    if isinstance(val, str):
+        return [v.strip() for v in val.split(",") if v.strip()]
+    return []
+
+
 def flatten_order(order: dict) -> dict:
-    """
-    Extract analytics-relevant scalars from a raw order dict.
-    Returns a flat dict suitable for a pandas DataFrame row.
-    """
+    """Extract analytics-relevant scalars from a raw order dict."""
     manager = order.get("manager") or {}
     customer = order.get("customer") or {}
+    cf = order.get("customFields") or {}
+
+    popadal = _cf_list(cf, "popadal_v_statusy")
+
     return {
         "id": order.get("id"),
         "number": order.get("number"),
@@ -99,6 +131,23 @@ def flatten_order(order: dict) -> dict:
         # derived
         "item_count": len(order.get("items") or []),
         "margin": float(order.get("totalSumm") or 0) - float(order.get("purchaseSumm") or 0),
+        # custom fields — qualification
+        "cf_num_users":       _cf(cf, "crm_num_of_users_new"),
+        "cf_client_base":     _cf(cf, "tamano_de_base_de_clientes"),
+        "cf_leads_per_day":   _cf(cf, "leads_por_dia"),
+        "cf_sector":          _cf(cf, "sector"),
+        "cf_win_probability": _cf(cf, "win_probability"),
+        "cf_is_referral":     _cf(cf, "is_client_referral_order"),
+        "cf_returning":       _cf(cf, "cliente_retornado"),
+        "cf_prev_platform":   _cf(cf, "plataforma_previa"),
+        "cf_whatsapp_type":   _cf(cf, "tipo_de_whatsapp"),
+        "cf_segment":         _cf(cf, "segment_lida"),
+        # custom fields — financial
+        "cf_first_payment":   _cf_float(cf, "the_amount_of_the_first_payment"),
+        "cf_payment_period":  _cf_float(cf, "payment_first_period_license"),
+        "cf_refunded":        _cf_float(cf, "refunded_amount"),
+        # funnel history (multi-select list of codes)
+        "popadal_v_statusy":  popadal,
     }
 
 
