@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
@@ -46,8 +46,21 @@ function AppInner() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const queryClient = useQueryClient();
 
+  // Auto-save filters to user profile on every change so state survives page reloads
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => {
+    const u = userRef.current;
+    if (!u) return;
+    updateUser({ ...u, savedFilters: filters as unknown as Record<string, unknown> });
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleFiltersChange = useCallback((partial: Partial<Filters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setFilters(getDefaultFilters());
   }, []);
 
   // Auto-load statuses when API key available
@@ -205,6 +218,7 @@ function AppInner() {
     filterTemplates,
     onFiltersChange: handleFiltersChange,
     onLoad: handleLoad,
+    onReset: handleReset,
     onSaveTemplate: handleSaveTemplate,
     onApplyTemplate: handleApplyTemplate,
     onDeleteTemplate: handleDeleteTemplate,

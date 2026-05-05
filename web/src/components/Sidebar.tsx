@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { BarChart3, TrendingDown, Filter, ShieldCheck, LogOut } from "lucide-react";
+import { BarChart3, TrendingDown, Filter, ShieldCheck, LogOut, RotateCcw } from "lucide-react";
 import type { Freq } from "@/lib/transforms";
 import type { FilterTemplate } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
@@ -30,6 +30,7 @@ interface Props {
   filterTemplates: FilterTemplate[];
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
+  onReset: () => void;
   onSaveTemplate: (name: string) => void;
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
@@ -83,7 +84,7 @@ function CheckList({
 
 export function Sidebar({
   filters, managers, availableUtms, filterTemplates,
-  onFiltersChange, onLoad, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading,
+  onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading,
 }: Props) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -126,9 +127,18 @@ export function Sidebar({
 
       {/* Filters */}
       <div className="flex flex-col gap-3">
-        <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest flex items-center gap-1">
-          <Filter size={10} /> Filtros
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest flex items-center gap-1">
+            <Filter size={10} /> Filtros
+          </p>
+          <button
+            onClick={onReset}
+            title="Restablecer filtros"
+            className="text-slate-600 hover:text-slate-300 transition-colors"
+          >
+            <RotateCcw size={11} />
+          </button>
+        </div>
 
         <DateRangePicker
           dateFrom={filters.dateFrom}

@@ -14,6 +14,7 @@ interface Props {
   filterTemplates: FilterTemplate[];
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
+  onReset: () => void;
   onSaveTemplate: (name: string) => void;
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
