@@ -98,9 +98,10 @@ async function fetchPage(
   apiKey: string,
   topLevel: Record<string, string | number>,
   filter: Record<string, string | number>,
+  arrayFilter: Record<string, string[]>,
   page: number
 ): Promise<RawOrder[]> {
-  const data = await getJson<{ orders: RawOrder[] }>("orders", apiKey, { ...topLevel, page }, filter);
+  const data = await getJson<{ orders: RawOrder[] }>("orders", apiKey, { ...topLevel, page }, filter, arrayFilter);
   return data.orders ?? [];
 }
 
@@ -144,9 +145,7 @@ export interface FetchOrdersParams {
   dateFrom: string;
   dateTo: string;
   orderType?: string;
-  managerId?: number;
-  utmSource?: string;
-  utmMedium?: string;
+  managerIds?: number[];
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -157,9 +156,11 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
     createdAtTo: `${p.dateTo} 23:59:59`,
   };
   if (p.orderType) filter["orderType"] = p.orderType;
-  if (p.managerId) filter["managerId"] = p.managerId;
-  if (p.utmSource) filter["utmSource"] = p.utmSource;
-  if (p.utmMedium) filter["utmMedium"] = p.utmMedium;
+
+  const arrayFilter: Record<string, string[]> = {};
+  if (p.managerIds && p.managerIds.length > 0) {
+    arrayFilter["assignedIds"] = p.managerIds.map(String);
+  }
 
   const topLevel: Record<string, string | number> = { limit: PAGE_LIMIT };
 
@@ -168,7 +169,8 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
     "orders",
     p.apiKey,
     { ...topLevel, page: 1 },
-    filter
+    filter,
+    arrayFilter
   );
   const totalPages = first.pagination?.totalPageCount ?? 1;
   const results: Map<number, RawOrder[]> = new Map([[1, first.orders ?? []]]);
@@ -184,7 +186,7 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
       const batch = remaining.slice(i, i + WORKERS);
       const fetched = await Promise.all(
         batch.map((page) =>
-          fetchPage(p.apiKey, topLevel, filter, page).then((rows) => ({ page, rows }))
+          fetchPage(p.apiKey, topLevel, filter, arrayFilter, page).then((rows) => ({ page, rows }))
         )
       );
       for (const { page, rows } of fetched) {

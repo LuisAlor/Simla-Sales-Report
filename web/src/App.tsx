@@ -22,9 +22,9 @@ function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
     dateTo:   (savedFilters?.dateTo   as string) ?? dayjs().format("YYYY-MM-DD"),
     freq:     (savedFilters?.freq as Filters["freq"]) ?? "D",
     selectedTypes: (savedFilters?.selectedTypes as string[]) ?? ["crm-license"],
-    managerId: (savedFilters?.managerId as string) ?? "",
-    utmSource: (savedFilters?.utmSource as string) ?? "",
-    utmMedium: (savedFilters?.utmMedium as string) ?? "",
+    managerIds: (savedFilters?.managerIds as string[]) ?? [],
+    utmSources: (savedFilters?.utmSources as string[]) ?? [],
+    utmMediums: (savedFilters?.utmMediums as string[]) ?? [],
   };
 }
 
@@ -84,9 +84,7 @@ function AppInner() {
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           orderType: otype,
-          managerId: filters.managerId ? parseInt(filters.managerId) : undefined,
-          utmSource: filters.utmSource || undefined,
-          utmMedium: filters.utmMedium || undefined,
+          managerIds: filters.managerIds.length > 0 ? filters.managerIds.map(Number) : undefined,
           onProgress: (done, total) => setProgress({ done, total }),
         });
         allOrders.push(...fetched);
@@ -110,22 +108,22 @@ function AppInner() {
         dateTo: filters.dateTo,
         freq: filters.freq,
         selectedTypes: filters.selectedTypes,
-        managerId: filters.managerId,
-        utmSource: filters.utmSource,
-        utmMedium: filters.utmMedium,
+        managerIds: filters.managerIds,
+        utmSources: filters.utmSources,
+        utmMediums: filters.utmMediums,
       };
       updateUser({ ...user, savedFilters });
     }
   }, [filters, apiKey, queryClient, user, updateUser]);
 
-  const records = data?.records ?? [];
+  const allRecords = data?.records ?? [];
   const items = data?.items ?? [];
 
   // Extract available UTMs from loaded orders; fall back to saved UTMs
   const availableUtms = useMemo(() => {
     const fromOrders = {
-      sources: [...new Set(records.map((r) => r.utmSource).filter(Boolean))] as string[],
-      mediums: [...new Set(records.map((r) => r.utmMedium).filter(Boolean))] as string[],
+      sources: [...new Set(allRecords.map((r) => r.utmSource).filter(Boolean))] as string[],
+      mediums: [...new Set(allRecords.map((r) => r.utmMedium).filter(Boolean))] as string[],
     };
     // Persist newly discovered UTMs into user profile
     if (user && (fromOrders.sources.length > 0 || fromOrders.mediums.length > 0)) {
@@ -143,7 +141,19 @@ function AppInner() {
     }
     return user?.savedUtms ?? { sources: [], mediums: [] };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records]);
+  }, [allRecords]);
+
+  // Apply client-side UTM filters
+  const records = useMemo(() => {
+    let result = allRecords;
+    if (filters.utmSources.length > 0) {
+      result = result.filter((r) => r.utmSource && filters.utmSources.includes(r.utmSource));
+    }
+    if (filters.utmMediums.length > 0) {
+      result = result.filter((r) => r.utmMedium && filters.utmMediums.includes(r.utmMedium));
+    }
+    return result;
+  }, [allRecords, filters.utmSources, filters.utmMediums]);
 
   const layoutProps = {
     filters,
