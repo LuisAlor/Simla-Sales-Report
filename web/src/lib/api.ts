@@ -41,20 +41,31 @@ export interface OrderType {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function apiUrl(path: string, params: Record<string, string | number>): string {
-  // encodeURIComponent encodes spaces as %20 (not +), which Simla requires for date params
-  const qs = Object.entries(params)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-    .join("&");
-  return `${BASE}/${path}?${qs}`;
+// Build a query string. Top-level keys are sent as-is; nested filter fields
+// must use PHP bracket notation: filter[createdAtFrom]=... so the API parses them.
+function buildQs(
+  topLevel: Record<string, string | number>,
+  filter: Record<string, string | number> = {}
+): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(topLevel)) {
+    parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  }
+  for (const [k, v] of Object.entries(filter)) {
+    // Brackets must NOT be encoded — PHP/Simla expects literal filter[key]
+    parts.push(`filter[${k}]=${encodeURIComponent(String(v))}`);
+  }
+  return parts.join("&");
 }
 
 async function getJson<T>(
   path: string,
   apiKey: string,
-  params: Record<string, string | number> = {}
+  topLevel: Record<string, string | number> = {},
+  filter: Record<string, string | number> = {}
 ): Promise<T> {
-  const url = apiUrl(path, { ...params, apiKey });
+  const qs = buildQs({ ...topLevel, apiKey }, filter);
+  const url = `${BASE}/${path}?${qs}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${url}`);
   return res.json() as Promise<T>;
@@ -62,14 +73,11 @@ async function getJson<T>(
 
 async function fetchPage(
   apiKey: string,
-  params: Record<string, string | number>,
+  topLevel: Record<string, string | number>,
+  filter: Record<string, string | number>,
   page: number
 ): Promise<RawOrder[]> {
-  const data = await getJson<{ orders: RawOrder[] }>("orders", apiKey, {
-    ...params,
-    page,
-    limit: PAGE_LIMIT,
-  });
+  const data = await getJson<{ orders: RawOrder[] }>("orders", apiKey, { ...topLevel, page }, filter);
   return data.orders ?? [];
 }
 
@@ -78,7 +86,7 @@ async function fetchPage(
 // ---------------------------------------------------------------------------
 
 export async function fetchOrderTypes(apiKey: string): Promise<OrderType[]> {
-  const data = await getJson<{ orderTypes: OrderType[] }>("order-types", apiKey);
+  const data = await getJson<{ orderTypes: OrderType[] }>("order-types", apiKey, {}, {});
   return data.orderTypes ?? [];
 }
 
@@ -92,19 +100,22 @@ export interface FetchOrdersParams {
 }
 
 export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
-  const params: Record<string, string | number> = {
+  // Filter fields go under filter[...] bracket notation — flat params are ignored by Simla
+  const filter: Record<string, string | number> = {
     createdAtFrom: `${p.dateFrom} 00:00:00`,
     createdAtTo: `${p.dateTo} 23:59:59`,
-    limit: PAGE_LIMIT,
   };
-  if (p.orderType) params["orderType"] = p.orderType;
-  if (p.managerId) params["managerId"] = p.managerId;
+  if (p.orderType) filter["orderType"] = p.orderType;
+  if (p.managerId) filter["managerId"] = p.managerId;
+
+  const topLevel: Record<string, string | number> = { limit: PAGE_LIMIT };
 
   // Page 1 to discover total pages
   const first = await getJson<{ orders: RawOrder[]; pagination: { totalPageCount: number } }>(
     "orders",
     p.apiKey,
-    { ...params, page: 1 }
+    { ...topLevel, page: 1 },
+    filter
   );
   const totalPages = first.pagination?.totalPageCount ?? 1;
   const results: Map<number, RawOrder[]> = new Map([[1, first.orders ?? []]]);
@@ -119,7 +130,9 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
     for (let i = 0; i < remaining.length; i += WORKERS) {
       const batch = remaining.slice(i, i + WORKERS);
       const fetched = await Promise.all(
-        batch.map((page) => fetchPage(p.apiKey, params, page).then((rows) => ({ page, rows })))
+        batch.map((page) =>
+          fetchPage(p.apiKey, topLevel, filter, page).then((rows) => ({ page, rows }))
+        )
       );
       for (const { page, rows } of fetched) {
         results.set(page, rows);

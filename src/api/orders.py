@@ -38,20 +38,21 @@ def fetch_orders(
     manager_id: int | None = None,
 ) -> list[dict]:
     """Return a flat list of all matching orders (all pages)."""
-    params: dict = {}
+    # Simla v5 requires filter fields under filter[...] bracket notation
+    filter_: dict = {}
     if date_from:
-        params["createdAtFrom"] = date_from.strftime("%Y-%m-%d 00:00:00")
+        filter_["filter[createdAtFrom]"] = date_from.strftime("%Y-%m-%d 00:00:00")
     if date_to:
-        params["createdAtTo"] = date_to.strftime("%Y-%m-%d 23:59:59")
+        filter_["filter[createdAtTo]"] = date_to.strftime("%Y-%m-%d 23:59:59")
     if status:
-        params["status"] = status
+        filter_["filter[status]"] = status
     if order_type:
-        params["orderType"] = order_type
+        filter_["filter[orderType]"] = order_type
     if manager_id:
-        params["managerId"] = manager_id
+        filter_["filter[managerId]"] = manager_id
 
     orders: list[dict] = []
-    for page in _iter_pages(client, params):
+    for page in _iter_pages(client, filter_):
         orders.extend(page)
     return orders
 
