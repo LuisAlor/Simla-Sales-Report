@@ -8,6 +8,7 @@ export interface User {
   avatarDataUrl?: string;
   apiKey?: string;
   savedFilters?: Record<string, unknown>;
+  savedUtms?: { sources: string[]; mediums: string[] };
 }
 
 const STORAGE_KEY = "simla_users";

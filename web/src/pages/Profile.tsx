@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar } from "@/components/Avatar";
+import { fetchUsers } from "@/lib/api";
 import type { User } from "@/lib/auth";
 
 export function Profile() {
@@ -12,6 +13,9 @@ export function Profile() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [apiKeyInput, setApiKeyInput] = useState(user?.apiKey ?? "");
+  const [apiKeyStatus, setApiKeyStatus] = useState<"idle" | "validating" | "ok" | "error">("idle");
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -46,18 +50,14 @@ export function Profile() {
       return;
     }
 
-    // Password change validation
-    if (newPassword || confirmPassword || currentPassword) {
+    // Password change validation — only if user intends to change password
+    if (newPassword) {
       if (!currentPassword) {
         setError("Debes ingresar tu contraseña actual para cambiarla.");
         return;
       }
       if (safeUser.password !== currentPassword) {
         setError("La contraseña actual es incorrecta.");
-        return;
-      }
-      if (!newPassword) {
-        setError("La nueva contraseña no puede estar vacía.");
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -79,6 +79,20 @@ export function Profile() {
     setNewPassword("");
     setConfirmPassword("");
     setSuccess(true);
+  }
+
+  async function handleSaveApiKey() {
+    if (!apiKeyInput.trim()) return;
+    setApiKeyStatus("validating");
+    setApiKeyError(null);
+    try {
+      await fetchUsers(apiKeyInput.trim());
+      updateUser({ ...safeUser, apiKey: apiKeyInput.trim() });
+      setApiKeyStatus("ok");
+    } catch {
+      setApiKeyStatus("error");
+      setApiKeyError("API Key inválida o sin conexión. Verifica e intenta de nuevo.");
+    }
   }
 
   return (
@@ -107,6 +121,31 @@ export function Profile() {
           className="hidden"
           onChange={handleFileChange}
         />
+      </div>
+
+      {/* API Key section */}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 mb-4">
+        <h3 className="text-sm font-semibold text-slate-700 mb-1">Configuración de API</h3>
+        <p className="text-slate-400 text-xs mb-3">La API Key se usa para conectar con Simla CRM. Se guarda de forma privada en tu perfil.</p>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={apiKeyInput}
+            onChange={(e) => { setApiKeyInput(e.target.value); setApiKeyStatus("idle"); }}
+            placeholder="Ingresa tu API Key"
+            className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal"
+          />
+          <button
+            type="button"
+            onClick={handleSaveApiKey}
+            disabled={apiKeyStatus === "validating" || !apiKeyInput.trim()}
+            className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors"
+          >
+            {apiKeyStatus === "validating" ? "Validando…" : "Guardar"}
+          </button>
+        </div>
+        {apiKeyStatus === "ok" && <p className="text-green-600 text-xs mt-2">✓ API Key válida y guardada.</p>}
+        {apiKeyStatus === "error" && <p className="text-red-600 text-xs mt-2">{apiKeyError}</p>}
       </div>
 
       {/* Profile form */}

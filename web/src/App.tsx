@@ -8,6 +8,7 @@ import { Funnel } from "@/pages/Funnel";
 import { Login } from "@/pages/Login";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Profile } from "@/pages/Profile";
+import { ApiSetup } from "@/pages/ApiSetup";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { fetchOrders, fetchUsers, fetchStatuses } from "@/lib/api";
@@ -15,12 +16,11 @@ import { flattenAll } from "@/lib/flatten";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 
-function getDefaultFilters(savedFilters?: Record<string, unknown>, apiKey?: string): Filters {
+function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
   return {
-    apiKey: apiKey ?? "",
     dateFrom: (savedFilters?.dateFrom as string) ?? dayjs().subtract(30, "day").format("YYYY-MM-DD"),
-    dateTo: (savedFilters?.dateTo as string) ?? dayjs().format("YYYY-MM-DD"),
-    freq: (savedFilters?.freq as Filters["freq"]) ?? "D",
+    dateTo:   (savedFilters?.dateTo   as string) ?? dayjs().format("YYYY-MM-DD"),
+    freq:     (savedFilters?.freq as Filters["freq"]) ?? "D",
     selectedTypes: (savedFilters?.selectedTypes as string[]) ?? ["crm-license"],
     managerId: (savedFilters?.managerId as string) ?? "",
     utmSource: (savedFilters?.utmSource as string) ?? "",
@@ -35,9 +35,10 @@ interface LoadedData {
 
 function AppInner() {
   const { user, updateUser } = useAuth();
+  const apiKey = user?.apiKey ?? "";
 
   const [filters, setFilters] = useState<Filters>(() =>
-    getDefaultFilters(user?.savedFilters, user?.apiKey)
+    getDefaultFilters(user?.savedFilters)
   );
   const [loadKey, setLoadKey] = useState(0);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -47,46 +48,39 @@ function AppInner() {
     setFilters((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Fetch managers when API key is available
+  // Auto-load managers when API key available
   const { data: managers = [] } = useQuery({
-    queryKey: ["users", filters.apiKey],
-    queryFn: () => fetchUsers(filters.apiKey),
-    enabled: filters.apiKey.length > 0,
+    queryKey: ["users", apiKey],
+    queryFn: () => fetchUsers(apiKey),
+    enabled: apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
   });
 
-  // Fetch statuses when API key is available
+  // Auto-load statuses when API key available
   const { data: statuses = [] } = useQuery({
-    queryKey: ["statuses", filters.apiKey],
-    queryFn: () => fetchStatuses(filters.apiKey),
-    enabled: filters.apiKey.length > 0,
+    queryKey: ["statuses", apiKey],
+    queryFn: () => fetchStatuses(apiKey),
+    enabled: apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
   });
 
-  // Build statusLabels map
   const statusLabels = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
-    for (const s of statuses) {
-      map[s.code] = s.name;
-    }
+    for (const s of statuses) map[s.code] = s.name;
     return map;
   }, [statuses]);
 
   // Main data query — triggered by loadKey
-  const {
-    data,
-    isFetching,
-    error,
-  } = useQuery<LoadedData>({
+  const { data, isFetching, error } = useQuery<LoadedData>({
     queryKey: ["orders", loadKey],
     queryFn: async () => {
       const typesToFetch = filters.selectedTypes.length > 0 ? filters.selectedTypes : [undefined];
       const allOrders = [];
       for (const otype of typesToFetch) {
         const fetched = await fetchOrders({
-          apiKey: filters.apiKey,
+          apiKey,
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           orderType: otype,
@@ -98,21 +92,18 @@ function AppInner() {
         allOrders.push(...fetched);
       }
       setProgress(null);
-      const { records, items } = flattenAll(allOrders);
-      return { records, items };
+      return flattenAll(allOrders);
     },
-    enabled: loadKey > 0 && filters.apiKey.length > 0,
+    enabled: loadKey > 0 && apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
   });
 
   const handleLoad = useCallback(() => {
-    if (!filters.apiKey) return;
+    if (!apiKey) return;
     queryClient.removeQueries({ queryKey: ["orders"] });
     setProgress(null);
     setLoadKey((k) => k + 1);
-
-    // Save filters and apiKey to user profile
     if (user) {
       const savedFilters: Record<string, unknown> = {
         dateFrom: filters.dateFrom,
@@ -123,18 +114,35 @@ function AppInner() {
         utmSource: filters.utmSource,
         utmMedium: filters.utmMedium,
       };
-      updateUser({ ...user, apiKey: filters.apiKey, savedFilters });
+      updateUser({ ...user, savedFilters });
     }
-  }, [filters, queryClient, user, updateUser]);
+  }, [filters, apiKey, queryClient, user, updateUser]);
 
   const records = data?.records ?? [];
   const items = data?.items ?? [];
 
-  // Extract available UTMs from loaded orders
+  // Extract available UTMs from loaded orders; fall back to saved UTMs
   const availableUtms = useMemo(() => {
-    const sources = [...new Set(records.map((r) => r.utmSource).filter(Boolean))] as string[];
-    const mediums = [...new Set(records.map((r) => r.utmMedium).filter(Boolean))] as string[];
-    return { sources, mediums };
+    const fromOrders = {
+      sources: [...new Set(records.map((r) => r.utmSource).filter(Boolean))] as string[],
+      mediums: [...new Set(records.map((r) => r.utmMedium).filter(Boolean))] as string[],
+    };
+    // Persist newly discovered UTMs into user profile
+    if (user && (fromOrders.sources.length > 0 || fromOrders.mediums.length > 0)) {
+      const merged = {
+        sources: [...new Set([...(user.savedUtms?.sources ?? []), ...fromOrders.sources])],
+        mediums: [...new Set([...(user.savedUtms?.mediums ?? []), ...fromOrders.mediums])],
+      };
+      if (
+        merged.sources.length !== (user.savedUtms?.sources?.length ?? 0) ||
+        merged.mediums.length !== (user.savedUtms?.mediums?.length ?? 0)
+      ) {
+        updateUser({ ...user, savedUtms: merged });
+      }
+      return merged;
+    }
+    return user?.savedUtms ?? { sources: [], mediums: [] };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records]);
 
   const layoutProps = {
@@ -145,6 +153,16 @@ function AppInner() {
     onLoad: handleLoad,
     loading: isFetching,
   };
+
+  // Block access until API key is configured (after login)
+  if (!apiKey) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<ProtectedRoute><ApiSetup /></ProtectedRoute>} />
+      </Routes>
+    );
+  }
 
   return (
     <Routes>
@@ -233,7 +251,7 @@ function PageShell({ loading, progress, error, hasData, loaded, children }: Shel
   if (!loaded) {
     return (
       <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-lg p-4 text-sm">
-        Introduce tu API Key en el panel lateral y pulsa <strong>Cargar datos</strong>.
+        Selecciona los filtros en el panel lateral y pulsa <strong>Cargar datos</strong>.
       </div>
     );
   }

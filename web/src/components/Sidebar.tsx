@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { BarChart3, TrendingDown, Settings, Filter, ShieldCheck } from "lucide-react";
+import { BarChart3, TrendingDown, Filter, ShieldCheck } from "lucide-react";
 import dayjs from "dayjs";
 import type { Freq } from "@/lib/transforms";
 import type { SimlaUser } from "@/lib/api";
@@ -7,7 +7,6 @@ import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface Filters {
-  apiKey: string;
   dateFrom: string;
   dateTo: string;
   freq: Freq;
@@ -101,23 +100,6 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
             </NavLink>
           )}
         </nav>
-      </div>
-
-      <hr className="border-navy-border" />
-
-      {/* API Key */}
-      <div>
-        <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest mb-2 flex items-center gap-1">
-          <Settings size={10} /> Configuración
-        </p>
-        <label className="block text-slate-400 text-xs mb-1">API Key</label>
-        <input
-          type="password"
-          value={filters.apiKey}
-          onChange={(e) => onFiltersChange({ apiKey: e.target.value })}
-          placeholder="Ingresa tu API Key"
-          className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal placeholder:text-slate-600"
-        />
       </div>
 
       <hr className="border-navy-border" />
@@ -237,9 +219,15 @@ export function Sidebar({ filters, managers, availableUtms, onFiltersChange, onL
       </div>
 
       <div className="mt-auto flex flex-col gap-3">
+        {!user?.apiKey && (
+          <p className="text-amber-400 text-xs text-center">
+            Configura tu API Key en{" "}
+            <button className="underline" onClick={() => navigate("/profile")}>Mi perfil</button>
+          </p>
+        )}
         <button
           onClick={onLoad}
-          disabled={loading || !filters.apiKey}
+          disabled={loading || !user?.apiKey}
           className="w-full bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm py-2 rounded-md transition-colors"
         >
           {loading ? "Cargando…" : "Cargar datos"}
