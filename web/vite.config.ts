@@ -11,5 +11,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      "/api/v5": {
+        target: "https://base.simla.com",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 });

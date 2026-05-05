@@ -1,4 +1,4 @@
-const BASE = "https://base.simla.com/api/v5";
+const BASE = "/api/v5";
 const PAGE_LIMIT = 100;
 const WORKERS = 10;
 
@@ -42,11 +42,10 @@ export interface OrderType {
 // ---------------------------------------------------------------------------
 
 function apiUrl(path: string, params: Record<string, string | number>): string {
-  const u = new URL(`${BASE}/${path}`);
-  for (const [k, v] of Object.entries(params)) {
-    u.searchParams.set(k, String(v));
-  }
-  return u.toString();
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
+  ).toString();
+  return `${BASE}/${path}?${qs}`;
 }
 
 async function getJson<T>(
