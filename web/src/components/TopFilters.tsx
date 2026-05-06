@@ -24,14 +24,14 @@ interface Props {
 }
 
 const ORDER_TYPES = [
-  { code: "crm-license",         label: "💡 License" },
-  { code: "sales-and-marketing", label: "🎯 Sales"   },
+  { code: "crm-license",         label: "💡 System License"    },
+  { code: "sales-and-marketing", label: "🎯 Sales & Marketing" },
 ];
 
 const FREQ_OPTIONS: { label: string; value: Freq }[] = [
-  { label: "D", value: "D"  },
-  { label: "S", value: "W"  },
-  { label: "M", value: "ME" },
+  { label: "Día",  value: "D"  },
+  { label: "Sem",  value: "W"  },
+  { label: "Mes",  value: "ME" },
 ];
 
 function sortedStr(arr: string[]) { return [...arr].sort().join("\0"); }
@@ -107,91 +107,107 @@ export function TopFilters({
 
         {!collapsed && (<>
 
-        {/* Date range — compact single button */}
-        <DateRangePicker
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onChange={(from, to) => onFiltersChange({ dateFrom: from, dateTo: to })}
-          compact
-        />
+        {/* Labeled filter groups — all aligned to bottom */}
+        <div className="flex items-end gap-3 flex-wrap flex-1">
 
-        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
+          {/* Período */}
+          <div className="flex flex-col gap-1 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Período</span>
+            <DateRangePicker
+              dateFrom={filters.dateFrom}
+              dateTo={filters.dateTo}
+              onChange={(from, to) => onFiltersChange({ dateFrom: from, dateTo: to })}
+              compact
+            />
+          </div>
 
-        {/* Frequency tabs */}
-        <div className="flex rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden shrink-0">
-          {FREQ_OPTIONS.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => onFiltersChange({ freq: o.value })}
-              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filters.freq === o.value
-                  ? "bg-brand-blue text-white"
-                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+          <div className="w-px h-7 bg-slate-200 dark:bg-gray-700 shrink-0 self-end mb-0.5" />
 
-        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
+          {/* Agrupación */}
+          <div className="flex flex-col gap-1 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Agrupación</span>
+            <div className="flex rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden">
+              {FREQ_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => onFiltersChange({ freq: o.value })}
+                  className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    filters.freq === o.value
+                      ? "bg-brand-blue text-white"
+                      : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Order type pills */}
-        <div className="flex items-center gap-1 shrink-0">
-          {ORDER_TYPES.map((t) => {
-            const active = filters.selectedTypes.includes(t.code);
-            return (
-              <button
-                key={t.code}
-                onClick={() => toggleType(t.code)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
-                  active
-                    ? "bg-teal/10 border-teal text-teal"
-                    : "border-slate-200 dark:border-gray-700 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-600 dark:hover:text-slate-300"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
+          <div className="w-px h-7 bg-slate-200 dark:bg-gray-700 shrink-0 self-end mb-0.5" />
 
-        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
+          {/* Tipo de pedido */}
+          <div className="flex flex-col gap-1 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Tipo de pedido</span>
+            <div className="flex items-center gap-1">
+              {ORDER_TYPES.map((t) => {
+                const active = filters.selectedTypes.includes(t.code);
+                return (
+                  <button
+                    key={t.code}
+                    onClick={() => toggleType(t.code)}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                      active
+                        ? "bg-teal/10 border-teal text-teal"
+                        : "border-slate-200 dark:border-gray-700 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-600 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* Managers */}
-        <div className="w-44 shrink-0">
-          <MultiSelect
-            variant="light"
-            options={managers}
-            selected={filters.managerIds}
-            onChange={(next) => onFiltersChange({ managerIds: next })}
-            placeholder="Asesores"
-            emptyLabel="Carga datos primero"
-          />
-        </div>
+          <div className="w-px h-7 bg-slate-200 dark:bg-gray-700 shrink-0 self-end mb-0.5" />
 
-        {/* UTM Source */}
-        <div className="w-36 shrink-0">
-          <MultiSelect
-            variant="light"
-            options={availableUtms.sources.map((s) => ({ value: s, label: s }))}
-            selected={filters.utmSources}
-            onChange={(next) => onFiltersChange({ utmSources: next })}
-            placeholder="UTM Source"
-            emptyLabel="Sin datos"
-          />
-        </div>
+          {/* Asesor */}
+          <div className="flex flex-col gap-1 w-44 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Asesor</span>
+            <MultiSelect
+              variant="light"
+              options={managers}
+              selected={filters.managerIds}
+              onChange={(next) => onFiltersChange({ managerIds: next })}
+              placeholder="Todos"
+              emptyLabel="Carga datos primero"
+            />
+          </div>
 
-        {/* UTM Medium */}
-        <div className="w-36 shrink-0">
-          <MultiSelect
-            variant="light"
-            options={availableUtms.mediums.map((m) => ({ value: m, label: m }))}
-            selected={filters.utmMediums}
-            onChange={(next) => onFiltersChange({ utmMediums: next })}
-            placeholder="UTM Medium"
-            emptyLabel="Sin datos"
-          />
+          {/* UTM Source */}
+          <div className="flex flex-col gap-1 w-36 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">UTM Source</span>
+            <MultiSelect
+              variant="light"
+              options={availableUtms.sources.map((s) => ({ value: s, label: s }))}
+              selected={filters.utmSources}
+              onChange={(next) => onFiltersChange({ utmSources: next })}
+              placeholder="Todos"
+              emptyLabel="Sin datos"
+            />
+          </div>
+
+          {/* UTM Medium */}
+          <div className="flex flex-col gap-1 w-36 shrink-0">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">UTM Medium</span>
+            <MultiSelect
+              variant="light"
+              options={availableUtms.mediums.map((m) => ({ value: m, label: m }))}
+              selected={filters.utmMediums}
+              onChange={(next) => onFiltersChange({ utmMediums: next })}
+              placeholder="Todos"
+              emptyLabel="Sin datos"
+            />
+          </div>
         </div>
 
         {/* Right: cache indicator + reset + load */}

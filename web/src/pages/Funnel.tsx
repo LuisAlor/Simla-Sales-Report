@@ -85,8 +85,8 @@ export function Funnel({ records, freq }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-0.5">Etapas del embudo</h2>
-      <p className="text-slate-500 text-sm mb-4">Análisis del embudo de ventas · crm-license</p>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">Etapas del embudo</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Análisis del embudo de ventas · crm-license</p>
 
       <SectionHeader>Registros CRM</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
