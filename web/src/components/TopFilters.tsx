@@ -287,7 +287,7 @@ export function TopFilters({
         </div>
 
         {/* Action buttons */}
-        <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
+        <div className="flex items-center gap-1 shrink-0 self-center">
           <button onClick={onReset} title="Restablecer todos los filtros" className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
             <X size={13} />
           </button>
