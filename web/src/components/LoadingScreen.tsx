@@ -67,16 +67,16 @@ export function LoadingScreen({ progress }: Props) {
     <div className="flex flex-col items-center justify-center flex-1 min-h-[70vh] gap-6 select-none">
 
       {/* Mock chart panel */}
-      <div className="relative bg-white rounded-2xl shadow-md border border-slate-100 p-5 w-[340px]">
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-slate-100 dark:border-gray-700 p-5 w-[340px]">
         {/* Panel header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-brand-blue animate-pulse" />
-            <span className="text-xs font-semibold text-slate-500 tracking-wide">Ingresos por período</span>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wide">Ingresos por período</span>
           </div>
           <div className="flex gap-1">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-gray-600" />
             ))}
           </div>
         </div>
@@ -86,7 +86,7 @@ export function LoadingScreen({ progress }: Props) {
           {[0.25, 0.5, 0.75].map((t) => (
             <div
               key={t}
-              className="absolute left-0 right-0 border-t border-dashed border-slate-100"
+              className="absolute left-0 right-0 border-t border-dashed border-slate-100 dark:border-gray-700"
               style={{ bottom: `${t * 100}%` }}
             />
           ))}
@@ -217,18 +217,18 @@ export function LoadingScreen({ progress }: Props) {
             </defs>
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-slate-700 font-bold text-sm">
+            <span className="text-slate-700 dark:text-slate-200 font-bold text-sm">
               {progress ? `${pct}%` : "···"}
             </span>
           </div>
         </div>
 
         <div>
-          <p className="text-slate-600 text-sm font-medium">
+          <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">
             {progress ? `Página ${progress.done} de ${progress.total}` : "Conectando con Simla…"}
           </p>
           {progress && (
-            <p className="text-slate-400 text-xs mt-0.5">{pct}% completado</p>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5">{pct}% completado</p>
           )}
         </div>
       </div>

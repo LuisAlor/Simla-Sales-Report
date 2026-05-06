@@ -1,6 +1,8 @@
 import ReactECharts from "echarts-for-react";
 import type { StatusRow } from "@/lib/transforms";
 import { PALETTE } from "@/lib/mappings";
+import { useIsDark } from "@/contexts/ThemeContext";
+import { chartTheme } from "@/lib/chartTheme";
 
 interface Props {
   data: StatusRow[];
@@ -8,9 +10,10 @@ interface Props {
 }
 
 export function StatusPieChart({ data, statusLabels = {} }: Props) {
+  const c = chartTheme(useIsDark());
   const option = {
-    backgroundColor: "#fff",
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+    backgroundColor: c.bg,
+    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)", ...c.tooltip },
     legend: {
       type: "scroll",
       orient: "vertical",
@@ -19,8 +22,8 @@ export function StatusPieChart({ data, statusLabels = {} }: Props) {
       bottom: 8,
       width: "52%",
       pageIconSize: 10,
-      pageTextStyle: { color: "#94A3B8", fontSize: 10 },
-      textStyle: { color: "#64748B", fontSize: 11 },
+      pageTextStyle: { color: c.axisLabel, fontSize: 10 },
+      textStyle: { color: c.axisLabel, fontSize: 11 },
       itemGap: 6,
     },
     color: PALETTE,
@@ -40,7 +43,7 @@ export function StatusPieChart({ data, statusLabels = {} }: Props) {
     ],
     title: {
       text: "Pedidos por estado",
-      textStyle: { fontSize: 14, color: "#1E293B" },
+      textStyle: { fontSize: 14, color: c.title },
       top: 8,
       left: 12,
     },

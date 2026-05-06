@@ -65,8 +65,8 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-0.5">Analíticas · Pedidos</h2>
-      <p className="text-slate-500 text-sm mb-4">Estadísticas de todas las tiendas · Datos de pedidos recibidos</p>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">Analíticas · Pedidos</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Estadísticas de todas las tiendas · Datos de pedidos recibidos</p>
 
       <SectionHeader>Resumen</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
@@ -78,20 +78,20 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
 
       <SectionHeader>Evolución temporal</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <RevenueLineChart data={ts} />
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <OrdersBarChart data={ts} />
         </div>
       </div>
 
       <SectionHeader>Distribución</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <StatusPieChart data={statusData} statusLabels={statusLabels} />
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <ManagerBarChart data={managerData} />
         </div>
       </div>
@@ -111,13 +111,13 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
           { key: "repeat", label: "Clientes recurrentes" },
           { key: "manager", label: "Desglose por asesor" },
         ].map(({ key, label }) => (
-          <div key={key} className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+          <div key={key} className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
             <button
               onClick={() => toggle(key)}
-              className="w-full flex justify-between items-center px-4 py-3 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors"
+              className="w-full flex justify-between items-center px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors"
             >
               {label}
-              <span className="text-slate-400">{openSection === key ? "▲" : "▼"}</span>
+              <span className="text-slate-400 dark:text-slate-500">{openSection === key ? "▲" : "▼"}</span>
             </button>
             {openSection === key && (
               <div className="p-3">

@@ -12,6 +12,7 @@ import { ApiSetup } from "@/pages/ApiSetup";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { fetchOrders, fetchStatuses, fetchDictionaryOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import { makeKey, readCache, writeCache, clearCache } from "@/lib/ordersCache";
@@ -336,9 +337,11 @@ function AppInner() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppInner />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppInner />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
@@ -357,7 +360,7 @@ function PageShell({ loading, progress, error, hasData, loaded, children }: Shel
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg p-4 text-sm">
         <strong>Error de API:</strong> {(error as Error).message}
       </div>
     );
@@ -365,7 +368,7 @@ function PageShell({ loading, progress, error, hasData, loaded, children }: Shel
 
   if (!loaded) {
     return (
-      <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-lg p-4 text-sm">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg p-4 text-sm">
         Selecciona los filtros en el panel lateral y pulsa <strong>Cargar datos</strong>.
       </div>
     );
@@ -390,13 +393,13 @@ function EmptyState() {
       {/* Animated chart with zero-data bars */}
       <div className="relative">
         {/* Ghost chart frame */}
-        <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 px-8 py-6 w-72">
+        <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-slate-100 dark:border-gray-700 px-8 py-6 w-72">
           {/* Dashed grid lines */}
           <div className="absolute inset-x-8 top-6 bottom-10 pointer-events-none">
             {[0.33, 0.66].map((t) => (
               <div
                 key={t}
-                className="absolute left-0 right-0 border-t border-dashed border-slate-100"
+                className="absolute left-0 right-0 border-t border-dashed border-slate-100 dark:border-gray-700"
                 style={{ bottom: `${t * 100}%` }}
               />
             ))}
@@ -407,7 +410,7 @@ function EmptyState() {
             {EMPTY_BARS.map((h, i) => (
               <div
                 key={i}
-                className="flex-1 rounded-t bg-slate-100"
+                className="flex-1 rounded-t bg-slate-100 dark:bg-gray-700"
                 style={{
                   height: `${h * 30}%`,
                   animation: `emptyPulse 2s ease-in-out ${i * 150}ms infinite`,
@@ -417,11 +420,11 @@ function EmptyState() {
           </div>
 
           {/* X-axis line */}
-          <div className="h-px bg-slate-100 mt-1" />
+          <div className="h-px bg-slate-100 dark:bg-gray-700 mt-1" />
 
           {/* Floating magnifying glass badge */}
           <div
-            className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center"
+            className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-md border border-slate-100 dark:border-gray-700 flex items-center justify-center"
             style={{ animation: "floatBadge 3s ease-in-out infinite" }}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -436,8 +439,8 @@ function EmptyState() {
 
       {/* Text */}
       <div className="text-center">
-        <p className="text-slate-700 font-semibold text-base">Sin resultados</p>
-        <p className="text-slate-400 text-sm mt-1 max-w-xs">
+        <p className="text-slate-700 dark:text-slate-200 font-semibold text-base">Sin resultados</p>
+        <p className="text-slate-400 dark:text-slate-500 text-sm mt-1 max-w-xs">
           No hay pedidos para los filtros activos. Intenta ampliar el rango de fechas o ajustar los filtros.
         </p>
       </div>

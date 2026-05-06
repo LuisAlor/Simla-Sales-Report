@@ -255,7 +255,9 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
           <button
             onClick={() => openFor("from")}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border transition-colors whitespace-nowrap ${
-              open ? "border-brand-blue text-slate-700 bg-blue-50" : "border-slate-200 text-slate-600 hover:border-slate-300 bg-white"
+              open
+                ? "border-brand-blue text-slate-700 dark:text-slate-200 bg-blue-50 dark:bg-blue-900/20"
+                : "border-slate-200 dark:border-gray-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800"
             }`}
           >
             <Calendar size={11} className="text-slate-400 shrink-0" />

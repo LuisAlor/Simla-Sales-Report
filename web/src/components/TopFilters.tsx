@@ -73,7 +73,7 @@ export function TopFilters({
   }
 
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm shrink-0">
+    <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
 
       {/* ── Main filter row ── */}
       <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
@@ -86,10 +86,10 @@ export function TopFilters({
           compact
         />
 
-        <div className="w-px h-5 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
         {/* Frequency tabs */}
-        <div className="flex rounded-md border border-slate-200 overflow-hidden shrink-0">
+        <div className="flex rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden shrink-0">
           {FREQ_OPTIONS.map((o) => (
             <button
               key={o.value}
@@ -97,7 +97,7 @@ export function TopFilters({
               className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filters.freq === o.value
                   ? "bg-brand-blue text-white"
-                  : "text-slate-500 hover:bg-slate-50"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-gray-800"
               }`}
             >
               {o.label}
@@ -105,7 +105,7 @@ export function TopFilters({
           ))}
         </div>
 
-        <div className="w-px h-5 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
         {/* Order type pills */}
         <div className="flex items-center gap-1 shrink-0">
@@ -118,7 +118,7 @@ export function TopFilters({
                 className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
                   active
                     ? "bg-teal/10 border-teal text-teal"
-                    : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+                    : "border-slate-200 dark:border-gray-700 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-600 dark:hover:text-slate-300"
                 }`}
               >
                 {t.label}
@@ -127,7 +127,7 @@ export function TopFilters({
           })}
         </div>
 
-        <div className="w-px h-5 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
         {/* Managers */}
         <div className="w-44 shrink-0">
@@ -177,7 +177,7 @@ export function TopFilters({
           <button
             onClick={onReset}
             title="Restablecer filtros"
-            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
           >
             <RotateCcw size={13} />
           </button>
@@ -194,12 +194,12 @@ export function TopFilters({
 
       {/* ── Templates row ── */}
       {(hasTemplates || !isCurrentSaved) && (
-        <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 bg-slate-50 overflow-x-auto">
-          <span className="flex items-center gap-1 text-slate-400 text-[10px] font-semibold uppercase tracking-wide shrink-0">
+        <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
+          <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
             <Bookmark size={9} /> Plantillas
           </span>
 
-          <div className="w-px h-4 bg-slate-200 shrink-0" />
+          <div className="w-px h-4 bg-slate-200 dark:bg-gray-700 shrink-0" />
 
           {filterTemplates.map((t) => {
             const isActive = matchesTemplate(filters, t);
@@ -210,14 +210,14 @@ export function TopFilters({
                   className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                     isActive
                       ? "bg-teal/10 border-teal text-teal"
-                      : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 bg-white"
+                      : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
                   }`}
                 >
                   {t.name}
                 </button>
                 <button
                   onClick={() => onDeleteTemplate(t.id)}
-                  className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all text-xs leading-none"
+                  className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none"
                   title="Eliminar"
                 >
                   ×
@@ -239,7 +239,7 @@ export function TopFilters({
                     if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
                   }}
                   placeholder="Nombre…"
-                  className="text-xs border border-teal rounded px-2 py-0.5 outline-none w-28 bg-white"
+                  className="text-xs border border-teal rounded px-2 py-0.5 outline-none w-28 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200"
                 />
                 <button onClick={handleSave} className="text-teal text-xs font-bold">✓</button>
                 <button
@@ -250,7 +250,7 @@ export function TopFilters({
             ) : (
               <button
                 onClick={() => setSavingTemplate(true)}
-                className="flex items-center gap-1 text-slate-400 hover:text-teal text-[10px] shrink-0 transition-colors"
+                className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-teal text-[10px] shrink-0 transition-colors"
               >
                 <Plus size={9} /> Guardar filtro actual
               </button>

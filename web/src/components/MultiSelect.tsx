@@ -45,7 +45,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
         className={`flex flex-wrap gap-1 items-center rounded-md px-2 py-1 min-h-[30px] cursor-text border ${
           isDark
             ? "bg-navy-border border-navy-border"
-            : "bg-white border-slate-200 hover:border-slate-300"
+            : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600"
         }`}
         onClick={() => setOpen(true)}
       >
@@ -62,7 +62,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
         ))}
         <input
           className={`flex-1 min-w-[50px] text-xs bg-transparent outline-none ${
-            isDark ? "text-white placeholder-slate-500" : "text-slate-700 placeholder-slate-400"
+            isDark ? "text-white placeholder-slate-500" : "text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
           }`}
           placeholder={selected.length === 0 ? placeholder : ""}
           value={search}
@@ -73,7 +73,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
 
       {open && (
         <div className={`border rounded-md max-h-36 overflow-y-auto z-30 relative ${
-          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white border-slate-200 shadow-md"
+          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 shadow-md"
         }`}>
           {filtered.length === 0 ? (
             <p className={`text-xs px-2 py-1.5 italic ${isDark ? "text-slate-500" : "text-slate-400"}`}>
@@ -87,7 +87,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
                 className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
                   isDark
                     ? "text-slate-300 hover:bg-navy-border"
-                    : "text-slate-700 hover:bg-slate-50"
+                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-gray-700"
                 }`}
               >
                 {o.label}

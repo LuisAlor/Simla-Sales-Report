@@ -1,26 +1,29 @@
 import ReactECharts from "echarts-for-react";
 import type { TsPoint } from "@/lib/transforms";
+import { useIsDark } from "@/contexts/ThemeContext";
+import { chartTheme } from "@/lib/chartTheme";
 
 interface Props {
   data: TsPoint[];
 }
 
 export function RevenueLineChart({ data }: Props) {
+  const c = chartTheme(useIsDark());
   const option = {
-    backgroundColor: "#fff",
-    tooltip: { trigger: "axis", axisPointer: { type: "cross" } },
+    backgroundColor: c.bg,
+    tooltip: { trigger: "axis", axisPointer: { type: "cross" }, ...c.tooltip },
     grid: { top: 48, bottom: 32, left: 60, right: 16 },
     xAxis: {
       type: "category",
       data: data.map((d) => d.date),
-      axisLine: { lineStyle: { color: "#E2E8F0" } },
+      axisLine: { lineStyle: { color: c.axisLine } },
       axisTick: { show: false },
-      axisLabel: { color: "#94A3B8", fontSize: 11 },
+      axisLabel: { color: c.axisLabel, fontSize: 11 },
     },
     yAxis: {
       type: "value",
-      splitLine: { lineStyle: { color: "#F1F5F9" } },
-      axisLabel: { color: "#94A3B8", fontSize: 11 },
+      splitLine: { lineStyle: { color: c.splitLine } },
+      axisLabel: { color: c.axisLabel, fontSize: 11 },
     },
     series: [
       {
@@ -34,7 +37,7 @@ export function RevenueLineChart({ data }: Props) {
         symbol: "none",
       },
     ],
-    title: { text: "Ingresos en el tiempo", textStyle: { fontSize: 14, color: "#1E293B" }, top: 8, left: 12 },
+    title: { text: "Ingresos en el tiempo", textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };
 
   return <ReactECharts option={option} style={{ height: 280 }} notMerge lazyUpdate />;
