@@ -99,7 +99,7 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
       {productData.length > 0 && (
         <>
           <SectionHeader>Productos</SectionHeader>
-          <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm mt-2">
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm mt-2">
             <TopProductsChart data={productData} />
           </div>
         </>
