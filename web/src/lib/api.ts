@@ -208,17 +208,20 @@ export async function fetchStatuses(apiKey: string): Promise<SimlaStatus[]> {
 
 export interface FetchOrdersParams {
   apiKey: string;
-  dateFrom: string;
-  dateTo: string;
+  dateFrom?: string;           // omit or "" to skip creation-date filter
+  dateTo?: string;
+  firstPaymentFrom?: string;   // filter by customFields[firstpaymentdate]
+  firstPaymentTo?: string;
   orderType?: string;
   onProgress?: (done: number, total: number) => void;
 }
 
 export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
-  const filter: Record<string, string | number> = {
-    createdAtFrom: `${p.dateFrom} 00:00:00`,
-    createdAtTo: `${p.dateTo} 23:59:59`,
-  };
+  const filter: Record<string, string | number> = {};
+  if (p.dateFrom) filter["createdAtFrom"] = `${p.dateFrom} 00:00:00`;
+  if (p.dateTo)   filter["createdAtTo"]   = `${p.dateTo} 23:59:59`;
+  if (p.firstPaymentFrom) filter["customFields][firstpaymentdate][min"] = p.firstPaymentFrom;
+  if (p.firstPaymentTo)   filter["customFields][firstpaymentdate][max"] = p.firstPaymentTo;
   if (p.orderType) filter["orderType"] = p.orderType;
 
   const arrayFilter: Record<string, string[]> = {};

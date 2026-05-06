@@ -165,7 +165,7 @@ export function Sidebar() {
             title={title}
             className={`p-1.5 rounded-md transition-colors ${
               theme === value
-                ? "bg-teal text-white"
+                ? "bg-brand-blue text-white"
                 : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
             }`}
           >

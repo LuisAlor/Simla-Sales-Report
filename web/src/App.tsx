@@ -29,6 +29,8 @@ function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
     managerIds: (savedFilters?.managerIds as string[]) ?? [],
     utmSources: (savedFilters?.utmSources as string[]) ?? [],
     utmMediums: (savedFilters?.utmMediums as string[]) ?? [],
+    firstPaymentFrom: (savedFilters?.firstPaymentFrom as string) ?? "",
+    firstPaymentTo:   (savedFilters?.firstPaymentTo   as string) ?? "",
   };
 }
 
@@ -95,7 +97,7 @@ function AppInner() {
   const { data, isFetching, error } = useQuery<LoadedData>({
     queryKey: ["orders", loadKey],
     queryFn: async () => {
-      const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes);
+      const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes, filters.firstPaymentFrom, filters.firstPaymentTo);
 
       // Return cached data instantly if available (skip all network requests)
       const cached = readCache(cacheKey);
@@ -115,8 +117,10 @@ function AppInner() {
         typesToFetch.map((otype, idx) =>
           fetchOrders({
             apiKey,
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+            firstPaymentFrom: filters.firstPaymentFrom || undefined,
+            firstPaymentTo: filters.firstPaymentTo || undefined,
             orderType: otype,
             onProgress: (done, total) => {
               progressMap.set(idx, { done, total });
@@ -149,7 +153,7 @@ function AppInner() {
   const handleLoad = useCallback(() => {
     if (!apiKey) return;
     // Clear cache for current filters so user always gets fresh data on explicit reload
-    const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes);
+    const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes, filters.firstPaymentFrom, filters.firstPaymentTo);
     clearCache(cacheKey);
     setCachedAt(null);
     queryClient.removeQueries({ queryKey: ["orders"] });
@@ -166,6 +170,8 @@ function AppInner() {
           managerIds: filters.managerIds,
           utmSources: filters.utmSources,
           utmMediums: filters.utmMediums,
+          firstPaymentFrom: filters.firstPaymentFrom,
+          firstPaymentTo: filters.firstPaymentTo,
         },
       });
     }
@@ -255,6 +261,8 @@ function AppInner() {
       managerIds: t.managerIds,
       utmSources: t.utmSources,
       utmMediums: t.utmMediums,
+      firstPaymentFrom: "",
+      firstPaymentTo: "",
     });
   }, []);
 

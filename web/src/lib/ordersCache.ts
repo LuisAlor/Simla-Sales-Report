@@ -19,9 +19,11 @@ export function makeKey(
   apiKey: string,
   dateFrom: string,
   dateTo: string,
-  types: string[]
+  types: string[],
+  firstPaymentFrom = "",
+  firstPaymentTo = ""
 ): string {
-  const sig = [apiKey.slice(-10), dateFrom, dateTo, [...types].sort().join(",")].join("|");
+  const sig = [apiKey.slice(-10), dateFrom, dateTo, [...types].sort().join(","), firstPaymentFrom, firstPaymentTo].join("|");
   return PREFIX + btoa(sig).replace(/[+/=]/g, "");
 }
 

@@ -50,7 +50,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
         onClick={() => setOpen(true)}
       >
         {selectedOptions.map((o) => (
-          <span key={o.value} className="flex items-center gap-0.5 bg-teal text-white text-[10px] px-1.5 py-0.5 rounded">
+          <span key={o.value} className="flex items-center gap-0.5 bg-brand-blue text-white text-[10px] px-1.5 py-0.5 rounded">
             {o.label}
             <button
               onClick={(e) => { e.stopPropagation(); toggle(o.value); }}

@@ -22,6 +22,7 @@ export function AdminPanel() {
   const [newRole, setNewRole] = useState<"admin" | "viewer">("viewer");
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const [apiKeyInput, setApiKeyInput] = useState(currentUser?.apiKey ?? "");
   const [showKey, setShowKey] = useState(false);
@@ -112,7 +113,7 @@ export function AdminPanel() {
                           ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
                           : "bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-slate-300"
                       }`}>
-                        {u.role === "admin" ? "Administrador" : "Visor"}
+                        {u.role === "admin" ? "Administrador" : "Lector"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -131,8 +132,17 @@ export function AdminPanel() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-4">Agregar usuario</h3>
-            <form onSubmit={handleAddUser} className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Agregar usuario</h3>
+              <button
+                type="button"
+                onClick={() => { setShowAddForm((v) => !v); setAddError(null); setAddSuccess(false); }}
+                className="flex items-center gap-1.5 text-xs bg-brand-blue hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md transition-colors"
+              >
+                {showAddForm ? "Cancelar" : "+ Añadir usuario"}
+              </button>
+            </div>
+            {showAddForm && <form onSubmit={handleAddUser} className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 text-xs mb-1">Nombre</label>
                 <input type="text" value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} required className={inputCls} />
@@ -152,7 +162,7 @@ export function AdminPanel() {
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 text-xs mb-1">Rol</label>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value as "admin" | "viewer")} className={inputCls}>
-                  <option value="viewer">Visor</option>
+                  <option value="viewer">Lector</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
@@ -163,7 +173,7 @@ export function AdminPanel() {
               </div>
               {addError && <p className="col-span-2 text-red-500 text-xs">{addError}</p>}
               {addSuccess && <p className="col-span-2 text-green-500 text-xs">Usuario creado correctamente.</p>}
-            </form>
+            </form>}
           </div>
         </div>
       )}
