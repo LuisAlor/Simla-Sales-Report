@@ -37,5 +37,5 @@ export function TopProductsChart({ data }: Props) {
     title: { text: "Productos principales por ingresos", textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };
 
-  return <ReactECharts option={option} style={{ height: Math.max(280, sorted.length * 28 + 80) }} notMerge lazyUpdate />;
+  return <ReactECharts option={option} style={{ height: Math.max(280, sorted.length * 28 + 80), background: c.bg }} notMerge lazyUpdate />;
 }

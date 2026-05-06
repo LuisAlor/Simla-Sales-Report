@@ -49,5 +49,5 @@ export function StatusPieChart({ data, statusLabels = {} }: Props) {
     },
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} notMerge={true} lazyUpdate={true} />;
+  return <ReactECharts option={option} style={{ height: 320, background: c.bg }} notMerge={true} lazyUpdate={true} />;
 }

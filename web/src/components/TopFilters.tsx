@@ -1,11 +1,22 @@
 import { useState } from "react";
-import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
 import type { Freq } from "@/lib/transforms";
 import { DateRangePicker } from "./DateRangePicker";
 import { MultiSelect } from "./MultiSelect";
+
+function FL({ label, tip }: { label: string; tip: string }) {
+  return (
+    <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
+      {label}
+      <span title={tip} className="cursor-help text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors">
+        <Info size={9} />
+      </span>
+    </span>
+  );
+}
 
 interface Props {
   filters: Filters;
@@ -112,7 +123,7 @@ export function TopFilters({
 
           {/* Período */}
           <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Período</span>
+            <FL label="Período" tip="Rango de fechas para filtrar los pedidos" />
             <DateRangePicker
               dateFrom={filters.dateFrom}
               dateTo={filters.dateTo}
@@ -125,12 +136,13 @@ export function TopFilters({
 
           {/* Agrupación */}
           <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Agrupación</span>
+            <FL label="Agrupación" tip="Cómo se agrupan los datos en las gráficas de tiempo: por día, semana o mes" />
             <div className="flex rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden">
               {FREQ_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   onClick={() => onFiltersChange({ freq: o.value })}
+                  title={o.value === "D" ? "Diario" : o.value === "W" ? "Semanal" : "Mensual"}
                   className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                     filters.freq === o.value
                       ? "bg-brand-blue text-white"
@@ -147,7 +159,7 @@ export function TopFilters({
 
           {/* Tipo de pedido */}
           <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Tipo de pedido</span>
+            <FL label="Tipo de pedido" tip="Filtra por tipo de pedido. Selecciona uno o ambos para combinarlos" />
             <div className="flex items-center gap-1">
               {ORDER_TYPES.map((t) => {
                 const active = filters.selectedTypes.includes(t.code);
@@ -172,7 +184,7 @@ export function TopFilters({
 
           {/* Asesor */}
           <div className="flex flex-col gap-1 w-44 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">Asesor</span>
+            <FL label="Asesor" tip="Filtra pedidos por el asesor responsable asignado" />
             <MultiSelect
               variant="light"
               options={managers}
@@ -185,7 +197,7 @@ export function TopFilters({
 
           {/* UTM Source */}
           <div className="flex flex-col gap-1 w-36 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">UTM Source</span>
+            <FL label="UTM Source" tip="Fuente de tráfico del pedido (ej. google, facebook, email)" />
             <MultiSelect
               variant="light"
               options={availableUtms.sources.map((s) => ({ value: s, label: s }))}
@@ -198,7 +210,7 @@ export function TopFilters({
 
           {/* UTM Medium */}
           <div className="flex flex-col gap-1 w-36 shrink-0">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">UTM Medium</span>
+            <FL label="UTM Medium" tip="Medio de tráfico del pedido (ej. cpc, organic, referral)" />
             <MultiSelect
               variant="light"
               options={availableUtms.mediums.map((m) => ({ value: m, label: m }))}

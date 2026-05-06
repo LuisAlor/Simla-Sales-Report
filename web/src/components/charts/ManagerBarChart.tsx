@@ -38,5 +38,5 @@ export function ManagerBarChart({ data }: Props) {
     title: { text: "Ingresos por asesor", textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };
 
-  return <ReactECharts option={option} style={{ height: 280 }} notMerge lazyUpdate />;
+  return <ReactECharts option={option} style={{ height: 280, background: c.bg }} notMerge lazyUpdate />;
 }
