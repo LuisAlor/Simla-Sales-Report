@@ -114,28 +114,65 @@ export interface CustomFieldOption {
   name: string;
 }
 
-// GET /api/v5/custom-fields/dictionaries — resolves a dictionary code → name map
-// Used for select custom fields backed by a custom dictionary (e.g. manager_sd)
+type DictElement = { code: string; name: string };
+type DictEntry  = { code: string; elements?: DictElement[] };
+
+function buildMapFromElements(elements: DictElement[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const el of elements) map[el.code] = el.name;
+  return map;
+}
+
+// GET /api/v5/custom-fields/dictionaries/{code} — single dictionary by code
+// Falls back to listing all dictionaries if the specific endpoint fails.
 export async function fetchDictionaryOptions(
   apiKey: string,
   dictionaryCode: string
 ): Promise<Record<string, string>> {
+  // Strategy 1: fetch the specific dictionary directly
   try {
-    const data = await getJson<{
-      customDictionaries?: Array<{
-        code: string;
-        elements?: Array<{ code: string; name: string }>;
-      }>;
-    }>("custom-fields/dictionaries", apiKey, {}, {});
-    const dict = data.customDictionaries?.find((d) => d.code === dictionaryCode);
-    const map: Record<string, string> = {};
-    for (const el of dict?.elements ?? []) {
-      map[el.code] = el.name;
+    const data = await getJson<{ customDictionary?: DictEntry }>(
+      `custom-fields/dictionaries/${dictionaryCode}`, apiKey, {}, {}
+    );
+    console.log("[dict] specific endpoint response:", data);
+    const elements = data.customDictionary?.elements;
+    if (elements && elements.length > 0) {
+      const map = buildMapFromElements(elements);
+      console.log("[dict] map from specific endpoint:", map);
+      return map;
     }
-    return map;
-  } catch {
-    return {};
+  } catch (err) {
+    console.warn("[dict] specific endpoint failed, trying list:", err);
   }
+
+  // Strategy 2: fetch all dictionaries and find by code
+  try {
+    const data = await getJson<{ customDictionaries?: unknown }>(
+      "custom-fields/dictionaries", apiKey, { limit: 250 }, {}
+    );
+    console.log("[dict] list endpoint response:", data);
+
+    const raw = data.customDictionaries;
+    let entries: DictEntry[] = [];
+    if (Array.isArray(raw)) {
+      entries = raw as DictEntry[];
+    } else if (raw && typeof raw === "object") {
+      // Object keyed by dictionary code — try direct key access first
+      const byKey = (raw as Record<string, DictEntry>)[dictionaryCode];
+      if (byKey) entries = [byKey];
+      else entries = Object.values(raw as Record<string, DictEntry>);
+    }
+
+    const dict = entries.find((d) => d.code === dictionaryCode);
+    console.log("[dict] matched entry:", dict);
+    if (dict?.elements && dict.elements.length > 0) {
+      return buildMapFromElements(dict.elements);
+    }
+  } catch (err) {
+    console.error("[dict] list endpoint failed:", err);
+  }
+
+  return {};
 }
 
 export async function fetchOrderTypes(apiKey: string): Promise<OrderType[]> {
