@@ -94,7 +94,7 @@ export function Sidebar() {
 
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-2 pt-1 pb-3 border-b border-navy-border">
-        <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center overflow-hidden shrink-0">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${logoError ? "bg-teal" : ""}`}>
           {logoError ? (
             <span className="text-white font-bold text-base">S</span>
           ) : (
