@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
   ChevronDown, ShieldCheck, LogOut,
-  Sun, Moon, Monitor,
+  Sun, Moon, Monitor, Clock,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -108,7 +108,11 @@ export function Sidebar() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
-          <p className="text-slate-500 text-[10px] tabular-nums">{now.format("DD/MM/YYYY HH:mm:ss")}</p>
+          <p className="text-slate-500 text-[10px] tabular-nums flex items-center gap-1">
+            <Clock size={9} className="shrink-0" />
+            {now.format("DD/MM/YYYY HH:mm:ss")}
+            <span>({Intl.DateTimeFormat().resolvedOptions().timeZone})</span>
+          </p>
         </div>
         {user?.role === "admin" && (
           <button
