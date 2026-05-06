@@ -113,7 +113,7 @@ export function Sidebar() {
               <Clock size={9} className="shrink-0" />
               {now.format("DD/MM/YYYY HH:mm:ss")}
             </p>
-            <p className="truncate pl-[13px]">({Intl.DateTimeFormat().resolvedOptions().timeZone})</p>
+            <p className="pl-[13px]">({Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' }).formatToParts(now.toDate()).find(p => p.type === 'timeZoneName')?.value ?? 'UTC'})</p>
           </div>
         </div>
         {user?.role === "admin" && (
