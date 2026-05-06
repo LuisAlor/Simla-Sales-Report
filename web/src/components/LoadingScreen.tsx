@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   progress: { done: number; total: number } | null;
@@ -11,7 +11,7 @@ const TOTAL_STEPS = BARS.length + 6; // bars + trend line frames + pause
 const TREND: [number, number][] = [
   [8, 62], [31, 50], [54, 56], [77, 38], [100, 44],
   [123, 26], [146, 33], [169, 19], [192, 25], [215, 14],
-  [238, 21], [272, 10],
+  [238, 21], [280, 10],
 ];
 
 function polylineLength(pts: [number, number][]): number {
@@ -29,6 +29,7 @@ const POINTS_STR = TREND.map(([x, y]) => `${x},${y}`).join(" ");
 export function LoadingScreen({ progress }: Props) {
   const [step, setStep] = useState(0);
   const [lineProgress, setLineProgress] = useState(0); // 0→1 for trend line draw
+  const lineAnimRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Advance the "analyst drawing" animation
   useEffect(() => {
@@ -38,20 +39,26 @@ export function LoadingScreen({ progress }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  // Animate trend line when all bars are done
+  // Animate trend line when all bars are done — run to completion independently of step
   useEffect(() => {
     if (step === BARS.length) {
+      if (lineAnimRef.current) clearInterval(lineAnimRef.current);
       setLineProgress(0);
       let frame = 0;
-      const total = 18;
-      const id = setInterval(() => {
+      const total = 24;
+      lineAnimRef.current = setInterval(() => {
         frame++;
         setLineProgress(frame / total);
-        if (frame >= total) clearInterval(id);
+        if (frame >= total) {
+          clearInterval(lineAnimRef.current!);
+          lineAnimRef.current = null;
+        }
       }, 40);
-      return () => clearInterval(id);
     }
   }, [step]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (lineAnimRef.current) clearInterval(lineAnimRef.current); }, []);
 
   const pct = progress ? Math.round((progress.done / progress.total) * 100) : 0;
   const r = 32;

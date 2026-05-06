@@ -307,7 +307,7 @@ export function TopFilters({
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Configurar filtros</p>
                   <button onClick={resetLayout} title="Restablecer al orden predeterminado" className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors">
-                    <RotateCcw size={9} /> Reset
+                    <RotateCcw size={9} /> Reiniciar
                   </button>
                 </div>
                 <div className="flex flex-col">
