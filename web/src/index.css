@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-100 text-slate-800 antialiased;
+  }
+}
+
+/* Custom color utilities that Tailwind can't infer from tailwind.config.ts */
+.bg-navy {
+  background-color: #1E2238;
+}
+.bg-navy-light {
+  background-color: #252A45;
+}
+.bg-navy-border {
+  background-color: #2D3452;
+}
+.border-navy-border {
+  border-color: #2D3452;
+}
+.text-teal {
+  color: #00BCD4;
+}
+.bg-teal {
+  background-color: #00BCD4;
+}
+.border-teal {
+  border-color: #00BCD4;
+}
+.ring-teal {
+  --tw-ring-color: #00BCD4;
+}
+.focus\:ring-teal:focus {
+  --tw-ring-color: #00BCD4;
+  box-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+}

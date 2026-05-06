@@ -32,20 +32,21 @@ def fetch_orders(
 
     progress_callback: optional callable(pages_done, total_pages).
     """
-    params: dict = {}
+    # Simla v5 requires filter fields under filter[...] bracket notation
+    filter_: dict = {}
     if date_from:
-        params["createdAtFrom"] = date_from.strftime("%Y-%m-%d 00:00:00")
+        filter_["filter[createdAtFrom]"] = date_from.strftime("%Y-%m-%d 00:00:00")
     if date_to:
-        params["createdAtTo"] = date_to.strftime("%Y-%m-%d 23:59:59")
+        filter_["filter[createdAtTo]"] = date_to.strftime("%Y-%m-%d 23:59:59")
     if status:
-        params["status"] = status
+        filter_["filter[status]"] = status
     if order_type:
-        params["orderType"] = order_type
+        filter_["filter[orderType]"] = order_type
     if manager_id:
-        params["managerId"] = manager_id
+        filter_["filter[managerId]"] = manager_id
 
     # Page 1 first to learn total_pages
-    resp1 = client.get("orders", {**params, "page": 1, "limit": _PAGE_LIMIT})
+    resp1 = client.get("orders", {**filter_, "page": 1, "limit": _PAGE_LIMIT})
     total_pages = resp1.get("pagination", {}).get("totalPageCount", 1)
     results: dict[int, list[dict]] = {1: resp1.get("orders", [])}
 
@@ -56,7 +57,7 @@ def fetch_orders(
         remaining = list(range(2, total_pages + 1))
         done = 1
         with ThreadPoolExecutor(max_workers=_WORKERS) as pool:
-            futures = {pool.submit(_fetch_page, client, params, p): p for p in remaining}
+            futures = {pool.submit(_fetch_page, client, filter_, p): p for p in remaining}
             for future in as_completed(futures):
                 page_num = futures[future]
                 results[page_num] = future.result()
