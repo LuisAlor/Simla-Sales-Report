@@ -114,19 +114,23 @@ export interface CustomFieldOption {
   name: string;
 }
 
-// GET /api/v5/custom-fields/{entity}/{code} — returns select field options
-export async function fetchCustomFieldOptions(
+// GET /api/v5/custom-fields/dictionaries — resolves a dictionary code → name map
+// Used for select custom fields backed by a custom dictionary (e.g. manager_sd)
+export async function fetchDictionaryOptions(
   apiKey: string,
-  entity: string,
-  fieldCode: string
+  dictionaryCode: string
 ): Promise<Record<string, string>> {
   try {
     const data = await getJson<{
-      customField?: { values?: CustomFieldOption[] };
-    }>(`custom-fields/${entity}/${fieldCode}`, apiKey, {}, {});
+      customDictionaries?: Array<{
+        code: string;
+        elements?: Array<{ code: string; name: string }>;
+      }>;
+    }>("custom-fields/dictionaries", apiKey, {}, {});
+    const dict = data.customDictionaries?.find((d) => d.code === dictionaryCode);
     const map: Record<string, string> = {};
-    for (const v of data.customField?.values ?? []) {
-      map[v.code] = v.name;
+    for (const el of dict?.elements ?? []) {
+      map[el.code] = el.name;
     }
     return map;
   } catch {

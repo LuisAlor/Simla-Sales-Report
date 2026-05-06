@@ -12,7 +12,7 @@ import { ApiSetup } from "@/pages/ApiSetup";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { fetchOrders, fetchStatuses, fetchCustomFieldOptions } from "@/lib/api";
+import { fetchOrders, fetchStatuses, fetchDictionaryOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
@@ -78,11 +78,10 @@ function AppInner() {
     return map;
   }, [statuses]);
 
-  // Fetch manager_sd custom field options to resolve code → display name
-  // Entity is "order" (singular) per Simla v5 custom-fields endpoint
+  // Resolve manager_sd codes → display names via the custom-fields dictionary
   const { data: managerSdMap = {} } = useQuery({
-    queryKey: ["customField", "order", "manager_sd", apiKey],
-    queryFn: () => fetchCustomFieldOptions(apiKey, "order", "manager_sd"),
+    queryKey: ["dictionary", "manager_sd", apiKey],
+    queryFn: () => fetchDictionaryOptions(apiKey, "manager_sd"),
     enabled: apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
@@ -336,12 +335,86 @@ function PageShell({ loading, progress, error, hasData, loaded, children }: Shel
   }
 
   if (!hasData) {
-    return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg p-4 text-sm">
-        No se encontraron pedidos para los filtros seleccionados.
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return <>{children}</>;
+}
+
+// ---------------------------------------------------------------------------
+// Empty state — shown when filters return zero orders
+// ---------------------------------------------------------------------------
+
+const EMPTY_BARS = [0.35, 0.55, 0.25, 0.45, 0.30, 0.50, 0.20, 0.40];
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 select-none">
+      {/* Animated chart with zero-data bars */}
+      <div className="relative">
+        {/* Ghost chart frame */}
+        <div className="relative bg-white rounded-2xl shadow-sm border border-slate-100 px-8 py-6 w-72">
+          {/* Dashed grid lines */}
+          <div className="absolute inset-x-8 top-6 bottom-10 pointer-events-none">
+            {[0.33, 0.66].map((t) => (
+              <div
+                key={t}
+                className="absolute left-0 right-0 border-t border-dashed border-slate-100"
+                style={{ bottom: `${t * 100}%` }}
+              />
+            ))}
+          </div>
+
+          {/* Bars — all very short, breathing animation */}
+          <div className="flex items-end gap-2 h-24">
+            {EMPTY_BARS.map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-t bg-slate-100"
+                style={{
+                  height: `${h * 30}%`,
+                  animation: `emptyPulse 2s ease-in-out ${i * 150}ms infinite`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* X-axis line */}
+          <div className="h-px bg-slate-100 mt-1" />
+
+          {/* Floating magnifying glass badge */}
+          <div
+            className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white shadow-md border border-slate-100 flex items-center justify-center"
+            style={{ animation: "floatBadge 3s ease-in-out infinite" }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="16.5" y1="16.5" x2="22" y2="22" />
+              <line x1="8" y1="11" x2="14" y2="11" strokeOpacity="0.4" />
+              <line x1="11" y1="8" x2="11" y2="14" strokeOpacity="0.4" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Text */}
+      <div className="text-center">
+        <p className="text-slate-700 font-semibold text-base">Sin resultados</p>
+        <p className="text-slate-400 text-sm mt-1 max-w-xs">
+          No hay pedidos para los filtros activos. Intenta ampliar el rango de fechas o ajustar los filtros.
+        </p>
+      </div>
+
+      <style>{`
+        @keyframes emptyPulse {
+          0%, 100% { opacity: 0.5; transform: scaleY(1); }
+          50% { opacity: 1; transform: scaleY(1.3); }
+        }
+        @keyframes floatBadge {
+          0%, 100% { transform: translateX(-50%) translateY(0px); }
+          50% { transform: translateX(-50%) translateY(-6px); }
+        }
+      `}</style>
+    </div>
+  );
 }
