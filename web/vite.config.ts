@@ -4,6 +4,8 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+  // Serve repo-root assets/ as the static public dir so assets/logo.png → /logo.png
+  publicDir: path.resolve(__dirname, "../assets"),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

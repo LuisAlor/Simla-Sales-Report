@@ -1,19 +1,36 @@
-# Simla CRM Analytics Dashboard
+# Simla.com — Sales Analytics Dashboard
 
 A real-time sales analytics dashboard that connects to [Simla CRM](https://simla.com) (RetailCRM) via REST v5 API and visualises order data, revenue trends, manager performance, funnel stages and UTM attribution — all in a React single-page application.
 
 ## Features
 
+### Analytics
 - **Revenue & Orders over time** — daily / weekly / monthly line and bar charts
 - **Orders by status** — donut chart with CRM status labels
 - **Manager performance** — revenue and order count per sales advisor
 - **Top products** — horizontal bar chart ranked by revenue
 - **Funnel analysis** — key stages, negative stages, and post-sale stages with cohort tracking
 - **UTM attribution** — filter by source and medium to measure campaign ROI
+
+### Filters
+- **Date range picker** — interactive calendar with relative-date presets (last 7 days, 1 month, 1 year…)
+- **First payment date** — filter by the `firstpaymentdate` custom field, independent of creation date
+- **Order type / Manager / UTM Source / UTM Medium** — multi-select dropdowns
+- **Grouping (Día / Sem / Mes)** — switch chart aggregation granularity
+- **Filter configurator** — drag-to-reorder filters, show/hide individual filters; layout persists in localStorage
 - **Filter templates** — save and restore named filter combinations (e.g. "Last Quarter — License only")
-- **30-minute localStorage cache** — repeat loads return instantly; clicking "Cargar datos" always re-fetches
+- **30-minute localStorage cache** — repeat loads return instantly; the ⚡ indicator shows the last load time
+
+### UX
 - **Dark / Light / Auto theme** — Sun / Moon / Monitor toggle; respects `prefers-color-scheme` in auto mode
+- **Collapsible filter bar** — collapse to a single row to maximise chart space
+- **Live clock** — sidebar shows the current date and time updating every second in the browser's local timezone
+- **Custom logo** — place `logo.png` in `web/public/` to display your logo in the sidebar
+
+### Admin
 - **Multi-user auth** — admin and viewer roles, per-user API keys stored locally
+- **API key validation** — key is tested against the live Simla API before saving
+- **User management** — add / delete users from the admin panel
 
 ## Tech Stack
 
@@ -58,6 +75,10 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 To find your key: Simla CRM → Settings → API Keys → REST API.
 
+## Custom Logo
+
+Place your logo file at `web/public/logo.png`. Vite serves the `public/` directory at the root URL, so the sidebar will pick it up automatically on next page load. Recommended size: 32×32 px or a square SVG-style image.
+
 ## Build for Production
 
 ```bash
@@ -79,13 +100,15 @@ web/src/
 
 ## Simla API Used
 
-| Method | Endpoint |
-|---|---|
-| GET | `/api/v5/orders` — paginated order list with manager, customer, items |
-| GET | `/api/v5/users` — sales managers |
-| GET | `/api/v5/statuses` — order status labels |
-| GET | `/api/v5/order-types` — order type slugs |
-| GET | `/api/v5/custom-fields/dictionaries/{code}` — custom field dictionary values |
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/v5/orders` | Paginated order list with manager, customer, items, custom fields |
+| GET | `/api/v5/users` | Sales managers list |
+| GET | `/api/v5/statuses` | Order status labels |
+| GET | `/api/v5/order-types` | Order type slugs |
+| GET | `/api/v5/custom-fields/dictionaries/{code}` | Custom field dictionary values |
+
+Filter params use PHP bracket notation: `filter[createdAtFrom]`, `filter[customFields][firstpaymentdate][min]`, etc.
 
 See [CLAUDE.md](CLAUDE.md) for the full API reference used during development.
 

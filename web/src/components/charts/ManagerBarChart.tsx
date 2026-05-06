@@ -13,11 +13,11 @@ export function ManagerBarChart({ data }: Props) {
   const option = {
     backgroundColor: c.bg,
     tooltip: { trigger: "axis", ...c.tooltip },
-    grid: { top: 48, bottom: 56, left: 16, right: 16, containLabel: true },
+    grid: { top: 48, bottom: 40, left: 16, right: 16, containLabel: true },
     xAxis: {
       type: "category",
       data: data.map((d) => d.managerName),
-      axisLabel: { color: c.axisLabel, fontSize: 11, rotate: 30 },
+      axisLabel: { color: c.axisLabel, fontSize: 11, rotate: 0, interval: 0, overflow: "truncate", width: 90 },
       axisLine: { lineStyle: { color: c.axisLine } },
       axisTick: { show: false },
     },
