@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical, X, RotateCcw } from "lucide-react";
+import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -98,44 +98,6 @@ function matchesTemplate(f: Filters, t: FilterTemplate) {
   );
 }
 
-function fmt(d: string) { return dayjs(d).format("DD/MM/YYYY"); }
-
-// Build an array of {label, value} pairs for active filters
-function buildSummary(filters: Filters, managers: { value: string; label: string }[]) {
-  const parts: { label: string; value: string }[] = [];
-
-  if (filters.dateFrom || filters.dateTo) {
-    const from = filters.dateFrom ? fmt(filters.dateFrom) : "—";
-    const to   = filters.dateTo   ? fmt(filters.dateTo)   : "—";
-    parts.push({ label: "Fecha de creación del pedido", value: `${from} – ${to}` });
-  }
-  if (filters.firstPaymentFrom || filters.firstPaymentTo) {
-    const from = filters.firstPaymentFrom ? fmt(filters.firstPaymentFrom) : "—";
-    const to   = filters.firstPaymentTo   ? fmt(filters.firstPaymentTo)   : "—";
-    parts.push({ label: "Fecha de primer pago", value: `${from} – ${to}` });
-  }
-  const freqLabel: Record<string, string> = { D: "Día", W: "Semana", ME: "Mes" };
-  parts.push({ label: "Agrupación", value: freqLabel[filters.freq] ?? filters.freq });
-
-  if (filters.selectedTypes.length > 0) {
-    const vals = filters.selectedTypes.map(
-      (c) => ORDER_TYPES.find((t) => t.value === c)?.label.replace(/^\S+\s/, "") ?? c
-    );
-    parts.push({ label: "Tipo de pedido", value: vals.join(", ") });
-  }
-  if (filters.managerIds.length > 0) {
-    const vals = filters.managerIds.map((id) => managers.find((m) => m.value === id)?.label ?? id);
-    parts.push({ label: "Asesor", value: vals.join(", ") });
-  }
-  if (filters.utmSources.length > 0) {
-    parts.push({ label: "UTM Source", value: filters.utmSources.join(", ") });
-  }
-  if (filters.utmMediums.length > 0) {
-    parts.push({ label: "UTM Medium", value: filters.utmMediums.join(", ") });
-  }
-  return parts;
-}
-
 // Approximate height of the FL label row so non-label items align with controls
 const LABEL_H = "mt-[18px]";
 
@@ -147,7 +109,6 @@ export function TopFilters({
 }: Props) {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
   const [showConfig, setShowConfig] = useState(false);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -167,7 +128,6 @@ export function TopFilters({
 
   const isCurrentSaved = filterTemplates.some((t) => matchesTemplate(filters, t));
   const hasTemplates = filterTemplates.length > 0;
-  const summary = buildSummary(filters, managers);
 
   function handleSave() {
     const name = templateName.trim();
@@ -213,61 +173,6 @@ export function TopFilters({
   }
 
   const visibleIds = layout.filter((l) => l.visible).map((l) => l.id);
-
-  // ── Shared template pills (used in both collapsed and expanded rows)
-  function TemplatePills() {
-    return (
-      <>
-        {filterTemplates.map((t) => {
-          const isActive = matchesTemplate(filters, t);
-          return (
-            <div key={t.id} className="flex items-center gap-0.5 shrink-0 group">
-              <button
-                onClick={() => onApplyTemplate(t)}
-                className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                  isActive
-                    ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
-                    : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
-                }`}
-              >{t.name}</button>
-              <button
-                onClick={() => onDeleteTemplate(t.id)}
-                className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none"
-                title="Eliminar"
-              >×</button>
-            </div>
-          );
-        })}
-        {!isCurrentSaved && (
-          savingTemplate ? (
-            <div className="flex items-center gap-1 shrink-0">
-              <input
-                autoFocus
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave();
-                  if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
-                }}
-                placeholder="Nombre…"
-                className="text-xs border border-brand-blue rounded px-2 py-0.5 outline-none w-28 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200"
-              />
-              <button onClick={handleSave} className="text-brand-blue text-xs font-bold">✓</button>
-              <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} className="text-slate-400 text-xs">✕</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setSavingTemplate(true)}
-              className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors"
-            >
-              <Plus size={9} /> Guardar filtro actual
-            </button>
-          )
-        )}
-      </>
-    );
-  }
 
   function renderFilter(id: FilterId) {
     switch (id) {
@@ -368,135 +273,134 @@ export function TopFilters({
   return (
     <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
 
-      {collapsed ? (
-        /* ── COLLAPSED: single row — arrow centered, filter summary, templates inline ── */
-        <div className="flex items-center gap-2 px-4 py-2 min-h-[42px] overflow-x-auto">
-          <button
-            onClick={() => setCollapsed(false)}
-            title="Mostrar filtros"
-            className="p-1 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-          >
-            <ChevronDown size={14} />
+      {/* ── Filter row — always visible ── */}
+      <div className="flex items-start gap-2 px-4 py-2 flex-wrap">
+
+        {/* Filter columns — top-aligned */}
+        <div className="flex items-start gap-3 flex-wrap flex-1">
+          {visibleIds.map((id, i) => (
+            <div key={id} className="flex items-start gap-3">
+              {i > 0 && <div className={`w-px h-6 bg-slate-200 dark:bg-gray-700 shrink-0 ${LABEL_H}`} />}
+              {renderFilter(id)}
+            </div>
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
+          <button onClick={onReset} title="Restablecer todos los filtros" className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <X size={13} />
           </button>
 
-          {/* Active filter summary chips */}
-          <div className="flex items-center gap-1.5 flex-1 overflow-x-auto">
-            {summary.map(({ label, value }) => (
-              <span key={label} className="flex items-center gap-1 shrink-0 text-[10px] bg-slate-100 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded px-2 py-0.5">
-                <span className="text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wide text-[9px]">{label}:</span>
-                <span className="text-slate-700 dark:text-slate-200">{value}</span>
-              </span>
-            ))}
-          </div>
-
-          {/* Templates inline when collapsed */}
-          {(hasTemplates || !isCurrentSaved) && (
-            <div className="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-gray-700 pl-2">
-              <Bookmark size={9} className="text-slate-400 dark:text-slate-500 shrink-0" />
-              <TemplatePills />
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* ── EXPANDED: filter row ── */}
-          <div className="flex items-start gap-2 px-4 py-2 flex-wrap">
+          {/* Gear config */}
+          <div ref={configRef} className="relative">
             <button
-              onClick={() => setCollapsed(true)}
-              title="Ocultar filtros"
-              className={`p-1 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors shrink-0 ${LABEL_H}`}
+              onClick={() => setShowConfig((v) => !v)}
+              title="Configurar filtros"
+              className={`p-1.5 rounded-md transition-colors ${showConfig ? "bg-brand-blue/10 text-brand-blue" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
             >
-              <ChevronUp size={14} />
+              <Settings2 size={14} />
             </button>
 
-            {/* Filter columns — top-aligned */}
-            <div className="flex items-start gap-3 flex-wrap flex-1">
-              {visibleIds.map((id, i) => (
-                <div key={id} className="flex items-start gap-3">
-                  {i > 0 && <div className={`w-px h-6 bg-slate-200 dark:bg-gray-700 shrink-0 ${LABEL_H}`} />}
-                  {renderFilter(id)}
+            {showConfig && (
+              <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-56">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Configurar filtros</p>
+                  <button onClick={resetLayout} title="Restablecer al orden predeterminado" className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors">
+                    <RotateCcw size={9} /> Reset
+                  </button>
                 </div>
-              ))}
-            </div>
-
-            {/* Action buttons */}
-            <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
-              <button onClick={onReset} title="Restablecer todos los filtros" className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                <X size={13} />
-              </button>
-
-              {/* Gear config */}
-              <div ref={configRef} className="relative">
-                <button
-                  onClick={() => setShowConfig((v) => !v)}
-                  title="Configurar filtros"
-                  className={`p-1.5 rounded-md transition-colors ${showConfig ? "bg-brand-blue/10 text-brand-blue" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
-                >
-                  <Settings2 size={14} />
-                </button>
-
-                {showConfig && (
-                  <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-56">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Configurar filtros</p>
-                      <button onClick={resetLayout} title="Restablecer al orden predeterminado" className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors">
-                        <RotateCcw size={9} /> Reset
-                      </button>
-                    </div>
-                    <div className="flex flex-col">
-                      {layout.map((item, idx) => {
-                        const def = FILTER_DEFS.find((f) => f.id === item.id);
-                        if (!def) return null;
-                        const isTarget = dragOverIdx === idx && draggingIdx !== idx;
-                        const isDragging = draggingIdx === idx;
-                        return (
-                          <div
-                            key={item.id}
-                            draggable
-                            onDragStart={() => handleDragStart(idx)}
-                            onDragEnd={handleDragEnd}
-                            onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
-                            onDragLeave={() => setDragOverIdx(null)}
-                            onDrop={() => handleDrop(idx)}
-                            className={`flex items-center gap-2 py-1.5 px-1 rounded cursor-grab active:cursor-grabbing transition-all select-none
-                              ${isDragging ? "opacity-30" : ""}
-                              ${isTarget ? "bg-brand-blue/10 border-t-2 border-brand-blue" : "border-t-2 border-transparent hover:bg-slate-50 dark:hover:bg-gray-700"}`}
-                          >
-                            <GripVertical size={11} className="text-slate-300 dark:text-slate-600 shrink-0" />
-                            <input type="checkbox" checked={item.visible} onChange={() => toggleVisible(item.id)} className="cursor-pointer accent-brand-blue shrink-0" />
-                            <span className="text-xs text-slate-700 dark:text-slate-200 truncate">{def.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-col">
+                  {layout.map((item, idx) => {
+                    const def = FILTER_DEFS.find((f) => f.id === item.id);
+                    if (!def) return null;
+                    const isTarget = dragOverIdx === idx && draggingIdx !== idx;
+                    const isDragging = draggingIdx === idx;
+                    return (
+                      <div
+                        key={item.id}
+                        draggable
+                        onDragStart={() => handleDragStart(idx)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                        onDragLeave={() => setDragOverIdx(null)}
+                        onDrop={() => handleDrop(idx)}
+                        className={`flex items-center gap-2 py-1.5 px-1 rounded cursor-grab active:cursor-grabbing transition-all select-none
+                          ${isDragging ? "opacity-30" : ""}
+                          ${isTarget ? "bg-brand-blue/10 border-t-2 border-brand-blue" : "border-t-2 border-transparent hover:bg-slate-50 dark:hover:bg-gray-700"}`}
+                      >
+                        <GripVertical size={11} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                        <input type="checkbox" checked={item.visible} onChange={() => toggleVisible(item.id)} className="cursor-pointer accent-brand-blue shrink-0" />
+                        <span className="text-xs text-slate-700 dark:text-slate-200 truncate">{def.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-
-              {cachedAt && !loading && (
-                <span title={`Datos desde caché · Última actualización: ${dayjs(cachedAt).format("HH:mm")}`} className="flex items-center gap-1 text-amber-500 text-[10px] cursor-help px-1">
-                  <Zap size={10} />
-                  {dayjs(cachedAt).format("HH:mm")}
-                </span>
-              )}
-
-              <button onClick={onLoad} disabled={loading || !hasApiKey} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors">
-                {loading ? "Cargando…" : "Cargar datos"}
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* ── Templates row — only when expanded ── */}
-          {(hasTemplates || !isCurrentSaved) && (
-            <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
-              <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
-                <Bookmark size={9} /> Plantillas
-              </span>
-              <div className="w-px h-4 bg-slate-200 dark:bg-gray-700 shrink-0" />
-              <TemplatePills />
-            </div>
+          {cachedAt && !loading && (
+            <span title={`Datos desde caché · Última actualización: ${dayjs(cachedAt).format("HH:mm")}`} className="flex items-center gap-1 text-amber-500 text-[10px] cursor-help px-1">
+              <Zap size={10} />
+              {dayjs(cachedAt).format("HH:mm")}
+            </span>
           )}
-        </>
+
+          <button onClick={onLoad} disabled={loading || !hasApiKey} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors">
+            {loading ? "Cargando…" : "Cargar datos"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Templates row ── */}
+      {(hasTemplates || !isCurrentSaved) && (
+        <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
+          <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
+            <Bookmark size={9} /> Plantillas
+          </span>
+          <div className="w-px h-4 bg-slate-200 dark:bg-gray-700 shrink-0" />
+          {filterTemplates.map((t) => {
+            const isActive = matchesTemplate(filters, t);
+            return (
+              <div key={t.id} className="flex items-center gap-0.5 shrink-0 group">
+                <button
+                  onClick={() => onApplyTemplate(t)}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                    isActive
+                      ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
+                      : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
+                  }`}
+                >{t.name}</button>
+                <button onClick={() => onDeleteTemplate(t.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none" title="Eliminar">×</button>
+              </div>
+            );
+          })}
+          {!isCurrentSaved && (
+            savingTemplate ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <input
+                  autoFocus
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave();
+                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
+                  }}
+                  placeholder="Nombre…"
+                  className="text-xs border border-brand-blue rounded px-2 py-0.5 outline-none w-28 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200"
+                />
+                <button onClick={handleSave} className="text-brand-blue text-xs font-bold">✓</button>
+                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} className="text-slate-400 text-xs">✕</button>
+              </div>
+            ) : (
+              <button onClick={() => setSavingTemplate(true)} className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors">
+                <Plus size={9} /> Guardar filtro actual
+              </button>
+            )
+          )}
+        </div>
       )}
     </div>
   );
