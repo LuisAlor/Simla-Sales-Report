@@ -90,7 +90,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-52 h-screen sticky top-0 overflow-y-auto bg-navy flex flex-col p-3 gap-2 shrink-0">
+    <aside className="w-64 h-screen sticky top-0 overflow-y-auto bg-navy flex flex-col p-3 gap-2 shrink-0">
 
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-2 pt-1 pb-3 border-b border-navy-border">
@@ -108,13 +108,11 @@ export function Sidebar() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
-          <div className="text-slate-500 text-[10px] tabular-nums min-w-0">
-            <p className="flex items-center gap-1">
-              <Clock size={9} className="shrink-0" />
-              {now.format("DD/MM/YYYY HH:mm:ss")}
-            </p>
-            <p className="pl-[13px]">({Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' }).formatToParts(now.toDate()).find(p => p.type === 'timeZoneName')?.value ?? 'UTC'})</p>
-          </div>
+          <p className="text-slate-500 text-[10px] tabular-nums flex items-center gap-1 whitespace-nowrap">
+            <Clock size={9} className="shrink-0" />
+            {now.format("DD/MM/YYYY HH:mm:ss")}
+            <span>({Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' }).formatToParts(now.toDate()).find(p => p.type === 'timeZoneName')?.value ?? 'UTC'})</span>
+          </p>
         </div>
         {user?.role === "admin" && (
           <button
