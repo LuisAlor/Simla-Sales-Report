@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw } from "lucide-react";
+import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -378,7 +378,8 @@ export function TopFilters({
           })}
           {!isCurrentSaved && (
             savingTemplate ? (
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 bg-white dark:bg-gray-900 border border-brand-blue/60 rounded-lg px-2 py-1 shadow-sm ring-1 ring-brand-blue/20">
+                <Bookmark size={11} className="text-brand-blue shrink-0" />
                 <input
                   autoFocus
                   type="text"
@@ -388,11 +389,23 @@ export function TopFilters({
                     if (e.key === "Enter") handleSave();
                     if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
                   }}
-                  placeholder="Nombre…"
-                  className="text-xs border border-brand-blue rounded px-2 py-0.5 outline-none w-28 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200"
+                  placeholder="Nombre de plantilla"
+                  className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
-                <button onClick={handleSave} className="text-brand-blue text-xs font-bold">✓</button>
-                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} className="text-slate-400 text-xs">✕</button>
+                <button
+                  onClick={handleSave}
+                  title="Guardar"
+                  className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 text-white transition-colors shrink-0"
+                >
+                  <Check size={11} />
+                </button>
+                <button
+                  onClick={() => { setSavingTemplate(false); setTemplateName(""); }}
+                  title="Cancelar"
+                  className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0"
+                >
+                  <X size={11} />
+                </button>
               </div>
             ) : (
               <button onClick={() => setSavingTemplate(true)} className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors">
