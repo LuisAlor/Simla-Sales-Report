@@ -79,9 +79,10 @@ function AppInner() {
   }, [statuses]);
 
   // Fetch manager_sd custom field options to resolve code → display name
+  // Entity is "order" (singular) per Simla v5 custom-fields endpoint
   const { data: managerSdMap = {} } = useQuery({
-    queryKey: ["customField", "orders", "manager_sd", apiKey],
-    queryFn: () => fetchCustomFieldOptions(apiKey, "orders", "manager_sd"),
+    queryKey: ["customField", "order", "manager_sd", apiKey],
+    queryFn: () => fetchCustomFieldOptions(apiKey, "order", "manager_sd"),
     enabled: apiKey.length > 0,
     staleTime: Infinity,
     retry: false,
@@ -103,6 +104,9 @@ function AppInner() {
         });
         allOrders.push(...fetched);
       }
+      // Flash 100% so the ring visually completes before disappearing
+      setProgress({ done: 1, total: 1 });
+      await new Promise<void>((r) => setTimeout(r, 500));
       setProgress(null);
       return flattenAll(allOrders);
     },
