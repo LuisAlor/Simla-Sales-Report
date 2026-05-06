@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, ChevronUp as Up, ChevronDown as Down } from "lucide-react";
+import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -74,8 +74,8 @@ interface Props {
 }
 
 const ORDER_TYPES = [
-  { code: "crm-license",         label: "💡 System License"    },
-  { code: "sales-and-marketing", label: "🎯 Sales & Marketing" },
+  { value: "crm-license",         label: "💡 System License"    },
+  { value: "sales-and-marketing", label: "🎯 Sales & Marketing" },
 ];
 
 const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
@@ -83,8 +83,6 @@ const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
   { label: "Sem", value: "W",  title: "Semanal"  },
   { label: "Mes", value: "ME", title: "Mensual"  },
 ];
-
-const dateCls = "text-xs border border-slate-200 dark:border-gray-700 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-blue w-32";
 
 function sortedStr(arr: string[]) { return [...arr].sort().join("\0"); }
 
@@ -110,6 +108,7 @@ export function TopFilters({
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
   const [showConfig, setShowConfig] = useState(false);
   const configRef = useRef<HTMLDivElement>(null);
+  const dragIdx = useRef<number | null>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -123,14 +122,6 @@ export function TopFilters({
 
   const isCurrentSaved = filterTemplates.some((t) => matchesTemplate(filters, t));
   const hasTemplates = filterTemplates.length > 0;
-
-  function toggleType(code: string) {
-    onFiltersChange({
-      selectedTypes: filters.selectedTypes.includes(code)
-        ? filters.selectedTypes.filter((c) => c !== code)
-        : [...filters.selectedTypes, code],
-    });
-  }
 
   function handleSave() {
     const name = templateName.trim();
@@ -146,18 +137,16 @@ export function TopFilters({
     saveLayout(next);
   }
 
-  function moveUp(idx: number) {
-    if (idx === 0) return;
-    const next = [...layout];
-    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-    setLayout(next);
-    saveLayout(next);
+  function handleDragStart(idx: number) {
+    dragIdx.current = idx;
   }
 
-  function moveDown(idx: number) {
-    if (idx === layout.length - 1) return;
+  function handleDrop(idx: number) {
+    if (dragIdx.current === null || dragIdx.current === idx) return;
     const next = [...layout];
-    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(idx, 0, moved);
+    dragIdx.current = null;
     setLayout(next);
     saveLayout(next);
   }
@@ -193,18 +182,11 @@ export function TopFilters({
           <div key="first-payment-date" className="flex flex-col gap-1 shrink-0">
             <FL label="Fecha de primer pago" tip="Filtra pedidos por el campo personalizado 'firstpaymentdate'. Independiente de la fecha de creación. Deja vacío para ignorar." />
             <div className="flex items-center gap-1">
-              <input
-                type="date"
-                value={filters.firstPaymentFrom}
-                onChange={(e) => onFiltersChange({ firstPaymentFrom: e.target.value })}
-                className={dateCls}
-              />
-              <span className="text-slate-400 dark:text-slate-600 text-xs">→</span>
-              <input
-                type="date"
-                value={filters.firstPaymentTo}
-                onChange={(e) => onFiltersChange({ firstPaymentTo: e.target.value })}
-                className={dateCls}
+              <DateRangePicker
+                dateFrom={filters.firstPaymentFrom}
+                dateTo={filters.firstPaymentTo}
+                onChange={(from, to) => onFiltersChange({ firstPaymentFrom: from, firstPaymentTo: to })}
+                compact
               />
               {(filters.firstPaymentFrom || filters.firstPaymentTo) && (
                 <button
@@ -240,24 +222,16 @@ export function TopFilters({
 
       case "order-type":
         return (
-          <div key="order-type" className="flex flex-col gap-1 shrink-0">
-            <FL label="Tipo de pedido" tip="Filtra por tipo de pedido. Selecciona uno o ambos para combinarlos." />
-            <div className="flex items-center gap-1">
-              {ORDER_TYPES.map((t) => {
-                const active = filters.selectedTypes.includes(t.code);
-                return (
-                  <button
-                    key={t.code}
-                    onClick={() => toggleType(t.code)}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                      active
-                        ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
-                        : "border-slate-200 dark:border-gray-700 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-600 dark:hover:text-slate-300"
-                    }`}
-                  >{t.label}</button>
-                );
-              })}
-            </div>
+          <div key="order-type" className="flex flex-col gap-1 w-48 shrink-0">
+            <FL label="Tipo de pedido" tip="Filtra por tipo de pedido. Selecciona uno o más para combinarlos." />
+            <MultiSelect
+              variant="light"
+              options={ORDER_TYPES}
+              selected={filters.selectedTypes}
+              onChange={(next) => onFiltersChange({ selectedTypes: next })}
+              placeholder="Todos"
+              emptyLabel="Sin opciones"
+            />
           </div>
         );
 
@@ -354,60 +328,57 @@ export function TopFilters({
             ))}
           </div>
 
-          {/* Gear: configure visible filters */}
-          <div ref={configRef} className="relative shrink-0 self-end mb-0.5">
-            <button
-              onClick={() => setShowConfig((v) => !v)}
-              title="Configurar filtros"
-              className={`p-1.5 rounded-md transition-colors ${showConfig ? "bg-brand-blue/10 text-brand-blue" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
-            >
-              <Settings2 size={14} />
-            </button>
-
-            {showConfig && (
-              <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-60">
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Configurar filtros</p>
-                <div className="flex flex-col gap-1.5">
-                  {layout.map((item, idx) => {
-                    const def = FILTER_DEFS.find((f) => f.id === item.id);
-                    if (!def) return null;
-                    return (
-                      <div key={item.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={item.visible}
-                          onChange={() => toggleVisible(item.id)}
-                          className="cursor-pointer accent-brand-blue"
-                        />
-                        <span className="text-xs text-slate-700 dark:text-slate-200 flex-1 truncate">{def.label}</span>
-                        <div className="flex gap-0.5">
-                          <button
-                            onClick={() => moveUp(idx)}
-                            disabled={idx === 0}
-                            className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-20 transition-colors"
-                          ><Up size={10} /></button>
-                          <button
-                            onClick={() => moveDown(idx)}
-                            disabled={idx === layout.length - 1}
-                            className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-20 transition-colors"
-                          ><Down size={10} /></button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: cache + reset + load */}
-          <div className="flex items-center gap-2 shrink-0 self-end mb-0.5">
+          {/* Right: cache + gear config + reset + load — all in one row for alignment */}
+          <div className="flex items-center gap-1 shrink-0 self-end mb-0.5">
             {cachedAt && !loading && (
-              <span className="flex items-center gap-1 text-amber-500 text-[10px]">
+              <span className="flex items-center gap-1 text-amber-500 text-[10px] mr-1">
                 <Zap size={10} />
                 {dayjs(cachedAt).format("HH:mm")}
               </span>
             )}
+
+            {/* Gear: configure visible filters */}
+            <div ref={configRef} className="relative">
+              <button
+                onClick={() => setShowConfig((v) => !v)}
+                title="Configurar filtros"
+                className={`p-1.5 rounded-md transition-colors ${showConfig ? "bg-brand-blue/10 text-brand-blue" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
+              >
+                <Settings2 size={14} />
+              </button>
+
+              {showConfig && (
+                <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-56">
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Configurar filtros</p>
+                  <div className="flex flex-col gap-1">
+                    {layout.map((item, idx) => {
+                      const def = FILTER_DEFS.find((f) => f.id === item.id);
+                      if (!def) return null;
+                      return (
+                        <div
+                          key={item.id}
+                          draggable
+                          onDragStart={() => handleDragStart(idx)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => handleDrop(idx)}
+                          className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing transition-colors"
+                        >
+                          <GripVertical size={11} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                          <input
+                            type="checkbox"
+                            checked={item.visible}
+                            onChange={() => toggleVisible(item.id)}
+                            className="cursor-pointer accent-brand-blue shrink-0"
+                          />
+                          <span className="text-xs text-slate-700 dark:text-slate-200 truncate">{def.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={onReset}
               title="Restablecer filtros"
