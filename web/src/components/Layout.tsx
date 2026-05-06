@@ -20,6 +20,7 @@ interface Props {
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (templates: FilterTemplate[]) => void;
   loading: boolean;
+  cachedAt: number | null;
 }
 
 export function Layout(props: Props) {

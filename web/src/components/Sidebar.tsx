@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
 import { BarChart3, TrendingDown, Filter, ShieldCheck, LogOut, RotateCcw } from "lucide-react";
 import type { Freq } from "@/lib/transforms";
 import type { FilterTemplate } from "@/lib/auth";
@@ -36,6 +37,7 @@ interface Props {
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (templates: FilterTemplate[]) => void;
   loading: boolean;
+  cachedAt: number | null;
 }
 
 const HARDCODED_ORDER_TYPES = [
@@ -84,7 +86,7 @@ function CheckList({
 
 export function Sidebar({
   filters, managers, availableUtms, filterTemplates,
-  onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading,
+  onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading, cachedAt,
 }: Props) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -251,6 +253,12 @@ export function Sidebar({
         >
           {loading ? "Cargando…" : "Cargar datos"}
         </button>
+
+        {cachedAt && !loading && (
+          <p className="text-slate-600 text-[10px] text-center">
+            ⚡ Caché · {dayjs(cachedAt).format("HH:mm")} · Recarga para actualizar
+          </p>
+        )}
 
         {user && (
           <div className="flex items-center gap-2">

@@ -14,6 +14,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { fetchOrders, fetchStatuses, fetchDictionaryOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
+import { makeKey, readCache, writeCache, clearCache } from "@/lib/ordersCache";
 import type { Filters } from "@/components/Sidebar";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
@@ -87,27 +88,57 @@ function AppInner() {
     retry: false,
   });
 
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
+
   // Main data query — triggered by loadKey
   const { data, isFetching, error } = useQuery<LoadedData>({
     queryKey: ["orders", loadKey],
     queryFn: async () => {
-      const typesToFetch = filters.selectedTypes.length > 0 ? filters.selectedTypes : [undefined];
-      const allOrders = [];
-      for (const otype of typesToFetch) {
-        const fetched = await fetchOrders({
-          apiKey,
-          dateFrom: filters.dateFrom,
-          dateTo: filters.dateTo,
-          orderType: otype,
-          onProgress: (done, total) => setProgress({ done, total }),
-        });
-        allOrders.push(...fetched);
+      const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes);
+
+      // Return cached data instantly if available (skip all network requests)
+      const cached = readCache(cacheKey);
+      if (cached) {
+        setCachedAt(cached.cachedAt);
+        return { records: cached.records, items: cached.items };
       }
+
+      setCachedAt(null);
+      const typesToFetch = filters.selectedTypes.length > 0
+        ? filters.selectedTypes
+        : [undefined as string | undefined];
+
+      // Fetch all order types in parallel, aggregating progress across all
+      const progressMap = new Map<number, { done: number; total: number }>();
+      const results = await Promise.all(
+        typesToFetch.map((otype, idx) =>
+          fetchOrders({
+            apiKey,
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+            orderType: otype,
+            onProgress: (done, total) => {
+              progressMap.set(idx, { done, total });
+              const vals = [...progressMap.values()];
+              setProgress({
+                done: vals.reduce((s, p) => s + p.done, 0),
+                total: vals.reduce((s, p) => s + p.total, 0),
+              });
+            },
+          })
+        )
+      );
+
+      const allOrders = results.flat();
+
       // Flash 100% so the ring visually completes before disappearing
       setProgress({ done: 1, total: 1 });
       await new Promise<void>((r) => setTimeout(r, 500));
       setProgress(null);
-      return flattenAll(allOrders);
+
+      const result = flattenAll(allOrders);
+      writeCache(cacheKey, result);
+      return result;
     },
     enabled: loadKey > 0 && apiKey.length > 0,
     staleTime: Infinity,
@@ -116,6 +147,10 @@ function AppInner() {
 
   const handleLoad = useCallback(() => {
     if (!apiKey) return;
+    // Clear cache for current filters so user always gets fresh data on explicit reload
+    const cacheKey = makeKey(apiKey, filters.dateFrom, filters.dateTo, filters.selectedTypes);
+    clearCache(cacheKey);
+    setCachedAt(null);
     queryClient.removeQueries({ queryKey: ["orders"] });
     setProgress(null);
     setLoadKey((k) => k + 1);
@@ -245,6 +280,7 @@ function AppInner() {
     onDeleteTemplate: handleDeleteTemplate,
     onReorderTemplates: handleReorderTemplates,
     loading: isFetching,
+    cachedAt,
   };
 
   if (!apiKey) {
