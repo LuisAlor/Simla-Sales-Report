@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical } from "lucide-react";
+import { Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical, X } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -153,6 +153,9 @@ export function TopFilters({
 
   const visibleIds = layout.filter((l) => l.visible).map((l) => l.id);
 
+  // Approximate height of the FL label row so non-label items align with controls
+  const LABEL_H = "mt-[18px]";
+
   function renderFilter(id: FilterId) {
     switch (id) {
       case "creation-date":
@@ -289,23 +292,24 @@ export function TopFilters({
     <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
 
       {/* ── Main filter row ── */}
-      <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
+      {/* items-start so all filter columns align at their label tops; content grows downward */}
+      <div className="flex items-start gap-2 px-4 py-2 flex-wrap">
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle — offset by label height so it aligns with the controls */}
         <button
           onClick={() => setCollapsed((v) => !v)}
           title={collapsed ? "Mostrar filtros" : "Ocultar filtros"}
-          className="p-1 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+          className={`p-1 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors shrink-0 ${!collapsed ? LABEL_H : ""}`}
         >
           {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         </button>
 
         {collapsed && (
           <>
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 self-center">
               {filters.dateFrom || "—"} → {filters.dateTo || "—"}
             </span>
-            <div className="ml-auto flex items-center gap-2 shrink-0">
+            <div className="ml-auto flex items-center gap-2 shrink-0 self-center">
               <button
                 onClick={onLoad}
                 disabled={loading || !hasApiKey}
@@ -318,24 +322,28 @@ export function TopFilters({
         )}
 
         {!collapsed && (<>
-          {/* Labeled filter groups — visible filters in configured order */}
-          <div className="flex items-end gap-3 flex-wrap flex-1">
+          {/* Filter columns — all top-aligned; separators start after label height */}
+          <div className="flex items-start gap-3 flex-wrap flex-1">
             {visibleIds.map((id, i) => (
-              <div key={id} className="flex items-end gap-3">
-                {i > 0 && <div className="w-px h-7 bg-slate-200 dark:bg-gray-700 shrink-0 self-end mb-0.5" />}
+              <div key={id} className="flex items-start gap-3">
+                {i > 0 && (
+                  <div className={`w-px h-6 bg-slate-200 dark:bg-gray-700 shrink-0 ${LABEL_H}`} />
+                )}
                 {renderFilter(id)}
               </div>
             ))}
           </div>
 
-          {/* Right: cache + gear config + reset + load — all in one row for alignment */}
-          <div className="flex items-center gap-1 shrink-0 self-end mb-0.5">
-            {cachedAt && !loading && (
-              <span className="flex items-center gap-1 text-amber-500 text-[10px] mr-1">
-                <Zap size={10} />
-                {dayjs(cachedAt).format("HH:mm")}
-              </span>
-            )}
+          {/* Action buttons — offset by label height to align with controls, not labels */}
+          <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
+            {/* Red X reset — placed first, closest to the last filter */}
+            <button
+              onClick={onReset}
+              title="Restablecer todos los filtros"
+              className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <X size={13} />
+            </button>
 
             {/* Gear: configure visible filters */}
             <div ref={configRef} className="relative">
@@ -379,13 +387,17 @@ export function TopFilters({
               )}
             </div>
 
-            <button
-              onClick={onReset}
-              title="Restablecer filtros"
-              className="p-1.5 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <RotateCcw size={13} />
-            </button>
+            {/* Cache indicator with tooltip */}
+            {cachedAt && !loading && (
+              <span
+                title={`Datos cargados desde caché · Última actualización: ${dayjs(cachedAt).format("HH:mm")}`}
+                className="flex items-center gap-1 text-amber-500 text-[10px] cursor-help px-1"
+              >
+                <Zap size={10} />
+                {dayjs(cachedAt).format("HH:mm")}
+              </span>
+            )}
+
             <button
               onClick={onLoad}
               disabled={loading || !hasApiKey}

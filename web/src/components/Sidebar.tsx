@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
@@ -8,6 +8,7 @@ import {
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
+import dayjs from "dayjs";
 
 const THEME_OPTS: { value: Theme; icon: React.ElementType; title: string }[] = [
   { value: "light", icon: Sun,     title: "Modo claro"     },
@@ -46,8 +47,6 @@ const MODULES: ModuleDef[] = [
       { to: "/funnel", label: "Embudo",    icon: TrendingDown, end: false },
     ],
   },
-  // Future modules:
-  // { id: "demo", label: "Demo Analysis", icon: Presentation, pages: [...] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -59,6 +58,14 @@ export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const [logoError, setLogoError] = useState(false);
+  const [now, setNow] = useState(() => dayjs());
+
+  // Live clock — updates every second
+  useEffect(() => {
+    const id = setInterval(() => setNow(dayjs()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Auto-open the module whose page is currently active
   const initialOpen = () => {
@@ -87,12 +94,21 @@ export function Sidebar() {
 
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-2 pt-1 pb-3 border-b border-navy-border">
-        <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center text-white font-bold text-base shrink-0">
-          S
+        <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center overflow-hidden shrink-0">
+          {logoError ? (
+            <span className="text-white font-bold text-base">S</span>
+          ) : (
+            <img
+              src="/logo.png"
+              alt="Simla.com"
+              className="w-full h-full object-contain"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-sm leading-tight">Simla</p>
-          <p className="text-slate-500 text-[10px]">Analytics · CRM</p>
+          <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
+          <p className="text-slate-500 text-[10px] tabular-nums">{now.format("DD/MM/YYYY HH:mm:ss")}</p>
         </div>
         {user?.role === "admin" && (
           <button
