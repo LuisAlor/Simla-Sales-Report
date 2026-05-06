@@ -40,7 +40,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
   const isDark = variant === "dark";
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-1">
+    <div ref={containerRef} className="relative">
       <div
         className={`flex flex-wrap gap-1 items-center rounded-md px-2 py-1 min-h-[30px] cursor-text border ${
           isDark
@@ -72,8 +72,8 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
       </div>
 
       {open && (
-        <div className={`border rounded-md max-h-36 overflow-y-auto z-30 relative ${
-          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 shadow-md"
+        <div className={`absolute top-full left-0 right-0 mt-1 border rounded-md max-h-48 overflow-y-auto z-50 shadow-lg ${
+          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700"
         }`}>
           {filtered.length === 0 ? (
             <p className={`text-xs px-2 py-1.5 italic ${isDark ? "text-slate-500" : "text-slate-400"}`}>

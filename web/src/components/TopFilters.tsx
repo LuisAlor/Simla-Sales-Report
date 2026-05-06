@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RotateCcw, Bookmark, Plus, Zap } from "lucide-react";
+import { RotateCcw, Bookmark, Plus, Zap, ChevronDown, ChevronUp } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -53,6 +53,7 @@ export function TopFilters({
 }: Props) {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
   const isCurrentSaved = filterTemplates.some((t) => matchesTemplate(filters, t));
   const hasTemplates = filterTemplates.length > 0;
@@ -77,6 +78,34 @@ export function TopFilters({
 
       {/* ── Main filter row ── */}
       <div className="flex items-center gap-2 px-4 py-2 flex-wrap">
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          title={collapsed ? "Mostrar filtros" : "Ocultar filtros"}
+          className="p-1 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+        >
+          {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </button>
+
+        {collapsed && (
+          <>
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
+              {filters.dateFrom} → {filters.dateTo}
+            </span>
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <button
+                onClick={onLoad}
+                disabled={loading || !hasApiKey}
+                className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors"
+              >
+                {loading ? "Cargando…" : "Cargar datos"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {!collapsed && (<>
 
         {/* Date range — compact single button */}
         <DateRangePicker
@@ -190,10 +219,11 @@ export function TopFilters({
             {loading ? "Cargando…" : "Cargar datos"}
           </button>
         </div>
+        </>)}
       </div>
 
       {/* ── Templates row ── */}
-      {(hasTemplates || !isCurrentSaved) && (
+      {!collapsed && (hasTemplates || !isCurrentSaved) && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
           <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
             <Bookmark size={9} /> Plantillas
