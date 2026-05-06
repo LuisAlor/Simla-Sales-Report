@@ -9,9 +9,10 @@ interface Props {
   onChange: (next: string[]) => void;
   placeholder?: string;
   emptyLabel?: string;
+  variant?: "dark" | "light";
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = "Buscar…", emptyLabel = "Sin opciones" }: Props) {
+export function MultiSelect({ options, selected, onChange, placeholder = "Buscar…", emptyLabel = "Sin opciones", variant = "dark" }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,10 +37,16 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
   }
 
+  const isDark = variant === "dark";
+
   return (
     <div ref={containerRef} className="flex flex-col gap-1">
       <div
-        className="flex flex-wrap gap-1 items-center bg-navy-border border border-navy-border rounded-md px-2 py-1 min-h-[30px] cursor-text"
+        className={`flex flex-wrap gap-1 items-center rounded-md px-2 py-1 min-h-[30px] cursor-text border ${
+          isDark
+            ? "bg-navy-border border-navy-border"
+            : "bg-white border-slate-200 hover:border-slate-300"
+        }`}
         onClick={() => setOpen(true)}
       >
         {selectedOptions.map((o) => (
@@ -54,7 +61,9 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
           </span>
         ))}
         <input
-          className="flex-1 min-w-[50px] text-xs bg-transparent text-white placeholder-slate-500 outline-none"
+          className={`flex-1 min-w-[50px] text-xs bg-transparent outline-none ${
+            isDark ? "text-white placeholder-slate-500" : "text-slate-700 placeholder-slate-400"
+          }`}
           placeholder={selected.length === 0 ? placeholder : ""}
           value={search}
           onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
@@ -63,9 +72,11 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
       </div>
 
       {open && (
-        <div className="bg-[#1a2233] border border-navy-border rounded-md max-h-36 overflow-y-auto">
+        <div className={`border rounded-md max-h-36 overflow-y-auto z-30 relative ${
+          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white border-slate-200 shadow-md"
+        }`}>
           {filtered.length === 0 ? (
-            <p className="text-slate-500 text-xs px-2 py-1.5 italic">
+            <p className={`text-xs px-2 py-1.5 italic ${isDark ? "text-slate-500" : "text-slate-400"}`}>
               {search ? "Sin resultados" : emptyLabel}
             </p>
           ) : (
@@ -73,7 +84,11 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
               <button
                 key={o.value}
                 onClick={() => { toggle(o.value); setSearch(""); }}
-                className="w-full text-left px-2 py-1.5 text-xs text-slate-300 hover:bg-navy-border transition-colors"
+                className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
+                  isDark
+                    ? "text-slate-300 hover:bg-navy-border"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
               >
                 {o.label}
               </button>

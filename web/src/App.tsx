@@ -15,7 +15,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { fetchOrders, fetchStatuses, fetchDictionaryOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import { makeKey, readCache, writeCache, clearCache } from "@/lib/ordersCache";
-import type { Filters } from "@/components/Sidebar";
+import type { Filters } from "@/lib/filters";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
 
@@ -281,6 +281,7 @@ function AppInner() {
     onReorderTemplates: handleReorderTemplates,
     loading: isFetching,
     cachedAt,
+    hasApiKey: apiKey.length > 0,
   };
 
   if (!apiKey) {

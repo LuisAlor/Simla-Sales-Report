@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Grip, Trash2, Plus } from "lucide-react";
 import type { FilterTemplate } from "@/lib/auth";
-import type { Filters } from "./Sidebar";
+import type { Filters } from "@/lib/filters";
 
 interface Props {
   templates: FilterTemplate[];

@@ -7,6 +7,7 @@ interface Props {
   dateFrom: string;
   dateTo: string;
   onChange: (from: string, to: string) => void;
+  compact?: boolean;
 }
 
 type Mode = "calendar" | "relative";
@@ -25,7 +26,7 @@ function fmt(d: string) {
   return d ? dayjs(d).format("DD/MM/YYYY") : "—";
 }
 
-export function DateRangePicker({ dateFrom, dateTo, onChange }: Props) {
+export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("calendar");
   const [selecting, setSelecting] = useState<Selecting>("from");
@@ -246,6 +247,25 @@ export function DateRangePicker({ dateFrom, dateTo, onChange }: Props) {
       )}
     </div>
   ) : null;
+
+  if (compact) {
+    return (
+      <>
+        <div ref={triggerRef}>
+          <button
+            onClick={() => openFor("from")}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border transition-colors whitespace-nowrap ${
+              open ? "border-brand-blue text-slate-700 bg-blue-50" : "border-slate-200 text-slate-600 hover:border-slate-300 bg-white"
+            }`}
+          >
+            <Calendar size={11} className="text-slate-400 shrink-0" />
+            {fmt(dateFrom)} → {fmt(dateTo)}
+          </button>
+        </div>
+        {createPortal(popup, document.body)}
+      </>
+    );
+  }
 
   return (
     <>

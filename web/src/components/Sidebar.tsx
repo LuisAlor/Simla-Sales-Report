@@ -1,272 +1,166 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import dayjs from "dayjs";
-import { BarChart3, TrendingDown, Filter, ShieldCheck, LogOut, RotateCcw } from "lucide-react";
-import type { Freq } from "@/lib/transforms";
-import type { FilterTemplate } from "@/lib/auth";
+import { useState } from "react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import {
+  BarChart3, TrendingDown, LineChart,
+  ChevronDown, ShieldCheck, LogOut,
+} from "lucide-react";
 import { Avatar } from "@/components/Avatar";
-import { MultiSelect } from "@/components/MultiSelect";
-import { DateRangePicker } from "@/components/DateRangePicker";
-import { FilterTemplates } from "@/components/FilterTemplates";
 import { useAuth } from "@/contexts/AuthContext";
 
-export interface Filters {
-  dateFrom: string;
-  dateTo: string;
-  freq: Freq;
-  selectedTypes: string[];
-  managerIds: string[];
-  utmSources: string[];
-  utmMediums: string[];
+// Re-export Filters type so existing imports keep working
+export type { Filters } from "@/lib/filters";
+
+// ---------------------------------------------------------------------------
+// Module / page definitions — add future modules here
+// ---------------------------------------------------------------------------
+
+interface PageDef {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  end?: boolean;
 }
 
-interface AvailableUtms {
-  sources: string[];
-  mediums: string[];
+interface ModuleDef {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  pages: PageDef[];
 }
 
-interface Props {
-  filters: Filters;
-  managers: { value: string; label: string }[];
-  availableUtms: AvailableUtms;
-  filterTemplates: FilterTemplate[];
-  onFiltersChange: (f: Partial<Filters>) => void;
-  onLoad: () => void;
-  onReset: () => void;
-  onSaveTemplate: (name: string) => void;
-  onApplyTemplate: (t: FilterTemplate) => void;
-  onDeleteTemplate: (id: string) => void;
-  onReorderTemplates: (templates: FilterTemplate[]) => void;
-  loading: boolean;
-  cachedAt: number | null;
-}
-
-const HARDCODED_ORDER_TYPES = [
-  { code: "crm-license",         label: "💡 SYSTEM LICENSE" },
-  { code: "sales-and-marketing", label: "🎯 SALES AND MARKETING" },
+const MODULES: ModuleDef[] = [
+  {
+    id: "analytics",
+    label: "Analíticas",
+    icon: BarChart3,
+    pages: [
+      { to: "/",       label: "Generales", icon: LineChart,    end: true  },
+      { to: "/funnel", label: "Embudo",    icon: TrendingDown, end: false },
+    ],
+  },
+  // Future modules:
+  // { id: "demo", label: "Demo Analysis", icon: Presentation, pages: [...] },
 ];
 
-const NAV_ITEMS = [
-  { to: "/",       label: "Analíticas generales", icon: BarChart3 },
-  { to: "/funnel", label: "Etapas del embudo",    icon: TrendingDown },
-];
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-const FREQ_OPTIONS: { label: string; value: Freq }[] = [
-  { label: "Diario",   value: "D"  },
-  { label: "Semanal",  value: "W"  },
-  { label: "Mensual",  value: "ME" },
-];
-
-function CheckList({
-  items,
-  selected,
-  onChange,
-}: {
-  items: { value: string; label: string }[];
-  selected: string[];
-  onChange: (next: string[]) => void;
-}) {
-  function toggle(value: string) {
-    onChange(
-      selected.includes(value)
-        ? selected.filter((v) => v !== value)
-        : [...selected, value]
-    );
-  }
-  return (
-    <div className="flex flex-col gap-1 max-h-24 overflow-y-auto pr-1">
-      {items.map(({ value, label }) => (
-        <label key={value} className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer select-none">
-          <input type="checkbox" checked={selected.includes(value)} onChange={() => toggle(value)} className="accent-teal" />
-          <span className="truncate">{label}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-export function Sidebar({
-  filters, managers, availableUtms, filterTemplates,
-  onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate, onReorderTemplates, loading, cachedAt,
-}: Props) {
+export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Auto-open the module whose page is currently active
+  const initialOpen = () => {
+    const open = new Set<string>();
+    for (const m of MODULES) {
+      if (m.pages.some((p) => p.end ? location.pathname === p.to : location.pathname.startsWith(p.to))) {
+        open.add(m.id);
+      }
+    }
+    if (open.size === 0) open.add(MODULES[0].id);
+    return open;
+  };
+
+  const [openModules, setOpenModules] = useState<Set<string>>(initialOpen);
+
+  function toggleModule(id: string) {
+    setOpenModules((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   return (
-    <aside className="w-64 h-screen sticky top-0 overflow-y-auto bg-navy flex flex-col p-4 gap-3 shrink-0">
+    <aside className="w-52 h-screen sticky top-0 overflow-y-auto bg-navy flex flex-col p-3 gap-2 shrink-0">
 
       {/* Brand */}
-      <div className="flex items-center gap-3 pb-3 border-b border-navy-border">
-        <div className="w-9 h-9 rounded-lg bg-teal flex items-center justify-center text-white font-bold text-lg shrink-0">S</div>
+      <div className="flex items-center gap-2.5 px-2 pt-1 pb-3 border-b border-navy-border">
+        <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center text-white font-bold text-base shrink-0">
+          S
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-sm leading-tight">Simla Analíticas</p>
-          <p className="text-slate-500 text-xs">Panel de ventas · CRM</p>
+          <p className="text-white font-bold text-sm leading-tight">Simla</p>
+          <p className="text-slate-500 text-[10px]">Analytics · CRM</p>
         </div>
         {user?.role === "admin" && (
-          <button onClick={() => navigate("/admin")} title="Panel de administración" className="text-slate-500 hover:text-white transition-colors shrink-0">
-            <ShieldCheck size={16} />
+          <button
+            onClick={() => navigate("/admin")}
+            title="Administración"
+            className="text-slate-500 hover:text-white transition-colors shrink-0"
+          >
+            <ShieldCheck size={14} />
           </button>
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to} to={to} end
-            className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                isActive ? "bg-brand-blue text-white font-semibold" : "text-slate-400 hover:bg-navy-border hover:text-white"
-              }`
-            }
-          >
-            <Icon size={15} />
-            {label}
-          </NavLink>
-        ))}
+      {/* Module navigation */}
+      <nav className="flex flex-col gap-0.5 flex-1">
+        {MODULES.map((module) => {
+          const ModIcon = module.icon;
+          const isOpen = openModules.has(module.id);
+
+          return (
+            <div key={module.id}>
+              {/* Module header — clickable to expand/collapse */}
+              <button
+                onClick={() => toggleModule(module.id)}
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-slate-400 hover:text-white hover:bg-navy-border transition-colors text-sm"
+              >
+                <ModIcon size={14} className="shrink-0" />
+                <span className="flex-1 text-left font-medium text-sm">{module.label}</span>
+                <ChevronDown
+                  size={12}
+                  className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {/* Sub-pages */}
+              {isOpen && (
+                <div className="ml-3 mt-0.5 mb-1 border-l border-navy-border pl-3 flex flex-col gap-0.5">
+                  {module.pages.map((page) => {
+                    const PageIcon = page.icon;
+                    return (
+                      <NavLink
+                        key={page.to}
+                        to={page.to}
+                        end={page.end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
+                            isActive
+                              ? "bg-brand-blue text-white font-semibold"
+                              : "text-slate-400 hover:bg-navy-border hover:text-white"
+                          }`
+                        }
+                      >
+                        <PageIcon size={12} className="shrink-0" />
+                        {page.label}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
-      <hr className="border-navy-border" />
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest flex items-center gap-1">
-            <Filter size={10} /> Filtros
-          </p>
-          <button
-            onClick={onReset}
-            title="Restablecer filtros"
-            className="text-slate-600 hover:text-slate-300 transition-colors"
-          >
-            <RotateCcw size={11} />
-          </button>
-        </div>
-
-        <DateRangePicker
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onChange={(from, to) => onFiltersChange({ dateFrom: from, dateTo: to })}
-        />
-
-        <div>
-          <label className="block text-slate-400 text-xs mb-1">Granularidad</label>
-          <select
-            value={filters.freq}
-            onChange={(e) => onFiltersChange({ freq: e.target.value as Freq })}
-            className="w-full bg-navy-border text-white text-sm rounded-md px-3 py-1.5 border border-navy-border focus:outline-none focus:ring-1 focus:ring-teal"
-          >
-            {FREQ_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-slate-400 text-xs mb-1">Tipo de pedido</label>
-          <CheckList
-            items={HARDCODED_ORDER_TYPES.map((t) => ({ value: t.code, label: t.label }))}
-            selected={filters.selectedTypes}
-            onChange={(next) => onFiltersChange({ selectedTypes: next })}
-          />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-slate-400 text-xs">Asesores (Manager SD)</label>
-            {filters.managerIds.length > 0 && (
-              <button onClick={() => onFiltersChange({ managerIds: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
-            )}
-          </div>
-          <MultiSelect
-            options={managers}
-            selected={filters.managerIds}
-            onChange={(next) => onFiltersChange({ managerIds: next })}
-            placeholder="Todos los asesores"
-            emptyLabel="Carga datos para ver asesores"
-          />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-slate-400 text-xs">UTM Source</label>
-            {filters.utmSources.length > 0 && (
-              <button onClick={() => onFiltersChange({ utmSources: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
-            )}
-          </div>
-          <MultiSelect
-            options={availableUtms.sources.map((s) => ({ value: s, label: s }))}
-            selected={filters.utmSources}
-            onChange={(next) => onFiltersChange({ utmSources: next })}
-            placeholder="Todas las fuentes"
-            emptyLabel="Carga datos para ver UTMs"
-          />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-slate-400 text-xs">UTM Medium</label>
-            {filters.utmMediums.length > 0 && (
-              <button onClick={() => onFiltersChange({ utmMediums: [] })} className="text-slate-500 hover:text-slate-300 text-[10px]">Limpiar</button>
-            )}
-          </div>
-          <MultiSelect
-            options={availableUtms.mediums.map((m) => ({ value: m, label: m }))}
-            selected={filters.utmMediums}
-            onChange={(next) => onFiltersChange({ utmMediums: next })}
-            placeholder="Todos los medios"
-            emptyLabel="Carga datos para ver UTMs"
-          />
-        </div>
-      </div>
-
-      {/* Filter Templates */}
-      {(filterTemplates.length > 0 || true) && (
-        <>
-          <hr className="border-navy-border" />
-          <div>
-            <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest mb-2">Plantillas</p>
-            <FilterTemplates
-              templates={filterTemplates}
-              currentFilters={filters}
-              onApply={onApplyTemplate}
-              onSave={onSaveTemplate}
-              onDelete={onDeleteTemplate}
-              onReorder={onReorderTemplates}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Bottom: load + profile */}
-      <div className="mt-auto flex flex-col gap-2 pt-3 border-t border-navy-border">
-        {!user?.apiKey && (
-          <p className="text-amber-400 text-xs text-center">
-            Configura tu API Key en{" "}
-            <button className="underline" onClick={() => navigate("/admin")}>Administración</button>
-          </p>
-        )}
-
-        <button
-          onClick={onLoad}
-          disabled={loading || !user?.apiKey}
-          className="w-full bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm py-2 rounded-md transition-colors"
-        >
-          {loading ? "Cargando…" : "Cargar datos"}
-        </button>
-
-        {cachedAt && !loading && (
-          <p className="text-slate-600 text-[10px] text-center">
-            ⚡ Caché · {dayjs(cachedAt).format("HH:mm")} · Recarga para actualizar
-          </p>
-        )}
-
+      {/* User profile + logout */}
+      <div className="pt-3 border-t border-navy-border">
         {user && (
           <div className="flex items-center gap-2">
             <div
               className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors min-w-0"
               onClick={() => navigate("/profile")}
             >
-              <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={28} />
+              <Avatar
+                firstName={user.firstName}
+                lastName={user.lastName}
+                avatarDataUrl={user.avatarDataUrl}
+                size={26}
+              />
               <div className="overflow-hidden">
                 <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
                 <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
@@ -277,7 +171,7 @@ export function Sidebar({
               title="Cerrar sesión"
               className="text-slate-500 hover:text-red-400 transition-colors shrink-0 p-1.5 rounded hover:bg-navy-border"
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </button>
           </div>
         )}
