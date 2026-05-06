@@ -11,8 +11,14 @@ function FL({ label, tip }: { label: string; tip: string }) {
   return (
     <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
       {label}
-      <span title={tip} className="cursor-help text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors">
-        <Info size={9} />
+      <span className="relative group/tip cursor-help">
+        <Info size={9} className="text-slate-300 dark:text-slate-600 group-hover/tip:text-slate-500 dark:group-hover/tip:text-slate-400 transition-colors" />
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover/tip:block z-50 pointer-events-none w-52">
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 text-[11px] text-slate-700 dark:text-slate-200 font-normal normal-case tracking-normal leading-relaxed">
+            {tip}
+          </div>
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white dark:bg-gray-800 border-l border-t border-slate-200 dark:border-gray-700 rotate-45" />
+        </div>
       </span>
     </span>
   );

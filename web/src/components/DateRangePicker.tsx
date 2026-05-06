@@ -128,11 +128,11 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
         : "bg-[#1e3a5f] text-white rounded-full font-semibold";
     }
     if (ds > rangeStart && ds < rangeEnd) {
-      return isFuture ? "opacity-30 cursor-default" : "bg-blue-100 text-slate-700";
+      return isFuture ? "opacity-30 cursor-default" : "bg-blue-100 dark:bg-blue-900/40 text-slate-700 dark:text-slate-200";
     }
     if (ds === today) return "text-teal font-bold hover:bg-slate-100 rounded-full";
     if (isFuture) return "text-slate-300 cursor-default";
-    return "text-slate-700 hover:bg-slate-100 rounded-full cursor-pointer";
+    return "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-full cursor-pointer";
   }
 
   const currentYear = dayjs().year();
@@ -142,11 +142,11 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
     <div
       ref={popupRef}
       style={{ position: "fixed", top: popupPos.top, left: popupPos.left, zIndex: 9999 }}
-      className="bg-white border border-slate-200 rounded-xl shadow-xl w-72 text-slate-800"
+      className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl shadow-xl w-72 text-slate-800 dark:text-slate-100"
     >
       {mode === "calendar" ? (
         <div className="p-3">
-          <p className="text-center text-[10px] text-slate-400 mb-2 font-semibold uppercase tracking-wide">
+          <p className="text-center text-[10px] text-slate-400 dark:text-slate-500 mb-2 font-semibold uppercase tracking-wide">
             {selecting === "from" ? "Selecciona fecha inicial" : "Selecciona fecha final"}
           </p>
 
@@ -154,29 +154,29 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setViewMonth((m) => m.subtract(1, "month"))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-500"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-gray-700 rounded text-slate-500 dark:text-slate-400"
             >
               <ChevronLeft size={15} />
             </button>
-            <div className="flex gap-1 text-sm font-semibold text-slate-700">
+            <div className="flex gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
               <select
                 value={viewMonth.month()}
                 onChange={(e) => setViewMonth((m) => m.month(Number(e.target.value)))}
-                className="outline-none bg-transparent cursor-pointer"
+                className="outline-none bg-transparent dark:bg-gray-800 dark:text-slate-200 cursor-pointer"
               >
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
               <select
                 value={viewMonth.year()}
                 onChange={(e) => setViewMonth((m) => m.year(Number(e.target.value)))}
-                className="outline-none bg-transparent cursor-pointer"
+                className="outline-none bg-transparent dark:bg-gray-800 dark:text-slate-200 cursor-pointer"
               >
                 {years.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
             <button
               onClick={() => setViewMonth((m) => m.add(1, "month"))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-500"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-gray-700 rounded text-slate-500 dark:text-slate-400"
             >
               <ChevronRight size={15} />
             </button>
@@ -208,8 +208,8 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
             ))}
           </div>
 
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <button onClick={reset} className="text-xs text-slate-400 hover:text-slate-600">
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-gray-700 flex items-center justify-between">
+            <button onClick={reset} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
               × Reiniciar
             </button>
             <button onClick={() => setMode("relative")} className="text-xs text-blue-600 hover:underline">
@@ -219,7 +219,7 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
         </div>
       ) : (
         <div className="p-4">
-          <p className="text-[10px] font-bold text-slate-400 tracking-widest mb-2">ATRÁS:</p>
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">ATRÁS:</p>
           <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
             {PRESETS_BACK.map(([label, days]) => (
               <button
@@ -235,8 +235,8 @@ export function DateRangePicker({ dateFrom, dateTo, onChange, compact = false }:
             Hoy
           </button>
 
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <button onClick={reset} className="text-xs text-slate-400 hover:text-slate-600">
+          <div className="mt-3 pt-2 border-t border-slate-100 dark:border-gray-700 flex items-center justify-between">
+            <button onClick={reset} className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
               × Reiniciar
             </button>
             <button onClick={() => setMode("calendar")} className="text-xs text-blue-600 hover:underline">
