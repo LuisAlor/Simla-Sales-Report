@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical, X } from "lucide-react";
+import { Bookmark, Plus, Zap, ChevronDown, ChevronUp, Info, Settings2, GripVertical, X, RotateCcw } from "lucide-react";
 import dayjs from "dayjs";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
@@ -39,6 +39,8 @@ const FILTER_DEFS = [
 type FilterId = (typeof FILTER_DEFS)[number]["id"];
 interface LayoutItem { id: FilterId; visible: boolean; }
 
+const DEFAULT_LAYOUT: LayoutItem[] = FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+
 function loadLayout(): LayoutItem[] {
   try {
     const saved = localStorage.getItem("simla_filter_layout");
@@ -49,7 +51,7 @@ function loadLayout(): LayoutItem[] {
       return [...parsed, ...missing];
     }
   } catch { /* ignore */ }
-  return FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+  return DEFAULT_LAYOUT;
 }
 
 function saveLayout(l: LayoutItem[]) {
@@ -96,6 +98,9 @@ function matchesTemplate(f: Filters, t: FilterTemplate) {
   );
 }
 
+// Approximate height of the FL label row so non-label items align with controls
+const LABEL_H = "mt-[18px]";
+
 // ── Component ────────────────────────────────────────────────────────────────
 export function TopFilters({
   filters, managers, availableUtms, filterTemplates,
@@ -107,6 +112,8 @@ export function TopFilters({
   const [collapsed, setCollapsed] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
   const [showConfig, setShowConfig] = useState(false);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
   const dragIdx = useRef<number | null>(null);
 
@@ -139,22 +146,34 @@ export function TopFilters({
 
   function handleDragStart(idx: number) {
     dragIdx.current = idx;
+    setDraggingIdx(idx);
+  }
+
+  function handleDragEnd() {
+    dragIdx.current = null;
+    setDraggingIdx(null);
+    setDragOverIdx(null);
   }
 
   function handleDrop(idx: number) {
-    if (dragIdx.current === null || dragIdx.current === idx) return;
-    const next = [...layout];
-    const [moved] = next.splice(dragIdx.current, 1);
-    next.splice(idx, 0, moved);
+    if (dragIdx.current !== null && dragIdx.current !== idx) {
+      const next = [...layout];
+      const [moved] = next.splice(dragIdx.current, 1);
+      next.splice(idx, 0, moved);
+      setLayout(next);
+      saveLayout(next);
+    }
     dragIdx.current = null;
-    setLayout(next);
-    saveLayout(next);
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  }
+
+  function resetLayout() {
+    setLayout(DEFAULT_LAYOUT);
+    saveLayout(DEFAULT_LAYOUT);
   }
 
   const visibleIds = layout.filter((l) => l.visible).map((l) => l.id);
-
-  // Approximate height of the FL label row so non-label items align with controls
-  const LABEL_H = "mt-[18px]";
 
   function renderFilter(id: FilterId) {
     switch (id) {
@@ -292,10 +311,9 @@ export function TopFilters({
     <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
 
       {/* ── Main filter row ── */}
-      {/* items-start so all filter columns align at their label tops; content grows downward */}
-      <div className="flex items-start gap-2 px-4 py-2 flex-wrap">
+      <div className={`flex gap-2 px-4 py-2 flex-wrap ${collapsed ? "items-center" : "items-start"}`}>
 
-        {/* Collapse toggle — offset by label height so it aligns with the controls */}
+        {/* Collapse toggle — always vertically centered via items-center on parent when collapsed */}
         <button
           onClick={() => setCollapsed((v) => !v)}
           title={collapsed ? "Mostrar filtros" : "Ocultar filtros"}
@@ -304,22 +322,7 @@ export function TopFilters({
           {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         </button>
 
-        {collapsed && (
-          <>
-            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0 self-center">
-              {filters.dateFrom || "—"} → {filters.dateTo || "—"}
-            </span>
-            <div className="ml-auto flex items-center gap-2 shrink-0 self-center">
-              <button
-                onClick={onLoad}
-                disabled={loading || !hasApiKey}
-                className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors"
-              >
-                {loading ? "Cargando…" : "Cargar datos"}
-              </button>
-            </div>
-          </>
-        )}
+        {/* When collapsed: show nothing — just the arrow above */}
 
         {!collapsed && (<>
           {/* Filter columns — all top-aligned; separators start after label height */}
@@ -336,7 +339,7 @@ export function TopFilters({
 
           {/* Action buttons — offset by label height to align with controls, not labels */}
           <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
-            {/* Red X reset — placed first, closest to the last filter */}
+            {/* Red X reset */}
             <button
               onClick={onReset}
               title="Restablecer todos los filtros"
@@ -357,19 +360,34 @@ export function TopFilters({
 
               {showConfig && (
                 <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-56">
-                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Configurar filtros</p>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Configurar filtros</p>
+                    <button
+                      onClick={resetLayout}
+                      title="Restablecer al orden predeterminado"
+                      className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors"
+                    >
+                      <RotateCcw size={9} /> Reset
+                    </button>
+                  </div>
+                  <div className="flex flex-col">
                     {layout.map((item, idx) => {
                       const def = FILTER_DEFS.find((f) => f.id === item.id);
                       if (!def) return null;
+                      const isTarget = dragOverIdx === idx && draggingIdx !== idx;
+                      const isDragging = draggingIdx === idx;
                       return (
                         <div
                           key={item.id}
                           draggable
                           onDragStart={() => handleDragStart(idx)}
-                          onDragOver={(e) => e.preventDefault()}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                          onDragLeave={() => setDragOverIdx(null)}
                           onDrop={() => handleDrop(idx)}
-                          className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing transition-colors"
+                          className={`flex items-center gap-2 py-1.5 px-1 rounded cursor-grab active:cursor-grabbing transition-all select-none
+                            ${isDragging ? "opacity-30" : ""}
+                            ${isTarget ? "bg-brand-blue/10 border-t-2 border-brand-blue" : "border-t-2 border-transparent hover:bg-slate-50 dark:hover:bg-gray-700"}`}
                         >
                           <GripVertical size={11} className="text-slate-300 dark:text-slate-600 shrink-0" />
                           <input
@@ -387,7 +405,7 @@ export function TopFilters({
               )}
             </div>
 
-            {/* Cache indicator with tooltip */}
+            {/* Cache indicator */}
             {cachedAt && !loading && (
               <span
                 title={`Datos cargados desde caché · Última actualización: ${dayjs(cachedAt).format("HH:mm")}`}
@@ -409,8 +427,8 @@ export function TopFilters({
         </>)}
       </div>
 
-      {/* ── Templates row ── */}
-      {!collapsed && (hasTemplates || !isCurrentSaved) && (
+      {/* ── Templates row — always visible regardless of collapsed state ── */}
+      {(hasTemplates || !isCurrentSaved) && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
           <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
             <Bookmark size={9} /> Plantillas
