@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
-  ChevronDown, Settings2, LogOut,
+  ChevronDown, Cog, LogOut,
   Clock, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
@@ -102,7 +102,9 @@ export function Sidebar() {
 
   const iconBtn = (active: boolean) =>
     `flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-      active ? "bg-brand-blue text-white" : "text-slate-400 hover:bg-navy-border hover:text-white"
+      active
+        ? "!bg-brand-blue !text-white shadow-md"
+        : "text-slate-400 hover:bg-navy-border hover:!text-white"
     }`;
 
   // Avatar with online dot
@@ -224,7 +226,7 @@ export function Sidebar() {
                   onClick={() => navigate("/admin")}
                   className={iconBtn(location.pathname === "/admin")}
                 >
-                  <Settings2 size={16} />
+                  <Cog size={16} />
                 </button>
               </div>
             ) : (
@@ -238,7 +240,7 @@ export function Sidebar() {
                   }`
                 }
               >
-                <Settings2 size={14} className="shrink-0" />
+                <Cog size={14} className="shrink-0" />
                 <span className="font-medium">{adminLabel}</span>
               </NavLink>
             )}
@@ -358,7 +360,7 @@ export function Sidebar() {
                     : "text-slate-300 hover:text-white hover:bg-navy-border"
                 }`}
               >
-                <Settings2 size={14} className="shrink-0" />
+                <Cog size={14} className="shrink-0" />
                 {adminLabel}
               </button>
             </div>
