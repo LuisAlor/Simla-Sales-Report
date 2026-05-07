@@ -73,11 +73,7 @@ export function LoadingScreen({ progress }: Props) {
 
       {/* Mock chart panel */}
       <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-slate-100 dark:border-gray-700 p-5 w-[340px]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-brand-blue animate-pulse" />
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wide">{t("loading_chart_title")}</span>
-          </div>
+        <div className="flex items-center justify-end mb-4">
           <div className="flex gap-1">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-gray-600" />
