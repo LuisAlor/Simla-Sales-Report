@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check } from "lucide-react";
 import dayjs from "dayjs";
+import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
 import type { FilterTemplate } from "@/lib/auth";
 import type { Freq } from "@/lib/transforms";
@@ -80,12 +81,6 @@ const ORDER_TYPES = [
   { value: "sales-and-marketing", label: "🎯 Sales & Marketing" },
 ];
 
-const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
-  { label: "Día", value: "D",  title: "Diario"   },
-  { label: "Sem", value: "W",  title: "Semanal"  },
-  { label: "Mes", value: "ME", title: "Mensual"  },
-];
-
 function sortedStr(arr: string[]) { return [...arr].sort().join("\0"); }
 
 function matchesTemplate(f: Filters, t: FilterTemplate) {
@@ -107,6 +102,14 @@ export function TopFilters({
   onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate,
   loading, cachedAt, hasApiKey,
 }: Props) {
+  const t = useT();
+
+  const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
+    { label: t("filter_freq_day"),   value: "D",  title: t("filter_freq_day_title")   },
+    { label: t("filter_freq_week"),  value: "W",  title: t("filter_freq_week_title")  },
+    { label: t("filter_freq_month"), value: "ME", title: t("filter_freq_month_title") },
+  ];
+
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
@@ -179,7 +182,7 @@ export function TopFilters({
       case "creation-date":
         return (
           <div key="creation-date" className="flex flex-col gap-1 shrink-0">
-            <FL label="Fecha de creación del pedido" tip="Filtra pedidos por su fecha de creación en Simla. Deja vacío para ignorar este criterio." />
+            <FL label={t("filter_creation_date")} tip={t("tip_creation_date")} />
             <div className="flex items-center gap-1">
               <DateRangePicker
                 dateFrom={filters.dateFrom}
@@ -188,7 +191,7 @@ export function TopFilters({
                 compact
               />
               {(filters.dateFrom || filters.dateTo) && (
-                <button onClick={() => onFiltersChange({ dateFrom: "", dateTo: "" })} title="Limpiar" className="text-slate-300 hover:text-red-400 dark:text-slate-600 dark:hover:text-red-400 text-sm leading-none transition-colors">×</button>
+                <button onClick={() => onFiltersChange({ dateFrom: "", dateTo: "" })} title={t("filter_clear")} className="text-slate-300 hover:text-red-400 dark:text-slate-600 dark:hover:text-red-400 text-sm leading-none transition-colors">×</button>
               )}
             </div>
           </div>
@@ -197,7 +200,7 @@ export function TopFilters({
       case "first-payment-date":
         return (
           <div key="first-payment-date" className="flex flex-col gap-1 shrink-0">
-            <FL label="Fecha de primer pago" tip="Filtra pedidos por el campo personalizado 'firstpaymentdate'. Independiente de la fecha de creación." />
+            <FL label={t("filter_first_payment")} tip={t("tip_first_payment")} />
             <div className="flex items-center gap-1">
               <DateRangePicker
                 dateFrom={filters.firstPaymentFrom}
@@ -206,7 +209,7 @@ export function TopFilters({
                 compact
               />
               {(filters.firstPaymentFrom || filters.firstPaymentTo) && (
-                <button onClick={() => onFiltersChange({ firstPaymentFrom: "", firstPaymentTo: "" })} title="Limpiar" className="text-slate-300 hover:text-red-400 dark:text-slate-600 dark:hover:text-red-400 text-sm leading-none transition-colors">×</button>
+                <button onClick={() => onFiltersChange({ firstPaymentFrom: "", firstPaymentTo: "" })} title={t("filter_clear")} className="text-slate-300 hover:text-red-400 dark:text-slate-600 dark:hover:text-red-400 text-sm leading-none transition-colors">×</button>
               )}
             </div>
           </div>
@@ -215,7 +218,7 @@ export function TopFilters({
       case "freq":
         return (
           <div key="freq" className="flex flex-col gap-1 shrink-0">
-            <FL label="Agrupación" tip="Cómo se agrupan los datos en las gráficas: por día, semana o mes." />
+            <FL label={t("filter_grouping")} tip={t("tip_grouping")} />
             <div className="flex rounded-md border border-slate-200 dark:border-gray-700 overflow-hidden">
               {FREQ_OPTIONS.map((o) => (
                 <button
@@ -236,32 +239,32 @@ export function TopFilters({
       case "order-type":
         return (
           <div key="order-type" className="flex flex-col gap-1 w-48 shrink-0">
-            <FL label="Tipo de pedido" tip="Filtra por tipo de pedido. Selecciona uno o más para combinarlos." />
-            <MultiSelect variant="light" options={ORDER_TYPES} selected={filters.selectedTypes} onChange={(next) => onFiltersChange({ selectedTypes: next })} placeholder="Todos" emptyLabel="Sin opciones" />
+            <FL label={t("filter_order_type")} tip={t("tip_order_type")} />
+            <MultiSelect variant="light" options={ORDER_TYPES} selected={filters.selectedTypes} onChange={(next) => onFiltersChange({ selectedTypes: next })} placeholder={t("filter_all")} emptyLabel={t("filter_no_data")} />
           </div>
         );
 
       case "manager":
         return (
           <div key="manager" className="flex flex-col gap-1 w-44 shrink-0">
-            <FL label="Asesor" tip="Filtra pedidos por el asesor responsable asignado." />
-            <MultiSelect variant="light" options={managers} selected={filters.managerIds} onChange={(next) => onFiltersChange({ managerIds: next })} placeholder="Todos" emptyLabel="Carga datos primero" />
+            <FL label={t("filter_manager")} tip={t("tip_manager")} />
+            <MultiSelect variant="light" options={managers} selected={filters.managerIds} onChange={(next) => onFiltersChange({ managerIds: next })} placeholder={t("filter_all")} emptyLabel={t("filter_load_first")} />
           </div>
         );
 
       case "utm-source":
         return (
           <div key="utm-source" className="flex flex-col gap-1 w-36 shrink-0">
-            <FL label="UTM Source" tip="Fuente de tráfico del pedido (ej. google, facebook, email)." />
-            <MultiSelect variant="light" options={availableUtms.sources.map((s) => ({ value: s, label: s }))} selected={filters.utmSources} onChange={(next) => onFiltersChange({ utmSources: next })} placeholder="Todos" emptyLabel="Sin datos" />
+            <FL label={t("filter_utm_source")} tip={t("tip_utm_source")} />
+            <MultiSelect variant="light" options={availableUtms.sources.map((s) => ({ value: s, label: s }))} selected={filters.utmSources} onChange={(next) => onFiltersChange({ utmSources: next })} placeholder={t("filter_all")} emptyLabel={t("filter_no_data")} />
           </div>
         );
 
       case "utm-medium":
         return (
           <div key="utm-medium" className="flex flex-col gap-1 w-36 shrink-0">
-            <FL label="UTM Medium" tip="Medio de tráfico del pedido (ej. cpc, organic, referral)." />
-            <MultiSelect variant="light" options={availableUtms.mediums.map((m) => ({ value: m, label: m }))} selected={filters.utmMediums} onChange={(next) => onFiltersChange({ utmMediums: next })} placeholder="Todos" emptyLabel="Sin datos" />
+            <FL label={t("filter_utm_medium")} tip={t("tip_utm_medium")} />
+            <MultiSelect variant="light" options={availableUtms.mediums.map((m) => ({ value: m, label: m }))} selected={filters.utmMediums} onChange={(next) => onFiltersChange({ utmMediums: next })} placeholder={t("filter_all")} emptyLabel={t("filter_no_data")} />
           </div>
         );
 
@@ -288,7 +291,7 @@ export function TopFilters({
 
         {/* Action buttons */}
         <div className={`flex items-center gap-1 shrink-0 ${LABEL_H}`}>
-          <button onClick={onReset} title="Restablecer todos los filtros" className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <button onClick={onReset} title={t("filter_reset_title")} className="p-1.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
             <X size={13} />
           </button>
 
@@ -296,7 +299,7 @@ export function TopFilters({
           <div ref={configRef} className="relative">
             <button
               onClick={() => setShowConfig((v) => !v)}
-              title="Configurar filtros"
+              title={t("filter_config_title")}
               className={`p-1.5 rounded-md transition-colors ${showConfig ? "bg-brand-blue/10 text-brand-blue" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
             >
               <Settings2 size={14} />
@@ -305,9 +308,9 @@ export function TopFilters({
             {showConfig && (
               <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg p-3 w-56">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Configurar filtros</p>
-                  <button onClick={resetLayout} title="Restablecer al orden predeterminado" className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors">
-                    <RotateCcw size={9} /> Reiniciar
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t("filter_config_title")}</p>
+                  <button onClick={resetLayout} title={t("filter_config_reset")} className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 hover:text-brand-blue transition-colors">
+                    <RotateCcw size={9} /> {t("filter_config_reset")}
                   </button>
                 </div>
                 <div className="flex flex-col">
@@ -341,14 +344,14 @@ export function TopFilters({
           </div>
 
           {cachedAt && !loading && (
-            <span title={`Datos desde caché · Última actualización: ${dayjs(cachedAt).format("HH:mm")}`} className="flex items-center gap-1 text-amber-500 text-[10px] cursor-help px-1">
+            <span title={`${t("filter_cache_tooltip")} ${dayjs(cachedAt).format("HH:mm")}`} className="flex items-center gap-1 text-amber-500 text-[10px] cursor-help px-1">
               <Zap size={10} />
               {dayjs(cachedAt).format("HH:mm")}
             </span>
           )}
 
           <button onClick={onLoad} disabled={loading || !hasApiKey} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors">
-            {loading ? "Cargando…" : "Cargar datos"}
+            {loading ? t("filter_loading") : t("filter_load")}
           </button>
         </div>
       </div>
@@ -357,22 +360,22 @@ export function TopFilters({
       {(hasTemplates || !isCurrentSaved) && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
           <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
-            <Bookmark size={9} /> Plantillas
+            <Bookmark size={9} /> {t("filter_templates_label")}
           </span>
           <div className="w-px h-4 bg-slate-200 dark:bg-gray-700 shrink-0" />
-          {filterTemplates.map((t) => {
-            const isActive = matchesTemplate(filters, t);
+          {filterTemplates.map((tmpl) => {
+            const isActive = matchesTemplate(filters, tmpl);
             return (
-              <div key={t.id} className="flex items-center gap-0.5 shrink-0 group">
+              <div key={tmpl.id} className="flex items-center gap-0.5 shrink-0 group">
                 <button
-                  onClick={() => onApplyTemplate(t)}
+                  onClick={() => onApplyTemplate(tmpl)}
                   className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                     isActive
                       ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
                       : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
                   }`}
-                >{t.name}</button>
-                <button onClick={() => onDeleteTemplate(t.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none" title="Eliminar">×</button>
+                >{tmpl.name}</button>
+                <button onClick={() => onDeleteTemplate(tmpl.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none" title={t("admin_delete")}>×</button>
               </div>
             );
           })}
@@ -389,7 +392,7 @@ export function TopFilters({
                     if (e.key === "Enter") handleSave();
                     if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
                   }}
-                  placeholder="Nombre de plantilla"
+                  placeholder={t("filter_template_placeholder")}
                   className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
                 <button
@@ -409,7 +412,7 @@ export function TopFilters({
               </div>
             ) : (
               <button onClick={() => setSavingTemplate(true)} className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors">
-                <Plus size={9} /> Guardar filtro actual
+                <Plus size={9} /> {t("filter_save_current")}
               </button>
             )
           )}

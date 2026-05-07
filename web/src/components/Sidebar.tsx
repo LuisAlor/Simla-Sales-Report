@@ -8,66 +8,52 @@ import {
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
+import { useI18n, useT } from "@/contexts/I18nContext";
+import type { Lang } from "@/lib/i18n";
 import dayjs from "dayjs";
 
-const THEME_OPTS: { value: Theme; icon: React.ElementType; title: string }[] = [
-  { value: "light", icon: Sun,     title: "Modo claro"     },
-  { value: "auto",  icon: Monitor, title: "Modo automático" },
-  { value: "dark",  icon: Moon,    title: "Modo oscuro"    },
+const THEME_OPTS: { value: Theme; icon: React.ElementType; titleKey: "theme_light" | "theme_auto" | "theme_dark" }[] = [
+  { value: "light", icon: Sun,     titleKey: "theme_light" },
+  { value: "auto",  icon: Monitor, titleKey: "theme_auto"  },
+  { value: "dark",  icon: Moon,    titleKey: "theme_dark"  },
+];
+
+const LANG_OPTS: { value: Lang; label: string }[] = [
+  { value: "es", label: "ES" },
+  { value: "en", label: "EN" },
+  { value: "ru", label: "RU" },
 ];
 
 // Re-export Filters type so existing imports keep working
 export type { Filters } from "@/lib/filters";
-
-// ---------------------------------------------------------------------------
-// Module / page definitions — add future modules here
-// ---------------------------------------------------------------------------
-
-interface PageDef {
-  to: string;
-  label: string;
-  icon: React.ElementType;
-  end?: boolean;
-}
-
-interface ModuleDef {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  pages: PageDef[];
-}
-
-const MODULES: ModuleDef[] = [
-  {
-    id: "analytics",
-    label: "Analíticas",
-    icon: BarChart3,
-    pages: [
-      { to: "/",       label: "Generales", icon: LineChart,    end: true  },
-      { to: "/funnel", label: "Embudo",    icon: TrendingDown, end: false },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { lang, setLang } = useI18n();
+  const t = useT();
   const [logoError, setLogoError] = useState(false);
   const [now, setNow] = useState(() => dayjs());
 
-  // Live clock — updates every second
   useEffect(() => {
     const id = setInterval(() => setNow(dayjs()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Auto-open the module whose page is currently active
+  const MODULES = [
+    {
+      id: "analytics",
+      label: t("nav_analytics"),
+      icon: BarChart3,
+      pages: [
+        { to: "/",       label: t("nav_general"), icon: LineChart,    end: true  },
+        { to: "/funnel", label: t("nav_funnel"),  icon: TrendingDown, end: false },
+      ],
+    },
+  ];
+
   const initialOpen = () => {
     const open = new Set<string>();
     for (const m of MODULES) {
@@ -98,12 +84,7 @@ export function Sidebar() {
           {logoError ? (
             <span className="text-white font-bold text-base">S</span>
           ) : (
-            <img
-              src="/logo.png"
-              alt="Simla.com"
-              className="w-full h-full object-contain"
-              onError={() => setLogoError(true)}
-            />
+            <img src="/logo.png" alt="Simla.com" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -115,11 +96,7 @@ export function Sidebar() {
           </p>
         </div>
         {user?.role === "admin" && (
-          <button
-            onClick={() => navigate("/admin")}
-            title="Administración"
-            className="text-slate-500 hover:text-white transition-colors shrink-0"
-          >
+          <button onClick={() => navigate("/admin")} title={t("sidebar_admin")} className="text-slate-500 hover:text-white transition-colors shrink-0">
             <ShieldCheck size={14} />
           </button>
         )}
@@ -130,23 +107,16 @@ export function Sidebar() {
         {MODULES.map((module) => {
           const ModIcon = module.icon;
           const isOpen = openModules.has(module.id);
-
           return (
             <div key={module.id}>
-              {/* Module header — clickable to expand/collapse */}
               <button
                 onClick={() => toggleModule(module.id)}
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-slate-400 hover:text-white hover:bg-navy-border transition-colors text-sm"
               >
                 <ModIcon size={14} className="shrink-0" />
                 <span className="flex-1 text-left font-medium text-sm">{module.label}</span>
-                <ChevronDown
-                  size={12}
-                  className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                />
+                <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
               </button>
-
-              {/* Sub-pages */}
               {isOpen && (
                 <div className="ml-3 mt-0.5 mb-1 border-l border-navy-border pl-3 flex flex-col gap-0.5">
                   {module.pages.map((page) => {
@@ -176,13 +146,30 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Language toggle */}
+      <div className="flex items-center justify-center gap-1 py-2 border-t border-navy-border">
+        {LANG_OPTS.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setLang(value)}
+            className={`px-2 py-1 rounded-md text-xs font-semibold transition-colors ${
+              lang === value
+                ? "bg-brand-blue text-white"
+                : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Theme toggle */}
       <div className="flex items-center justify-center gap-1 py-2 border-t border-navy-border">
-        {THEME_OPTS.map(({ value, icon: Icon, title }) => (
+        {THEME_OPTS.map(({ value, icon: Icon, titleKey }) => (
           <button
             key={value}
             onClick={() => setTheme(value)}
-            title={title}
+            title={t(titleKey)}
             className={`p-1.5 rounded-md transition-colors ${
               theme === value
                 ? "bg-brand-blue text-white"
@@ -202,12 +189,7 @@ export function Sidebar() {
               className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors min-w-0"
               onClick={() => navigate("/profile")}
             >
-              <Avatar
-                firstName={user.firstName}
-                lastName={user.lastName}
-                avatarDataUrl={user.avatarDataUrl}
-                size={26}
-              />
+              <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={26} />
               <div className="overflow-hidden">
                 <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
                 <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
@@ -215,7 +197,7 @@ export function Sidebar() {
             </div>
             <button
               onClick={logout}
-              title="Cerrar sesión"
+              title={t("sidebar_logout")}
               className="text-slate-500 hover:text-red-400 transition-colors shrink-0 p-1.5 rounded hover:bg-navy-border"
             >
               <LogOut size={14} />
