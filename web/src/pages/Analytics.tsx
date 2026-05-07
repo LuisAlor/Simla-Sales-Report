@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { KpiCard } from "@/components/KpiCard";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable } from "@/components/DataTable";
 import { RevenueLineChart } from "@/components/charts/RevenueLineChart";
@@ -31,6 +32,15 @@ interface Props {
 
 const colMgr = createColumnHelper<ManagerRow>();
 const colCust = createColumnHelper<RepeatCustomer>();
+
+function ChartCard({ info, children, className }: { info?: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm ${className ?? ""}`}>
+      {info && <div className="absolute top-3 right-3 z-10"><InfoTooltip text={info} /></div>}
+      {children}
+    </div>
+  );
+}
 
 export function Analytics({ records, items, freq, statusLabels }: Props) {
   const t = useT();
@@ -72,38 +82,38 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
 
       <SectionHeader>{t("analytics_section_summary")}</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
-        <KpiCard label={t("analytics_total_revenue")} value={fmtUsd(totalRevenue)} />
-        <KpiCard label={t("analytics_total_orders")}  value={fmtInt(totalOrders)} />
-        <KpiCard label={t("analytics_avg_ticket")}    value={fmtUsd(avgOrder)} />
-        <KpiCard label={t("analytics_gross_margin")}  value={fmtUsd(totalMargin)} delta={`${marginPct.toFixed(1)}%`} />
+        <KpiCard label={t("analytics_total_revenue")} value={fmtUsd(totalRevenue)} info={t("info_total_revenue")} />
+        <KpiCard label={t("analytics_total_orders")}  value={fmtInt(totalOrders)}  info={t("info_total_orders")} />
+        <KpiCard label={t("analytics_avg_ticket")}    value={fmtUsd(avgOrder)}     info={t("info_avg_ticket")} />
+        <KpiCard label={t("analytics_gross_margin")}  value={fmtUsd(totalMargin)}  delta={`${marginPct.toFixed(1)}%`} info={t("info_gross_margin")} />
       </div>
 
       <SectionHeader>{t("analytics_section_temporal")}</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
-        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+        <ChartCard info={t("info_revenue_time")}>
           <RevenueLineChart data={ts} />
-        </div>
-        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+        </ChartCard>
+        <ChartCard info={t("info_orders_time")}>
           <OrdersBarChart data={ts} />
-        </div>
+        </ChartCard>
       </div>
 
       <SectionHeader>{t("analytics_section_distribution")}</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
-        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+        <ChartCard info={t("info_orders_status")}>
           <StatusPieChart data={statusData} statusLabels={statusLabels} />
-        </div>
-        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+        </ChartCard>
+        <ChartCard info={t("info_revenue_manager")}>
           <ManagerBarChart data={managerData} />
-        </div>
+        </ChartCard>
       </div>
 
       {productData.length > 0 && (
         <>
           <SectionHeader>{t("analytics_section_products")}</SectionHeader>
-          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm mt-2">
+          <ChartCard info={t("info_top_products")} className="mt-2">
             <TopProductsChart data={productData} />
-          </div>
+          </ChartCard>
         </>
       )}
 

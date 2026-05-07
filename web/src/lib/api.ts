@@ -27,6 +27,7 @@ export interface RawOrder {
 export interface RawItem {
   id: number;
   productName: string;
+  offer?: { displayName?: string; name?: string };
   quantity: number;
   initialPrice: number;
   discountPercent: number;
