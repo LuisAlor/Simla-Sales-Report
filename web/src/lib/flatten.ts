@@ -143,7 +143,7 @@ export function flattenItem(o: RawOrder, item: RawItem): ItemRecord {
   return {
     orderId: o.id,
     createdAt: o.createdAt,
-    productName: item.productName,
+    productName: item.offer?.displayName ?? item.offer?.name ?? item.productName ?? "",
     quantity: item.quantity ?? 0,
     unitPrice: item.initialPrice ?? 0,
     discountPercent: item.discountPercent ?? 0,
