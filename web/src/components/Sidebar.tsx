@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
-  ChevronDown, ShieldCheck, LogOut,
+  ChevronDown, Settings2, LogOut,
   Clock, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
@@ -224,7 +224,7 @@ export function Sidebar() {
                   onClick={() => navigate("/admin")}
                   className={iconBtn(location.pathname === "/admin")}
                 >
-                  <ShieldCheck size={16} />
+                  <Settings2 size={16} />
                 </button>
               </div>
             ) : (
@@ -238,7 +238,7 @@ export function Sidebar() {
                   }`
                 }
               >
-                <ShieldCheck size={14} className="shrink-0" />
+                <Settings2 size={14} className="shrink-0" />
                 <span className="font-medium">{adminLabel}</span>
               </NavLink>
             )}
@@ -358,7 +358,7 @@ export function Sidebar() {
                     : "text-slate-300 hover:text-white hover:bg-navy-border"
                 }`}
               >
-                <ShieldCheck size={14} className="shrink-0" />
+                <Settings2 size={14} className="shrink-0" />
                 {adminLabel}
               </button>
             </div>

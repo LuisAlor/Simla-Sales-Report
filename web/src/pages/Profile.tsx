@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT, useI18n } from "@/contexts/I18nContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
@@ -61,7 +61,7 @@ const THEME_OPTIONS: { value: Theme; icon: React.ElementType; key: "theme_light"
 ];
 
 export function Profile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const t = useT();
   const { lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -111,7 +111,17 @@ export function Profile() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">{t("profile_title")}</h2>
+      <div className="flex items-start justify-between mb-1">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t("profile_title")}</h2>
+        <button
+          onClick={logout}
+          title={t("sidebar_logout")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-slate-200 dark:border-gray-700"
+        >
+          <LogOut size={14} />
+          {t("sidebar_logout")}
+        </button>
+      </div>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t("profile_subtitle")}</p>
 
       {/* Tabs */}
