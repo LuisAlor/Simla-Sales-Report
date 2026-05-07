@@ -15,6 +15,8 @@ import dayjs from "dayjs";
 export type { Filters } from "@/lib/filters";
 
 const COLLAPSED_KEY = "simla_sidebar_collapsed";
+const EXPANDED_W = 224; // w-56
+const COLLAPSED_W = 60;  // w-[60px]
 
 export function Sidebar() {
   const { user, logout } = useAuth();
@@ -77,13 +79,7 @@ export function Sidebar() {
     },
   ];
 
-  // Admin as a pseudo-module for uniform rendering
-  const ADMIN_MODULE = {
-    id: "admin",
-    label: t("sidebar_admin"),
-    icon: ShieldCheck,
-    to: "/admin",
-  };
+  const adminLabel = t("sidebar_admin");
 
   const tz = Intl.DateTimeFormat("en", { timeZoneName: "shortOffset" })
     .formatToParts(now.toDate())
@@ -97,12 +93,15 @@ export function Sidebar() {
       active ? "bg-brand-blue text-white" : "text-slate-400 hover:bg-navy-border hover:text-white"
     }`;
 
+  // The toggle button sits at the right edge of the sidebar, vertically centered in the brand row
+  const toggleLeft = (isCollapsed ? COLLAPSED_W : EXPANDED_W) - 12;
+
   return (
     <>
       <aside
         className={`${
           isCollapsed ? "w-[60px]" : "w-56"
-        } transition-all duration-200 ease-in-out h-screen sticky top-0 bg-navy flex flex-col shrink-0 overflow-y-auto`}
+        } transition-all duration-200 ease-in-out h-screen sticky top-0 bg-navy flex flex-col shrink-0`}
       >
         {/* ── Brand ── */}
         <div
@@ -110,13 +109,18 @@ export function Sidebar() {
             isCollapsed ? "justify-center px-2 py-3" : "gap-2 px-2 pt-2 pb-3"
           }`}
         >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${logoError ? "bg-teal" : ""}`}>
+          {/* Clickable logo → home */}
+          <button
+            onClick={() => navigate("/")}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 hover:opacity-80 transition-opacity ${logoError ? "bg-teal" : ""}`}
+          >
             {logoError ? (
               <span className="text-white font-bold text-base">S</span>
             ) : (
               <img src="/logo.png" alt="Simla.com" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
             )}
-          </div>
+          </button>
+
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
@@ -133,7 +137,6 @@ export function Sidebar() {
         <nav className={`flex flex-col flex-1 pt-2 ${isCollapsed ? "items-center px-1 gap-1" : "px-1 gap-0.5"}`}>
           {isCollapsed ? (
             <>
-              {/* Module icons → flyout on hover */}
               {MODULES.map((module) => {
                 const ModIcon = module.icon;
                 return (
@@ -149,7 +152,6 @@ export function Sidebar() {
                 );
               })}
 
-              {/* Admin icon */}
               {user?.role === "admin" && (
                 <div
                   onMouseEnter={(e) => openFlyout(e, "admin")}
@@ -166,7 +168,6 @@ export function Sidebar() {
             </>
           ) : (
             <>
-              {/* Accordion */}
               {MODULES.map((module) => {
                 const ModIcon = module.icon;
                 const isOpen = openModules.has(module.id);
@@ -208,7 +209,6 @@ export function Sidebar() {
                 );
               })}
 
-              {/* Admin as nav link */}
               {user?.role === "admin" && (
                 <NavLink
                   to="/admin"
@@ -221,23 +221,12 @@ export function Sidebar() {
                   }
                 >
                   <ShieldCheck size={14} className="shrink-0" />
-                  <span className="font-medium">{ADMIN_MODULE.label}</span>
+                  <span className="font-medium">{adminLabel}</span>
                 </NavLink>
               )}
             </>
           )}
         </nav>
-
-        {/* ── Collapse toggle ── */}
-        <div className={`flex border-t border-navy-border py-2 ${isCollapsed ? "justify-center" : "justify-end px-2"}`}>
-          <button
-            onClick={toggleCollapsed}
-            title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-            className="flex items-center justify-center w-7 h-7 rounded-md text-slate-500 hover:text-white hover:bg-navy-border transition-colors"
-          >
-            {isCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-          </button>
-        </div>
 
         {/* ── User / profile ── */}
         <div className={`border-t border-navy-border ${isCollapsed ? "flex justify-center py-3" : "pt-2 pb-2 px-2"}`}>
@@ -275,15 +264,30 @@ export function Sidebar() {
         </div>
       </aside>
 
+      {/* ── Floating collapse toggle — fixed, slides with sidebar ── */}
+      <button
+        onClick={toggleCollapsed}
+        title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+        style={{
+          position: "fixed",
+          left: toggleLeft,
+          top: 20,
+          transition: "left 200ms ease-in-out",
+          zIndex: 100,
+        }}
+        className="w-6 h-6 rounded-full bg-[#1a2540] border border-navy-border flex items-center justify-center text-slate-400 hover:text-white hover:bg-navy-border shadow-lg transition-colors"
+      >
+        {isCollapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
+      </button>
+
       {/* ── Flyout portal (collapsed mode) ── */}
       {isCollapsed && flyout && createPortal(
         <div
-          style={{ position: "fixed", top: flyout.top, left: 64, zIndex: 9999 }}
+          style={{ position: "fixed", top: flyout.top, left: COLLAPSED_W + 6, zIndex: 9999 }}
           onMouseEnter={cancelCloseFlyout}
           onMouseLeave={closeFlyoutDelayed}
           className="bg-[#141e30] border border-navy-border rounded-lg shadow-2xl overflow-hidden min-w-[164px]"
         >
-          {/* Analytics modules */}
           {MODULES.filter((m) => m.id === flyout.moduleId).map((module) => (
             <div key={module.id}>
               <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
@@ -314,11 +318,10 @@ export function Sidebar() {
             </div>
           ))}
 
-          {/* Admin flyout (single item, just navigate) */}
           {flyout.moduleId === "admin" && user?.role === "admin" && (
             <div>
               <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
-                {ADMIN_MODULE.label}
+                {adminLabel}
               </p>
               <button
                 onClick={() => { navigate("/admin"); setFlyout(null); }}
@@ -329,7 +332,7 @@ export function Sidebar() {
                 }`}
               >
                 <ShieldCheck size={14} className="shrink-0" />
-                {ADMIN_MODULE.label}
+                {adminLabel}
               </button>
             </div>
           )}
