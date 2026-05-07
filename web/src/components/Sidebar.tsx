@@ -3,26 +3,12 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
   ChevronDown, ShieldCheck, LogOut,
-  Sun, Moon, Monitor, Clock,
+  Clock,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme, type Theme } from "@/contexts/ThemeContext";
-import { useI18n, useT } from "@/contexts/I18nContext";
-import type { Lang } from "@/lib/i18n";
+import { useT } from "@/contexts/I18nContext";
 import dayjs from "dayjs";
-
-const THEME_OPTS: { value: Theme; icon: React.ElementType; titleKey: "theme_light" | "theme_auto" | "theme_dark" }[] = [
-  { value: "light", icon: Sun,     titleKey: "theme_light" },
-  { value: "auto",  icon: Monitor, titleKey: "theme_auto"  },
-  { value: "dark",  icon: Moon,    titleKey: "theme_dark"  },
-];
-
-const LANG_OPTS: { value: Lang; label: string }[] = [
-  { value: "es", label: "ES" },
-  { value: "en", label: "EN" },
-  { value: "ru", label: "RU" },
-];
 
 // Re-export Filters type so existing imports keep working
 export type { Filters } from "@/lib/filters";
@@ -31,8 +17,6 @@ export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, setTheme } = useTheme();
-  const { lang, setLang } = useI18n();
   const t = useT();
   const [logoError, setLogoError] = useState(false);
   const [now, setNow] = useState(() => dayjs());
@@ -145,41 +129,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Language toggle */}
-      <div className="flex items-center justify-center gap-1 py-2 border-t border-navy-border">
-        {LANG_OPTS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setLang(value)}
-            className={`px-2 py-1 rounded-md text-xs font-semibold transition-colors ${
-              lang === value
-                ? "bg-brand-blue text-white"
-                : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Theme toggle */}
-      <div className="flex items-center justify-center gap-1 py-2 border-t border-navy-border">
-        {THEME_OPTS.map(({ value, icon: Icon, titleKey }) => (
-          <button
-            key={value}
-            onClick={() => setTheme(value)}
-            title={t(titleKey)}
-            className={`p-1.5 rounded-md transition-colors ${
-              theme === value
-                ? "bg-brand-blue text-white"
-                : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
-            }`}
-          >
-            <Icon size={13} />
-          </button>
-        ))}
-      </div>
 
       {/* User profile + logout */}
       <div className="pt-2 border-t border-navy-border">
