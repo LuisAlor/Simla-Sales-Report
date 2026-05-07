@@ -9,10 +9,49 @@ import type { Lang } from "@/lib/i18n";
 
 const inputCls = "w-full border border-slate-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal bg-white dark:bg-gray-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500";
 
-const LANG_OPTIONS: { value: Lang; flag: string; nativeName: string; key: "prefs_lang_es" | "prefs_lang_en" | "prefs_lang_ru" }[] = [
-  { value: "es", flag: "🇪🇸", nativeName: "Español",  key: "prefs_lang_es" },
-  { value: "en", flag: "🇬🇧", nativeName: "English",  key: "prefs_lang_en" },
-  { value: "ru", flag: "🇷🇺", nativeName: "Русский",  key: "prefs_lang_ru" },
+function FlagES() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" width="36" height="24" style={{ borderRadius: 3, display: "block" }}>
+      <rect width="60" height="40" fill="#c60b1e"/>
+      <rect y="10" width="60" height="20" fill="#ffc400"/>
+    </svg>
+  );
+}
+
+function FlagGB() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" width="36" height="24" style={{ borderRadius: 3, display: "block" }}>
+      <rect width="60" height="40" fill="#012169"/>
+      {/* White diagonals */}
+      <line x1="0" y1="0" x2="60" y2="40" stroke="white" strokeWidth="8"/>
+      <line x1="60" y1="0" x2="0" y2="40" stroke="white" strokeWidth="8"/>
+      {/* Red diagonals */}
+      <line x1="0" y1="0" x2="60" y2="40" stroke="#C8102E" strokeWidth="4.8"/>
+      <line x1="60" y1="0" x2="0" y2="40" stroke="#C8102E" strokeWidth="4.8"/>
+      {/* White cross */}
+      <rect x="24" y="0" width="12" height="40" fill="white"/>
+      <rect x="0" y="14" width="60" height="12" fill="white"/>
+      {/* Red cross */}
+      <rect x="26" y="0" width="8" height="40" fill="#C8102E"/>
+      <rect x="0" y="16" width="60" height="8" fill="#C8102E"/>
+    </svg>
+  );
+}
+
+function FlagRU() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" width="36" height="24" style={{ borderRadius: 3, display: "block" }}>
+      <rect width="60" height="40" fill="#fff"/>
+      <rect y="13.33" width="60" height="13.33" fill="#0039A6"/>
+      <rect y="26.67" width="60" height="13.33" fill="#D52B1E"/>
+    </svg>
+  );
+}
+
+const LANG_OPTIONS: { value: Lang; FlagComponent: () => JSX.Element; nativeName: string; key: "prefs_lang_es" | "prefs_lang_en" | "prefs_lang_ru" }[] = [
+  { value: "es", FlagComponent: FlagES, nativeName: "Español", key: "prefs_lang_es" },
+  { value: "en", FlagComponent: FlagGB, nativeName: "English", key: "prefs_lang_en" },
+  { value: "ru", FlagComponent: FlagRU, nativeName: "Русский", key: "prefs_lang_ru" },
 ];
 
 const THEME_OPTIONS: { value: Theme; icon: React.ElementType; key: "theme_light" | "theme_auto" | "theme_dark" }[] = [
@@ -156,7 +195,7 @@ export function Profile() {
           <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">{t("prefs_language")}</p>
             <div className="grid grid-cols-3 gap-3">
-              {LANG_OPTIONS.map(({ value, flag, nativeName, key }) => (
+              {LANG_OPTIONS.map(({ value, FlagComponent, nativeName, key }) => (
                 <button
                   key={value}
                   onClick={() => setLang(value)}
@@ -166,7 +205,7 @@ export function Profile() {
                       : "border-slate-200 dark:border-gray-600 hover:border-slate-300 dark:hover:border-gray-500"
                   }`}
                 >
-                  <span className="text-2xl">{flag}</span>
+                  <FlagComponent />
                   <span className={`text-xs font-semibold ${lang === value ? "text-brand-blue" : "text-slate-600 dark:text-slate-300"}`}>
                     {nativeName}
                   </span>
