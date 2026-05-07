@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
@@ -25,6 +26,24 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(
     () => localStorage.getItem(COLLAPSED_KEY) === "1"
   );
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set(["analytics"]));
+
+  // Flyout for collapsed mode — delay-close so mouse can travel to the panel
+  const [flyout, setFlyout] = useState<{ moduleId: string; top: number } | null>(null);
+  const flyoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function openFlyout(e: React.MouseEvent<HTMLElement>, moduleId: string) {
+    if (flyoutTimer.current) { clearTimeout(flyoutTimer.current); flyoutTimer.current = null; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setFlyout({ moduleId, top: rect.top });
+  }
+  function closeFlyoutDelayed() {
+    flyoutTimer.current = setTimeout(() => setFlyout(null), 120);
+  }
+  function cancelCloseFlyout() {
+    if (flyoutTimer.current) { clearTimeout(flyoutTimer.current); flyoutTimer.current = null; }
+  }
+  useEffect(() => () => { if (flyoutTimer.current) clearTimeout(flyoutTimer.current); }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(dayjs()), 1000);
@@ -34,7 +53,16 @@ export function Sidebar() {
   function toggleCollapsed() {
     const next = !isCollapsed;
     setIsCollapsed(next);
+    setFlyout(null);
     localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0");
+  }
+
+  function toggleModule(id: string) {
+    setOpenModules((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }
 
   const MODULES = [
@@ -49,206 +77,265 @@ export function Sidebar() {
     },
   ];
 
-  const initialOpen = () => {
-    const open = new Set<string>();
-    for (const m of MODULES) {
-      if (m.pages.some((p) => p.end ? location.pathname === p.to : location.pathname.startsWith(p.to))) {
-        open.add(m.id);
-      }
-    }
-    if (open.size === 0) open.add(MODULES[0].id);
-    return open;
+  // Admin as a pseudo-module for uniform rendering
+  const ADMIN_MODULE = {
+    id: "admin",
+    label: t("sidebar_admin"),
+    icon: ShieldCheck,
+    to: "/admin",
   };
-
-  const [openModules, setOpenModules] = useState<Set<string>>(initialOpen);
-
-  function toggleModule(id: string) {
-    setOpenModules((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  const iconNavCls = (isActive: boolean) =>
-    `flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
-      isActive
-        ? "bg-brand-blue text-white"
-        : "text-slate-400 hover:bg-navy-border hover:text-white"
-    }`;
 
   const tz = Intl.DateTimeFormat("en", { timeZoneName: "shortOffset" })
     .formatToParts(now.toDate())
     .find((p) => p.type === "timeZoneName")?.value ?? "UTC";
 
+  const isModuleActive = (m: (typeof MODULES)[0]) =>
+    m.pages.some((p) => (p.end ? location.pathname === p.to : location.pathname.startsWith(p.to)));
+
+  const iconBtn = (active: boolean) =>
+    `flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+      active ? "bg-brand-blue text-white" : "text-slate-400 hover:bg-navy-border hover:text-white"
+    }`;
+
   return (
-    <aside
-      className={`${isCollapsed ? "w-[60px]" : "w-64"} transition-all duration-200 ease-in-out h-screen sticky top-0 overflow-y-auto bg-navy flex flex-col shrink-0`}
-    >
-      {/* ── Brand ── */}
-      <div className={`flex items-center border-b border-navy-border shrink-0 ${isCollapsed ? "justify-center px-2 py-3" : "gap-2.5 px-3 pt-2 pb-3"}`}>
+    <>
+      <aside
+        className={`${
+          isCollapsed ? "w-[60px]" : "w-56"
+        } transition-all duration-200 ease-in-out h-screen sticky top-0 bg-navy flex flex-col shrink-0 overflow-y-auto`}
+      >
+        {/* ── Brand ── */}
         <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${logoError ? "bg-teal" : ""}`}
+          className={`flex items-center border-b border-navy-border shrink-0 ${
+            isCollapsed ? "justify-center px-2 py-3" : "gap-2 px-2 pt-2 pb-3"
+          }`}
         >
-          {logoError ? (
-            <span className="text-white font-bold text-base">S</span>
-          ) : (
-            <img
-              src="/logo.png"
-              alt="Simla.com"
-              className="w-full h-full object-contain"
-              onError={() => setLogoError(true)}
-            />
-          )}
-        </div>
-
-        {!isCollapsed && (
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
-            <p className="text-slate-500 text-[10px] tabular-nums flex items-center gap-1 whitespace-nowrap">
-              <Clock size={9} className="shrink-0" />
-              {now.format("DD/MM/YYYY HH:mm:ss")}
-              <span>({tz})</span>
-            </p>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shrink-0 ${logoError ? "bg-teal" : ""}`}>
+            {logoError ? (
+              <span className="text-white font-bold text-base">S</span>
+            ) : (
+              <img src="/logo.png" alt="Simla.com" className="w-full h-full object-contain" onError={() => setLogoError(true)} />
+            )}
           </div>
-        )}
-      </div>
-
-      {/* ── Navigation ── */}
-      {isCollapsed ? (
-        /* Collapsed: flat icon list */
-        <nav className="flex flex-col items-center gap-1 flex-1 pt-3 px-1">
-          {MODULES.flatMap((m) =>
-            m.pages.map((page) => {
-              const PageIcon = page.icon;
-              return (
-                <NavLink
-                  key={page.to}
-                  to={page.to}
-                  end={page.end}
-                  title={page.label}
-                  className={({ isActive }) => iconNavCls(isActive)}
-                >
-                  <PageIcon size={16} />
-                </NavLink>
-              );
-            })
-          )}
-        </nav>
-      ) : (
-        /* Expanded: accordion */
-        <nav className="flex flex-col gap-0.5 flex-1 pt-2 px-1">
-          {MODULES.map((module) => {
-            const ModIcon = module.icon;
-            const isOpen = openModules.has(module.id);
-            return (
-              <div key={module.id}>
-                <button
-                  onClick={() => toggleModule(module.id)}
-                  className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-slate-400 hover:text-white hover:bg-navy-border transition-colors text-sm"
-                >
-                  <ModIcon size={14} className="shrink-0" />
-                  <span className="flex-1 text-left font-medium text-sm">{module.label}</span>
-                  <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-                </button>
-                {isOpen && (
-                  <div className="ml-3 mt-0.5 mb-1 border-l border-navy-border pl-3 flex flex-col gap-0.5">
-                    {module.pages.map((page) => {
-                      const PageIcon = page.icon;
-                      return (
-                        <NavLink
-                          key={page.to}
-                          to={page.to}
-                          end={page.end}
-                          className={({ isActive }) =>
-                            `flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
-                              isActive
-                                ? "bg-brand-blue text-white font-semibold"
-                                : "text-slate-400 hover:bg-navy-border hover:text-white"
-                            }`
-                          }
-                        >
-                          <PageIcon size={12} className="shrink-0" />
-                          {page.label}
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      )}
-
-      {/* ── Admin ── */}
-      {user?.role === "admin" && (
-        <div className={`flex border-t border-navy-border py-2 ${isCollapsed ? "justify-center px-1" : "px-3"}`}>
-          {isCollapsed ? (
-            <button
-              onClick={() => navigate("/admin")}
-              title={t("sidebar_admin")}
-              className="flex items-center justify-center w-10 h-10 rounded-lg text-slate-400 hover:text-white hover:bg-navy-border transition-colors"
-            >
-              <ShieldCheck size={16} />
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate("/admin")}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-slate-400 hover:text-white hover:bg-navy-border transition-colors text-xs"
-            >
-              <ShieldCheck size={13} />
-              <span>{t("sidebar_admin")}</span>
-            </button>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
+              <p className="text-slate-500 text-[10px] tabular-nums flex items-center gap-1 whitespace-nowrap">
+                <Clock size={9} className="shrink-0" />
+                {now.format("DD/MM/YYYY HH:mm:ss")}
+                <span>({tz})</span>
+              </p>
+            </div>
           )}
         </div>
-      )}
 
-      {/* ── Collapse toggle ── */}
-      <div className={`flex border-t border-navy-border py-2 ${isCollapsed ? "justify-center px-1" : "justify-end px-3"}`}>
-        <button
-          onClick={toggleCollapsed}
-          title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-          className="flex items-center justify-center w-7 h-7 rounded-md text-slate-500 hover:text-white hover:bg-navy-border transition-colors"
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      </div>
+        {/* ── Navigation ── */}
+        <nav className={`flex flex-col flex-1 pt-2 ${isCollapsed ? "items-center px-1 gap-1" : "px-1 gap-0.5"}`}>
+          {isCollapsed ? (
+            <>
+              {/* Module icons → flyout on hover */}
+              {MODULES.map((module) => {
+                const ModIcon = module.icon;
+                return (
+                  <div
+                    key={module.id}
+                    onMouseEnter={(e) => openFlyout(e, module.id)}
+                    onMouseLeave={closeFlyoutDelayed}
+                  >
+                    <button className={iconBtn(isModuleActive(module))}>
+                      <ModIcon size={16} />
+                    </button>
+                  </div>
+                );
+              })}
 
-      {/* ── User / profile ── */}
-      <div className={`border-t border-navy-border ${isCollapsed ? "flex justify-center py-3 px-1" : "pt-2 px-2 pb-2"}`}>
-        {user && (
-          isCollapsed ? (
-            <button
-              onClick={() => navigate("/profile")}
-              title={`${user.firstName} ${user.lastName}`}
-              className="flex items-center justify-center rounded-full hover:opacity-80 transition-opacity"
-            >
-              <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={30} />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div
-                className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors min-w-0"
-                onClick={() => navigate("/profile")}
-              >
-                <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={26} />
-                <div className="overflow-hidden">
-                  <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
-                  <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
+              {/* Admin icon */}
+              {user?.role === "admin" && (
+                <div
+                  onMouseEnter={(e) => openFlyout(e, "admin")}
+                  onMouseLeave={closeFlyoutDelayed}
+                >
+                  <button
+                    onClick={() => navigate("/admin")}
+                    className={iconBtn(location.pathname === "/admin")}
+                  >
+                    <ShieldCheck size={16} />
+                  </button>
                 </div>
-              </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Accordion */}
+              {MODULES.map((module) => {
+                const ModIcon = module.icon;
+                const isOpen = openModules.has(module.id);
+                return (
+                  <div key={module.id}>
+                    <button
+                      onClick={() => toggleModule(module.id)}
+                      className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-slate-400 hover:text-white hover:bg-navy-border transition-colors"
+                    >
+                      <ModIcon size={14} className="shrink-0" />
+                      <span className="flex-1 text-left font-medium text-sm">{module.label}</span>
+                      <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="ml-3 mt-0.5 mb-1 border-l border-navy-border pl-3 flex flex-col gap-0.5">
+                        {module.pages.map((page) => {
+                          const PageIcon = page.icon;
+                          return (
+                            <NavLink
+                              key={page.to}
+                              to={page.to}
+                              end={page.end}
+                              className={({ isActive }) =>
+                                `flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
+                                  isActive
+                                    ? "bg-brand-blue text-white font-semibold"
+                                    : "text-slate-400 hover:bg-navy-border hover:text-white"
+                                }`
+                              }
+                            >
+                              <PageIcon size={12} className="shrink-0" />
+                              {page.label}
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Admin as nav link */}
+              {user?.role === "admin" && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors ${
+                      isActive
+                        ? "bg-brand-blue text-white font-semibold"
+                        : "text-slate-400 hover:text-white hover:bg-navy-border"
+                    }`
+                  }
+                >
+                  <ShieldCheck size={14} className="shrink-0" />
+                  <span className="font-medium">{ADMIN_MODULE.label}</span>
+                </NavLink>
+              )}
+            </>
+          )}
+        </nav>
+
+        {/* ── Collapse toggle ── */}
+        <div className={`flex border-t border-navy-border py-2 ${isCollapsed ? "justify-center" : "justify-end px-2"}`}>
+          <button
+            onClick={toggleCollapsed}
+            title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+            className="flex items-center justify-center w-7 h-7 rounded-md text-slate-500 hover:text-white hover:bg-navy-border transition-colors"
+          >
+            {isCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+          </button>
+        </div>
+
+        {/* ── User / profile ── */}
+        <div className={`border-t border-navy-border ${isCollapsed ? "flex justify-center py-3" : "pt-2 pb-2 px-2"}`}>
+          {user && (
+            isCollapsed ? (
               <button
-                onClick={logout}
-                title={t("sidebar_logout")}
-                className="text-slate-500 hover:text-red-400 transition-colors shrink-0 p-1.5 rounded hover:bg-navy-border"
+                onClick={() => navigate("/profile")}
+                title={`${user.firstName} ${user.lastName}`}
+                className="rounded-full hover:opacity-80 transition-opacity"
               >
-                <LogOut size={14} />
+                <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={30} />
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-navy-border rounded-md px-2 py-1.5 transition-colors min-w-0"
+                  onClick={() => navigate("/profile")}
+                >
+                  <Avatar firstName={user.firstName} lastName={user.lastName} avatarDataUrl={user.avatarDataUrl} size={26} />
+                  <div className="min-w-0 overflow-hidden">
+                    <p className="text-white text-xs font-semibold truncate">{user.firstName} {user.lastName}</p>
+                    <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={logout}
+                  title={t("sidebar_logout")}
+                  className="text-slate-500 hover:text-red-400 transition-colors shrink-0 p-1.5 rounded hover:bg-navy-border"
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      </aside>
+
+      {/* ── Flyout portal (collapsed mode) ── */}
+      {isCollapsed && flyout && createPortal(
+        <div
+          style={{ position: "fixed", top: flyout.top, left: 64, zIndex: 9999 }}
+          onMouseEnter={cancelCloseFlyout}
+          onMouseLeave={closeFlyoutDelayed}
+          className="bg-[#141e30] border border-navy-border rounded-lg shadow-2xl overflow-hidden min-w-[164px]"
+        >
+          {/* Analytics modules */}
+          {MODULES.filter((m) => m.id === flyout.moduleId).map((module) => (
+            <div key={module.id}>
+              <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
+                {module.label}
+              </p>
+              {module.pages.map((page) => {
+                const PageIcon = page.icon;
+                const isActive = page.end
+                  ? location.pathname === page.to
+                  : location.pathname.startsWith(page.to);
+                return (
+                  <NavLink
+                    key={page.to}
+                    to={page.to}
+                    end={page.end}
+                    onClick={() => setFlyout(null)}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? "text-brand-blue font-semibold bg-brand-blue/10"
+                        : "text-slate-300 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <PageIcon size={14} className="shrink-0" />
+                    {page.label}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* Admin flyout (single item, just navigate) */}
+          {flyout.moduleId === "admin" && user?.role === "admin" && (
+            <div>
+              <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
+                {ADMIN_MODULE.label}
+              </p>
+              <button
+                onClick={() => { navigate("/admin"); setFlyout(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                  location.pathname === "/admin"
+                    ? "text-brand-blue font-semibold bg-brand-blue/10"
+                    : "text-slate-300 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <ShieldCheck size={14} className="shrink-0" />
+                {ADMIN_MODULE.label}
               </button>
             </div>
-          )
-        )}
-      </div>
-    </aside>
+          )}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
