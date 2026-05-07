@@ -15,6 +15,7 @@ import {
   type StageRow,
   type Freq,
 } from "@/lib/transforms";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   FUNNEL_KEY_STAGES,
   FUNNEL_NEGATIVE_STAGES,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/mappings";
 import { fmtInt, fmtUsd } from "@/lib/utils";
 import type { OrderRecord } from "@/lib/flatten";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   records: OrderRecord[];
@@ -29,20 +31,17 @@ interface Props {
 }
 
 const colStage = createColumnHelper<StageRow>();
-const stageCols = [
-  colStage.accessor("label", { header: "Etapa" }),
-  colStage.accessor("count", { header: "Total", cell: (i) => fmtInt(i.getValue()) }),
-  colStage.accessor("crPct", { header: "CR (%)", cell: (i) => `${i.getValue()}%` }),
-];
 
 interface FunnelSectionProps {
   title: string;
   rows: StageRow[];
   tsData: ReturnType<typeof funnelOverTime>;
   chartTitle: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stageCols: ColumnDef<StageRow, any>[];
 }
 
-function FunnelSection({ title, rows, tsData, chartTitle }: FunnelSectionProps) {
+function FunnelSection({ title, rows, tsData, chartTitle, stageCols }: FunnelSectionProps) {
   return (
     <>
       <SectionHeader>{title}</SectionHeader>
@@ -62,6 +61,14 @@ function FunnelSection({ title, rows, tsData, chartTitle }: FunnelSectionProps) 
 }
 
 export function Funnel({ records, freq }: Props) {
+  const t = useT();
+
+  const stageCols = useMemo(() => [
+    colStage.accessor("label",  { header: t("funnel_table_stage") }),
+    colStage.accessor("count",  { header: t("funnel_table_total"), cell: (i) => fmtInt(i.getValue()) }),
+    colStage.accessor("crPct",  { header: t("funnel_table_cr"),    cell: (i) => `${i.getValue()}%` }),
+  ], [t]);
+
   const totalRegs = records.length;
   const returning = useMemo(
     () => records.filter((r) => r.cfReturning && r.cfReturning !== "no").length,
@@ -72,31 +79,31 @@ export function Funnel({ records, freq }: Props) {
     [records]
   );
 
-  const fk = useMemo(() => financialKpis(records), [records]);
-  const plat = useMemo(() => platformsBreakdown(records), [records]);
+  const fk   = useMemo(() => financialKpis(records),       [records]);
+  const plat = useMemo(() => platformsBreakdown(records),  [records]);
 
-  const keyRows = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES), [records]);
+  const keyRows = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES),      [records]);
   const negRows = useMemo(() => funnelStageCounts(records, FUNNEL_NEGATIVE_STAGES), [records]);
-  const psRows  = useMemo(() => funnelStageCounts(records, FUNNEL_POSTSALES_STAGES), [records]);
+  const psRows  = useMemo(() => funnelStageCounts(records, FUNNEL_POSTSALES_STAGES),[records]);
 
-  const keyTs = useMemo(() => funnelOverTime(records, FUNNEL_KEY_STAGES, freq), [records, freq]);
+  const keyTs = useMemo(() => funnelOverTime(records, FUNNEL_KEY_STAGES,      freq), [records, freq]);
   const negTs = useMemo(() => funnelOverTime(records, FUNNEL_NEGATIVE_STAGES, freq), [records, freq]);
-  const psTs  = useMemo(() => funnelOverTime(records, FUNNEL_POSTSALES_STAGES, freq), [records, freq]);
+  const psTs  = useMemo(() => funnelOverTime(records, FUNNEL_POSTSALES_STAGES, freq),[records, freq]);
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">Etapas del embudo</h2>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Análisis del embudo de ventas · crm-license</p>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">{t("funnel_title")}</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{t("funnel_subtitle")}</p>
 
-      <SectionHeader>Registros CRM</SectionHeader>
+      <SectionHeader>{t("funnel_crm_records")}</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
-        <KpiCard label="Total registros"   value={fmtInt(totalRegs)} />
-        <KpiCard label="Hecho de registro" value={fmtInt(totalRegs)} />
-        <KpiCard label="♻️ Retornados"     value={fmtInt(returning)} />
-        <KpiCard label="👍 Recomendados"   value={fmtInt(recommended)} />
+        <KpiCard label={t("funnel_total_records")}      value={fmtInt(totalRegs)} />
+        <KpiCard label={t("funnel_registration_event")} value={fmtInt(totalRegs)} />
+        <KpiCard label={t("funnel_returned")}           value={fmtInt(returning)} />
+        <KpiCard label={t("funnel_recommended")}        value={fmtInt(recommended)} />
       </div>
 
-      <SectionHeader>Indicadores generales de ventas</SectionHeader>
+      <SectionHeader>{t("funnel_sales_indicators")}</SectionHeader>
       <div className="flex flex-wrap gap-3 mt-2">
         <DarkKpiCard label="Total Sales (#)" value={fmtInt(fk.totalSales)} color="#F59E0B" />
         <DarkKpiCard label="MRR"             value={fmtUsd(fk.mrr)}        color="#F59E0B" />
@@ -105,34 +112,17 @@ export function Funnel({ records, freq }: Props) {
         <DarkKpiCard label="Net Total"       value={fmtUsd(fk.netTotal)}   color="#86EFAC" />
       </div>
 
-      <FunnelSection
-        title="Etapas clave del embudo"
-        rows={keyRows}
-        tsData={keyTs}
-        chartTitle="Etapas clave del embudo"
-      />
+      <FunnelSection title={t("funnel_key_stages")}      rows={keyRows} tsData={keyTs} chartTitle={t("funnel_key_stages")}      stageCols={stageCols} />
+      <FunnelSection title={t("funnel_negative_stages")} rows={negRows} tsData={negTs} chartTitle={t("funnel_negative_stages")} stageCols={stageCols} />
+      <FunnelSection title={t("funnel_postsale_stages")} rows={psRows}  tsData={psTs}  chartTitle={t("funnel_postsale_stages")} stageCols={stageCols} />
 
-      <FunnelSection
-        title="Etapas negativas del embudo"
-        rows={negRows}
-        tsData={negTs}
-        chartTitle="Etapas negativas del embudo"
-      />
-
-      <FunnelSection
-        title="Etapas posventa del embudo"
-        rows={psRows}
-        tsData={psTs}
-        chartTitle="Etapas posventa del embudo"
-      />
-
-      <SectionHeader>Fuentes de leads por plataforma</SectionHeader>
+      <SectionHeader>{t("funnel_lead_sources")}</SectionHeader>
       {plat.length > 0 ? (
         <div className="bg-navy-light border border-navy-border rounded-lg p-3 mt-2">
           <PlatformsDonutChart data={plat} />
         </div>
       ) : (
-        <p className="text-slate-500 text-sm mt-2">Sin datos de plataforma previa.</p>
+        <p className="text-slate-500 text-sm mt-2">{t("funnel_no_platform")}</p>
       )}
     </div>
   );

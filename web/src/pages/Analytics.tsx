@@ -20,6 +20,7 @@ import {
 import { fmtUsd, fmtInt } from "@/lib/utils";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { Freq } from "@/lib/transforms";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   records: OrderRecord[];
@@ -31,21 +32,22 @@ interface Props {
 const colMgr = createColumnHelper<ManagerRow>();
 const colCust = createColumnHelper<RepeatCustomer>();
 
-const managerCols = [
-  colMgr.accessor("managerName", { header: "Asesor" }),
-  colMgr.accessor("orders", { header: "Pedidos", cell: (i) => fmtInt(i.getValue()) }),
-  colMgr.accessor("revenue", { header: "Ingresos", cell: (i) => fmtUsd(i.getValue()) }),
-  colMgr.accessor("avgOrder", { header: "Ticket prom.", cell: (i) => fmtUsd(i.getValue()) }),
-];
-
-const customerCols = [
-  colCust.accessor("customerName", { header: "Cliente" }),
-  colCust.accessor("orders", { header: "Pedidos", cell: (i) => fmtInt(i.getValue()) }),
-  colCust.accessor("revenue", { header: "Ingresos", cell: (i) => fmtUsd(i.getValue()) }),
-];
-
 export function Analytics({ records, items, freq, statusLabels }: Props) {
+  const t = useT();
   const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const managerCols = useMemo(() => [
+    colMgr.accessor("managerName", { header: t("table_manager") }),
+    colMgr.accessor("orders",      { header: t("table_orders"),     cell: (i) => fmtInt(i.getValue()) }),
+    colMgr.accessor("revenue",     { header: t("table_revenue"),    cell: (i) => fmtUsd(i.getValue()) }),
+    colMgr.accessor("avgOrder",    { header: t("table_avg_ticket"), cell: (i) => fmtUsd(i.getValue()) }),
+  ], [t]);
+
+  const customerCols = useMemo(() => [
+    colCust.accessor("customerName", { header: t("table_customer") }),
+    colCust.accessor("orders",       { header: t("table_orders"),  cell: (i) => fmtInt(i.getValue()) }),
+    colCust.accessor("revenue",      { header: t("table_revenue"), cell: (i) => fmtUsd(i.getValue()) }),
+  ], [t]);
 
   const totalRevenue = useMemo(() => records.reduce((s, r) => s + r.totalSumm, 0), [records]);
   const totalOrders = records.length;
@@ -65,18 +67,18 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">Analíticas · Pedidos</h2>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">Estadísticas de todas las tiendas · Datos de pedidos recibidos</p>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-0.5">{t("analytics_title")}</h2>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{t("analytics_subtitle")}</p>
 
-      <SectionHeader>Resumen</SectionHeader>
+      <SectionHeader>{t("analytics_section_summary")}</SectionHeader>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
-        <KpiCard label="Ingresos totales" value={fmtUsd(totalRevenue)} />
-        <KpiCard label="Total pedidos" value={fmtInt(totalOrders)} />
-        <KpiCard label="Ticket promedio" value={fmtUsd(avgOrder)} />
-        <KpiCard label="Margen bruto" value={fmtUsd(totalMargin)} delta={`${marginPct.toFixed(1)}%`} />
+        <KpiCard label={t("analytics_total_revenue")} value={fmtUsd(totalRevenue)} />
+        <KpiCard label={t("analytics_total_orders")}  value={fmtInt(totalOrders)} />
+        <KpiCard label={t("analytics_avg_ticket")}    value={fmtUsd(avgOrder)} />
+        <KpiCard label={t("analytics_gross_margin")}  value={fmtUsd(totalMargin)} delta={`${marginPct.toFixed(1)}%`} />
       </div>
 
-      <SectionHeader>Evolución temporal</SectionHeader>
+      <SectionHeader>{t("analytics_section_temporal")}</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <RevenueLineChart data={ts} />
@@ -86,7 +88,7 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
         </div>
       </div>
 
-      <SectionHeader>Distribución</SectionHeader>
+      <SectionHeader>{t("analytics_section_distribution")}</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
           <StatusPieChart data={statusData} statusLabels={statusLabels} />
@@ -98,18 +100,18 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
 
       {productData.length > 0 && (
         <>
-          <SectionHeader>Productos</SectionHeader>
+          <SectionHeader>{t("analytics_section_products")}</SectionHeader>
           <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm mt-2">
             <TopProductsChart data={productData} />
           </div>
         </>
       )}
 
-      <SectionHeader>Detalle</SectionHeader>
+      <SectionHeader>{t("analytics_section_detail")}</SectionHeader>
       <div className="flex flex-col gap-2 mt-2">
         {[
-          { key: "repeat", label: "Clientes recurrentes" },
-          { key: "manager", label: "Desglose por asesor" },
+          { key: "repeat",  label: t("analytics_repeat_customers") },
+          { key: "manager", label: t("analytics_by_manager") },
         ].map(({ key, label }) => (
           <div key={key} className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
             <button
@@ -121,7 +123,7 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
             </button>
             {openSection === key && (
               <div className="p-3">
-                {key === "repeat" && <DataTable data={repeatData} columns={customerCols} />}
+                {key === "repeat"  && <DataTable data={repeatData}  columns={customerCols} />}
                 {key === "manager" && <DataTable data={managerData} columns={managerCols} />}
               </div>
             )}
