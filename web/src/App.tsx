@@ -17,6 +17,8 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { fetchOrders, fetchStatuses, fetchDictionaryOptions } from "@/lib/api";
 import { flattenAll } from "@/lib/flatten";
 import { makeKey, readCache, writeCache, clearCache } from "@/lib/ordersCache";
+import { notifyDone } from "@/lib/notify";
+import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
@@ -42,6 +44,7 @@ interface LoadedData {
 
 function AppInner() {
   const { user, updateUser } = useAuth();
+  const t = useT();
   const apiKey = user?.apiKey ?? "";
 
   const [filters, setFilters] = useState<Filters>(() =>
@@ -150,6 +153,16 @@ function AppInner() {
     staleTime: Infinity,
     retry: false,
   });
+
+  const wasFetchingRef = useRef(false);
+  useEffect(() => {
+    if (isFetching) {
+      wasFetchingRef.current = true;
+    } else if (wasFetchingRef.current) {
+      wasFetchingRef.current = false;
+      notifyDone(t("notify_done_title"), t("notify_done_body"));
+    }
+  }, [isFetching]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLoad = useCallback(() => {
     if (!apiKey) return;

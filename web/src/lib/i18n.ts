@@ -96,6 +96,9 @@ const es = {
   funnel_table_stage: "Etapa",
   funnel_table_total: "Total",
   funnel_table_cr: "CR (%)",
+  // Notifications
+  notify_done_title: "Simla · Datos cargados",
+  notify_done_body: "Los datos se han cargado correctamente.",
   // Loading
   loading_connecting: "Conectando con Simla…",
   loading_page: "Página",
@@ -284,6 +287,8 @@ const en: Record<TranslationKey, string> = {
   funnel_table_stage: "Stage",
   funnel_table_total: "Total",
   funnel_table_cr: "CR (%)",
+  notify_done_title: "Simla · Data loaded",
+  notify_done_body: "Data has been loaded successfully.",
   loading_connecting: "Connecting to Simla…",
   loading_page: "Page",
   loading_of: "of",
@@ -464,6 +469,8 @@ const ru: Record<TranslationKey, string> = {
   funnel_table_stage: "Этап",
   funnel_table_total: "Итого",
   funnel_table_cr: "CR (%)",
+  notify_done_title: "Simla · Данные загружены",
+  notify_done_body: "Данные успешно загружены.",
   loading_connecting: "Подключение к Simla…",
   loading_page: "Страница",
   loading_of: "из",
