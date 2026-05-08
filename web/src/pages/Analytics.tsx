@@ -38,7 +38,7 @@ const colCust = createColumnHelper<RepeatCustomer>();
 
 function ChartCard({ info, children }: { info?: string; children: React.ReactNode }) {
   return (
-    <div className="relative bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+    <div className="relative bg-white dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700/60 rounded-xl p-3 shadow-sm">
       {info && <div className="absolute top-3 right-3 z-10"><InfoTooltip text={info} /></div>}
       {children}
     </div>
@@ -448,7 +448,7 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
         </div>
         <button
           onClick={() => setShowConfig(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-700 shadow-sm transition-colors mt-1 flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200/80 dark:border-gray-700/60 bg-white dark:bg-gray-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-gray-600 shadow-sm transition-all mt-1 flex-shrink-0"
         >
           <Settings2 className="w-3.5 h-3.5" />
           {t("charts_configure")}
@@ -521,13 +521,15 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
           <SectionHeader>{t("analytics_section_detail")}</SectionHeader>
           <div className="flex flex-col gap-2 mt-2">
             {visibleTables.map(({ id }) => (
-              <div key={id} className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+              <div key={id} className="bg-white dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700/60 rounded-xl shadow-sm overflow-hidden">
                 <button
                   onClick={() => toggle(id)}
-                  className="w-full flex justify-between items-center px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-gray-700 hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors"
+                  className="w-full flex justify-between items-center px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-gray-800/60 hover:bg-slate-100 dark:hover:bg-gray-700/60 transition-colors"
                 >
                   {t(TABLE_LABEL_KEYS[id] as Parameters<typeof t>[0])}
-                  <span className="text-slate-400 dark:text-slate-500">{openSection === id ? "▲" : "▼"}</span>
+                  {openSection === id
+                    ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                 </button>
                 {openSection === id && (
                   <div className="p-3">

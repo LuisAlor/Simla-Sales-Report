@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check, ChevronLeft, ChevronRight, Pencil, Lock, Users } from "lucide-react";
+import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check, ChevronLeft, ChevronRight, Pencil, Lock, Users, Play, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import dayjs from "dayjs";
 import { useT } from "@/contexts/I18nContext";
@@ -387,8 +387,16 @@ export function TopFilters({
             </span>
           )}
 
-          <button onClick={onLoad} disabled={loading || !hasApiKey} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm px-4 py-1.5 rounded-md transition-colors">
-            {loading ? t("filter_loading") : t("filter_load")}
+          <button
+            onClick={onLoad}
+            disabled={loading || !hasApiKey}
+            className="flex items-center gap-2 text-white font-semibold text-sm px-4 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] whitespace-nowrap"
+            style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
+          >
+            {loading
+              ? <><RefreshCw size={13} className="animate-spin" /> {t("filter_loading")}</>
+              : <><Play size={12} className="fill-white" /> {t("filter_load")}</>
+            }
           </button>
         </div>
       </div>
