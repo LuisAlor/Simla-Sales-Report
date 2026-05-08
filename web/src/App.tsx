@@ -290,6 +290,14 @@ function AppInner() {
     updateUser({ ...user, savedFilterTemplates: reordered });
   }, [user, updateUser]);
 
+  const handleRenameTemplate = useCallback((id: string, name: string) => {
+    if (!user) return;
+    updateUser({
+      ...user,
+      savedFilterTemplates: filterTemplates.map((t) => t.id === id ? { ...t, name } : t),
+    });
+  }, [user, filterTemplates, updateUser]);
+
   const layoutProps = {
     filters,
     managers: managerOptions,
@@ -302,6 +310,7 @@ function AppInner() {
     onApplyTemplate: handleApplyTemplate,
     onDeleteTemplate: handleDeleteTemplate,
     onReorderTemplates: handleReorderTemplates,
+    onRenameTemplate: handleRenameTemplate,
     loading: isFetching,
     cachedAt,
     hasApiKey: apiKey.length > 0,

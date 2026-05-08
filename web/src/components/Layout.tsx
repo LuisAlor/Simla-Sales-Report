@@ -21,6 +21,7 @@ export interface LayoutProps {
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (templates: FilterTemplate[]) => void;
+  onRenameTemplate: (id: string, name: string) => void;
   loading: boolean;
   cachedAt: number | null;
   hasApiKey: boolean;
