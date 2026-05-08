@@ -325,12 +325,7 @@ export function TLDV({ managerSdMap }: Props) {
         {loading ? (
           <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
         ) : !selectedOrder ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 select-none">
-            <div className="w-16 h-16 rounded-2xl bg-gray-800/40 border border-gray-700/40 flex items-center justify-center">
-              <Video size={26} className="text-gray-700" />
-            </div>
-            <p className="text-sm text-gray-600">{t("tldv_no_selection")}</p>
-          </div>
+          <EmptyState />
         ) : (
           <>
             {/* Header */}
@@ -514,6 +509,75 @@ export function TLDV({ managerSdMap }: Props) {
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Empty state (no meeting selected) ───────────────────────────────────────
+function EmptyState() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
+      <style>{`
+        @keyframes ringPulse {
+          0%   { transform: scale(1);   opacity: 0.18; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        @keyframes iconFloat {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-7px); }
+        }
+        @keyframes dotBlink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.15; }
+        }
+        @keyframes textFade {
+          0%, 100% { opacity: 0.5; }
+          50%       { opacity: 1; }
+        }
+      `}</style>
+
+      {/* Pulsing rings + floating icon */}
+      <div className="relative flex items-center justify-center w-32 h-32">
+        {/* Rings */}
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="absolute rounded-full border border-cyan-500/25"
+            style={{
+              width: 56, height: 56,
+              animation: `ringPulse 2.4s ease-out ${i * 0.8}s infinite`,
+            }}
+          />
+        ))}
+
+        {/* Central icon container */}
+        <div
+          className="relative w-14 h-14 rounded-2xl flex items-center justify-center z-10"
+          style={{
+            background: "linear-gradient(135deg, rgba(6,182,212,0.12), rgba(59,130,246,0.12))",
+            border: "1px solid rgba(6,182,212,0.25)",
+            animation: "iconFloat 3.2s ease-in-out infinite",
+          }}
+        >
+          <Video size={24} className="text-cyan-500/60" />
+          {/* Blinking REC dot */}
+          <div
+            className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500/80"
+            style={{ animation: "dotBlink 1.8s ease-in-out infinite" }}
+          />
+        </div>
+      </div>
+
+      {/* Text */}
+      <div className="flex flex-col items-center gap-1.5">
+        <p
+          className="text-sm font-semibold text-gray-400"
+          style={{ animation: "textFade 3s ease-in-out infinite" }}
+        >
+          Selecciona una reunión
+        </p>
+        <p className="text-xs text-gray-700">para ver la transcripción y el análisis</p>
       </div>
     </div>
   );
