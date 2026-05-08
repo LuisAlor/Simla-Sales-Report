@@ -94,9 +94,9 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
   const [openSections, setOpenSections] = useState<Set<SectionId>>(
     new Set(["summary", "temporal", "distribution", "products", "detail"])
   );
-  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const dragRef = useRef<number | null>(null);
+  // Drag tracking via refs — no state, so no re-renders during drag
+  const dragSrcRef  = useRef<number | null>(null);
+  const dragOverRef = useRef<number | null>(null);
 
   const totalVis = countVisible(layout);
   const sectionVis = new Map(layout.sections.map((s) => [s.id, s.visible]));
@@ -142,28 +142,54 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
     onChange({ ...layout, tables: layout.tables.map((tb) => tb.id === id ? { ...tb, visible: !tb.visible } : tb) });
   }
 
+  function clearDragStyles() {
+    document.querySelectorAll("[data-drag-item]").forEach((el) => {
+      el.classList.remove("opacity-30", "outline", "outline-2", "outline-blue-400", "dark:outline-blue-500");
+    });
+  }
+
   function handleDragStart(e: React.DragEvent, idx: number) {
-    dragRef.current = idx;
-    setDraggingIdx(idx);
+    dragSrcRef.current = idx;
     e.dataTransfer.effectAllowed = "move";
+    // defer so the ghost image captures the un-dimmed element
+    requestAnimationFrame(() => {
+      (e.target as HTMLElement).closest("[data-drag-item]")?.classList.add("opacity-30");
+    });
   }
 
   function handleDragOver(e: React.DragEvent, idx: number) {
     e.preventDefault();
-    setDragOverIdx(idx);
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverRef.current === idx) return; // no DOM work if same target
+    dragOverRef.current = idx;
+    // update highlight without touching React state
+    document.querySelectorAll("[data-drag-item]").forEach((el) => {
+      const elIdx = Number((el as HTMLElement).dataset.dragItem);
+      if (elIdx === idx && elIdx !== dragSrcRef.current) {
+        el.classList.add("outline", "outline-2", "outline-blue-400");
+      } else {
+        el.classList.remove("outline", "outline-2", "outline-blue-400");
+      }
+    });
   }
 
   function handleDrop(e: React.DragEvent, idx: number) {
     e.preventDefault();
-    if (dragRef.current !== null && dragRef.current !== idx) {
+    clearDragStyles();
+    if (dragSrcRef.current !== null && dragSrcRef.current !== idx) {
       const next = [...layout.charts];
-      const [item] = next.splice(dragRef.current, 1);
+      const [item] = next.splice(dragSrcRef.current, 1);
       next.splice(idx, 0, item);
       onChange({ ...layout, charts: next });
     }
-    dragRef.current = null;
-    setDraggingIdx(null);
-    setDragOverIdx(null);
+    dragSrcRef.current  = null;
+    dragOverRef.current = null;
+  }
+
+  function handleDragEnd() {
+    clearDragStyles();
+    dragSrcRef.current  = null;
+    dragOverRef.current = null;
   }
 
   function toggleOpen(id: SectionId) {
@@ -236,21 +262,16 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
                 .filter(({ chart }) => CHART_SECTION[chart.id] === id)
                 .map(({ chart, globalIdx }) => {
                   const effVis = chart.visible && sectionVis.get(id);
-                  const isDragging = draggingIdx === globalIdx;
-                  const isOver = dragOverIdx === globalIdx && draggingIdx !== globalIdx;
                   return (
                     <div
                       key={chart.id}
+                      data-drag-item={globalIdx}
                       draggable
                       onDragStart={(e) => handleDragStart(e, globalIdx)}
                       onDragOver={(e) => handleDragOver(e, globalIdx)}
                       onDrop={(e) => handleDrop(e, globalIdx)}
-                      onDragEnd={() => { dragRef.current = null; setDraggingIdx(null); setDragOverIdx(null); }}
-                      className={[
-                        "flex flex-col gap-1.5 px-3 py-2 cursor-grab active:cursor-grabbing select-none",
-                        isDragging ? "opacity-30" : !effVis ? "opacity-50" : "",
-                        isOver ? "bg-blue-50 dark:bg-blue-900/20" : "",
-                      ].join(" ")}
+                      onDragEnd={handleDragEnd}
+                      className={`flex flex-col gap-1.5 px-3 py-2 cursor-grab active:cursor-grabbing select-none rounded transition-opacity ${!effVis ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-center gap-2">
                         <GripVertical className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 flex-shrink-0 pointer-events-none" />
