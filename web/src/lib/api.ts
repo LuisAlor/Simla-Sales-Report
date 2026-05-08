@@ -224,8 +224,8 @@ export async function fetchOrdersByDemoDate(
   dateTo?: string,
 ): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
-  if (dateFrom) filter["customFields][demo_date][min"] = dateFrom;
-  if (dateTo)   filter["customFields][demo_date][max"] = dateTo;
+  if (dateFrom) filter["customFields][demo_date][gte][abs"] = dateFrom;
+  if (dateTo)   filter["customFields][demo_date][lte][abs"] = dateTo;
 
   const all: RawOrder[] = [];
   let page = 1;

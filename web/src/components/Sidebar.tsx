@@ -319,9 +319,27 @@ export function Sidebar() {
         >
           {flyout.moduleId === "analytics" && (
             <div>
-              <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
-                {t("nav_analytics")}
-              </p>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-navy-border">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+                  {t("nav_analytics")}
+                </p>
+                <button
+                  ref={reorderBtnRef}
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setReorderAnchorTop(rect.top);
+                    setShowReorder((v) => !v);
+                  }}
+                  title={t("nav_reorder_title")}
+                  className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+                    showReorder
+                      ? "text-brand-blue bg-brand-blue/10"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
+                  }`}
+                >
+                  <GripVertical size={13} />
+                </button>
+              </div>
               {orderedPages.map((page) => {
                 const PageIcon = page.Icon;
                 const isActive = page.end
@@ -344,25 +362,6 @@ export function Sidebar() {
                   </NavLink>
                 );
               })}
-              {/* Reorder trigger at the bottom of the flyout */}
-              <div className="border-t border-navy-border">
-                <button
-                  ref={reorderBtnRef}
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    setReorderAnchorTop(rect.top);
-                    setShowReorder((v) => !v);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-2 text-xs transition-colors ${
-                    showReorder
-                      ? "text-brand-blue bg-brand-blue/10"
-                      : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
-                  }`}
-                >
-                  <GripVertical size={12} className="shrink-0" />
-                  {t("nav_reorder_title")}
-                </button>
-              </div>
             </div>
           )}
 
