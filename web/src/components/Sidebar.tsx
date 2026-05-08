@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
-  Cog, LogOut, GripVertical, RotateCcw, X,
+  Cog, GripVertical, RotateCcw, X,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +42,7 @@ function saveNavOrder(userId: string, order: PageTo[]) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const t = useT();
@@ -54,6 +54,7 @@ export function Sidebar() {
   );
 
   const [showReorder, setShowReorder] = useState(false);
+  const [reorderAnchorTop, setReorderAnchorTop] = useState(0);
   const reorderPanelRef = useRef<HTMLDivElement>(null);
   const reorderBtnRef = useRef<HTMLButtonElement>(null);
   const dragSrcRef = useRef<number | null>(null);
@@ -221,22 +222,6 @@ export function Sidebar() {
           </div>
         </nav>
 
-        {/* ── Reorder nav button ── */}
-        <div className="flex justify-center py-1 px-1">
-          <button
-            ref={reorderBtnRef}
-            onClick={() => setShowReorder((v) => !v)}
-            title={t("nav_reorder_title")}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-              showReorder
-                ? "bg-brand-blue/20 text-brand-blue"
-                : "text-slate-600 hover:bg-navy-border hover:text-slate-300"
-            }`}
-          >
-            <GripVertical size={14} />
-          </button>
-        </div>
-
         {/* ── Admin ── */}
         {user?.role === "admin" && (
           <div className="flex justify-center py-2 px-1 border-t border-navy-border">
@@ -263,25 +248,16 @@ export function Sidebar() {
             </button>
           )}
         </div>
-
-        {/* ── Logout ── */}
-        <div className="flex justify-center pb-3">
-          <button
-            onClick={logout}
-            title={t("sidebar_logout")}
-            className="text-slate-600 hover:text-red-400 transition-colors p-1.5 rounded hover:bg-navy-border"
-          >
-            <LogOut size={14} />
-          </button>
-        </div>
       </aside>
 
-      {/* ── Nav reorder panel (portal) ── */}
+      {/* ── Nav reorder panel (portal, anchored below flyout) ── */}
       {showReorder && createPortal(
         <div
           ref={reorderPanelRef}
-          style={{ position: "fixed", left: W + 4, bottom: 60, zIndex: 9999, minWidth: 200 }}
-          className="bg-navy border border-navy-border rounded-lg shadow-xl overflow-hidden"
+          style={{ position: "fixed", left: W, top: reorderAnchorTop, zIndex: 10000, minWidth: 200 }}
+          onMouseEnter={cancelCloseFlyout}
+          onMouseLeave={closeFlyoutDelayed}
+          className="bg-navy border border-navy-border rounded-tr-lg rounded-br-lg shadow-xl overflow-hidden"
         >
           <div className="flex items-center justify-between px-3 py-2 border-b border-navy-border">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
@@ -361,6 +337,25 @@ export function Sidebar() {
                   </NavLink>
                 );
               })}
+              {/* Reorder trigger at the bottom of the flyout */}
+              <div className="border-t border-navy-border">
+                <button
+                  ref={reorderBtnRef}
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    setReorderAnchorTop(rect.top);
+                    setShowReorder((v) => !v);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-xs transition-colors ${
+                    showReorder
+                      ? "text-brand-blue bg-brand-blue/10"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
+                  }`}
+                >
+                  <GripVertical size={12} className="shrink-0" />
+                  {t("nav_reorder_title")}
+                </button>
+              </div>
             </div>
           )}
 
