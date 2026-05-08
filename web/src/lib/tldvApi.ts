@@ -36,7 +36,8 @@ export async function fetchTldvTranscript(apiKey: string, meetingId: string): Pr
   const res = await fetch(`${TLDV_BASE}/meetings/${meetingId}/transcript`, { headers: { "x-api-key": apiKey } });
   if (!res.ok) throw new Error(`TLDV transcript ${res.status}`);
   const data = await res.json();
-  const raw = data.transcript ?? data.entries ?? data.segments ?? data;
+  console.log("[TLDV transcript] raw response:", JSON.stringify(data, null, 2));
+  const raw = data.transcript ?? data.entries ?? data.segments ?? data.sentences ?? data.data ?? data;
   return Array.isArray(raw) ? raw : [];
 }
 
