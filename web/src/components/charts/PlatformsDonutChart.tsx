@@ -11,7 +11,7 @@ export function PlatformsDonutChart({ data, title }: Props) {
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const option = {
-    backgroundColor: "#1E2238",
+    backgroundColor: "transparent",
     tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)", backgroundColor: "#252A45", borderColor: "#2D3452", textStyle: { color: "#CBD5E1" } },
     legend: { orient: "vertical" as const, right: 0, top: "center", textStyle: { color: "#CBD5E1", fontSize: 11 } },
     color: PALETTE,

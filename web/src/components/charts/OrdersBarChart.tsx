@@ -33,5 +33,5 @@ export function OrdersBarChart({ data, color = "#00BCD4" }: Props) {
     }],
     title: { text: t("chart_orders_time"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };
-  return <ReactECharts option={option} style={{ height: 280, background: c.bg }} notMerge lazyUpdate />;
+  return <ReactECharts option={option} style={{ height: 280 }} notMerge lazyUpdate />;
 }

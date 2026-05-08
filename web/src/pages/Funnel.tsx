@@ -87,18 +87,15 @@ export function Funnel({ records, freq: _freq, statusLabels }: Props) {
               <DataTable data={dynamicRows} columns={stageCols} dark />
             </div>
             <div className="col-span-2 bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3">
-              {/* no time chart needed for this simplified view */}
+              <FunnelBarChart data={dynamicRows} title={t("funnel_key_stages")} />
             </div>
-          </div>
-          <div className="bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3 mt-3">
-            <FunnelBarChart data={dynamicRows} title={t("funnel_key_stages")} />
           </div>
         </>
       )}
 
       <SectionHeader>{t("funnel_lead_sources")}</SectionHeader>
       {plat.length > 0 ? (
-        <div className="bg-navy-light border border-navy-border rounded-lg p-3 mt-2">
+        <div className="bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3 mt-2">
           <PlatformsDonutChart data={plat} title={t("funnel_lead_sources")} />
         </div>
       ) : (

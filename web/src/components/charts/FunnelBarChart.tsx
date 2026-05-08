@@ -9,7 +9,7 @@ interface Props {
 export function FunnelBarChart({ data, title }: Props) {
   const sorted = [...data].reverse();
   const option = {
-    backgroundColor: "#1E2238",
+    backgroundColor: "transparent",
     tooltip: {
       trigger: "axis",
       backgroundColor: "#252A45",

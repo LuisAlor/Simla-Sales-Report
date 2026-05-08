@@ -39,6 +39,7 @@ const colCust = createColumnHelper<RepeatCustomer>();
 function ChartCard({ info, children }: { info?: string; children: React.ReactNode }) {
   return (
     <div className="relative bg-white dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700/60 rounded-xl p-3 shadow-sm overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg, #06b6d4, #3b82f6)" }} />
       {info && <div className="absolute top-3 right-3 z-10"><InfoTooltip text={info} /></div>}
       {children}
     </div>
@@ -362,7 +363,7 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
 export function Analytics({ records, items, freq, statusLabels }: Props) {
   const t = useT();
   const { user } = useAuth();
-  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["table_repeat", "table_manager"]));
   const [showConfig, setShowConfig] = useState(false);
   const [layout, setLayout] = useState<FullLayout>(() => loadFullLayout(user?.id ?? "default"));
 
@@ -431,7 +432,11 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
   const visibleTables = layout.tables.filter((tb) => tb.visible && sectionVis.get("detail"));
 
   function toggle(s: string) {
-    setOpenSection((prev) => (prev === s ? null : s));
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
   }
 
   // ── Render sections ────────────────────────────────────────────────────────
@@ -527,11 +532,11 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
                   className="w-full flex justify-between items-center px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-gray-800/60 hover:bg-slate-100 dark:hover:bg-gray-700/60 transition-colors"
                 >
                   {t(TABLE_LABEL_KEYS[id] as Parameters<typeof t>[0])}
-                  {openSection === id
+                  {openSections.has(id)
                     ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                 </button>
-                {openSection === id && (
+                {openSections.has(id) && (
                   <div className="p-3">
                     {id === "table_repeat"  && <DataTable data={repeatData}  columns={customerCols} />}
                     {id === "table_manager" && <DataTable data={managerData} columns={managerCols} />}

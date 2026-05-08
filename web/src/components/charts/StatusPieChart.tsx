@@ -37,5 +37,5 @@ export function StatusPieChart({ data, statusLabels = {} }: Props) {
     }],
     title: { text: t("chart_orders_status"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };
-  return <ReactECharts option={option} style={{ height: 320, background: c.bg }} notMerge={true} lazyUpdate={true} />;
+  return <ReactECharts option={option} style={{ height: 320 }} notMerge={true} lazyUpdate={true} />;
 }
