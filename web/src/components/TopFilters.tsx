@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check, ChevronLeft, ChevronRight, Pencil, Lock, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import dayjs from "dayjs";
 import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
@@ -68,7 +69,7 @@ interface Props {
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
   onReset: () => void;
-  onSaveTemplate: (name: string) => void;
+  onSaveTemplate: (name: string, visibility: "private" | "public") => void;
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (templates: FilterTemplate[]) => void;
@@ -106,6 +107,7 @@ export function TopFilters({
   loading, cachedAt, hasApiKey,
 }: Props) {
   const t = useT();
+  const { user } = useAuth();
 
   const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
     { label: t("filter_freq_day"),   value: "D",  title: t("filter_freq_day_title")   },
@@ -115,6 +117,7 @@ export function TopFilters({
 
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [templateVisibility, setTemplateVisibility] = useState<"private" | "public">("private");
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
   const [showConfig, setShowConfig] = useState(false);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -168,8 +171,9 @@ export function TopFilters({
   function handleSave() {
     const name = templateName.trim();
     if (!name || isDuplicateFilter) return;
-    onSaveTemplate(name);
+    onSaveTemplate(name, templateVisibility);
     setTemplateName("");
+    setTemplateVisibility("private");
     setSavingTemplate(false);
   }
 
@@ -417,12 +421,14 @@ export function TopFilters({
             const isDragging = tmplDraggingIdx === idx;
             const isOver = tmplDragOverIdx === idx && tmplDraggingIdx !== idx;
             const isEditing = editingId === tmpl.id;
+            const isOwn = !tmpl.ownerId || tmpl.ownerId === user?.id;
+            const isPublicOther = !isOwn && tmpl.visibility === "public";
             return (
               <div
                 key={tmpl.id}
-                draggable={!isEditing}
+                draggable={!isEditing && isOwn}
                 onDragStart={(e) => {
-                  if (isEditing) return;
+                  if (isEditing || !isOwn) return;
                   tmplDragRef.current = idx;
                   setTmplDraggingIdx(idx);
                   e.dataTransfer.effectAllowed = "move";
@@ -468,25 +474,33 @@ export function TopFilters({
                   <>
                     <button
                       onClick={() => onApplyTemplate(tmpl)}
-                      onDoubleClick={() => { setEditingId(tmpl.id); setEditName(tmpl.name); }}
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors cursor-grab active:cursor-grabbing ${
+                      onDoubleClick={() => { if (!isOwn) return; setEditingId(tmpl.id); setEditName(tmpl.name); }}
+                      title={isPublicOther ? t("filter_template_public") : undefined}
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${isOwn ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${
                         isActive
                           ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
                           : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
                       }`}
-                    >{tmpl.name}</button>
-                    <button
-                      onClick={() => { setEditingId(tmpl.id); setEditName(tmpl.name); }}
-                      className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-all p-0.5"
-                      title="Renombrar"
                     >
-                      <Pencil size={9} />
+                      {isPublicOther && <Users size={8} className="inline mr-1 opacity-50" />}
+                      {tmpl.name}
                     </button>
-                    <button
-                      onClick={() => onDeleteTemplate(tmpl.id)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none px-0.5"
-                      title={t("admin_delete")}
-                    >×</button>
+                    {isOwn && (
+                      <>
+                        <button
+                          onClick={() => { setEditingId(tmpl.id); setEditName(tmpl.name); }}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-all p-0.5"
+                          title="Renombrar"
+                        >
+                          <Pencil size={9} />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTemplate(tmpl.id)}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none px-0.5"
+                          title={t("admin_delete")}
+                        >×</button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -510,16 +524,31 @@ export function TopFilters({
                   onChange={(e) => setTemplateName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSave();
-                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
+                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); setTemplateVisibility("private"); }
                   }}
                   placeholder={t("filter_template_placeholder")}
                   disabled={isDuplicateFilter}
-                  className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50"
+                  className="text-xs outline-none w-32 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50"
                 />
+                {/* Visibility toggle */}
+                <button
+                  onClick={() => setTemplateVisibility((v) => v === "private" ? "public" : "private")}
+                  title={templateVisibility === "private" ? t("filter_template_visibility_tip") : t("filter_template_visibility_tip")}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors shrink-0 ${
+                    templateVisibility === "public"
+                      ? "bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 border border-teal-300 dark:border-teal-700"
+                      : "bg-slate-50 dark:bg-gray-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-gray-700 hover:text-slate-600"
+                  }`}
+                >
+                  {templateVisibility === "public"
+                    ? <><Users size={9} className="shrink-0" /> {t("filter_template_public")}</>
+                    : <><Lock size={9} className="shrink-0" /> {t("filter_template_private")}</>
+                  }
+                </button>
                 <button onClick={handleSave} title="Guardar" disabled={isDuplicateFilter} className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shrink-0">
                   <Check size={11} />
                 </button>
-                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} title="Cancelar" className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0">
+                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); setTemplateVisibility("private"); }} title="Cancelar" className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0">
                   <X size={11} />
                 </button>
               </div>

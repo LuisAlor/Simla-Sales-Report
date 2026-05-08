@@ -52,7 +52,7 @@ export interface FullLayout {
   tables:   TableConfig[];
 }
 
-const STORAGE_KEY = "simla_full_layout";
+const storageKey = (userId: string) => `simla_full_layout_${userId}`;
 
 function defaultLayout(): FullLayout {
   return {
@@ -63,9 +63,9 @@ function defaultLayout(): FullLayout {
   };
 }
 
-export function loadFullLayout(): FullLayout {
+export function loadFullLayout(userId = "default"): FullLayout {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(userId));
     if (!raw) return defaultLayout();
     const p: Partial<FullLayout> = JSON.parse(raw);
     const def = defaultLayout();
@@ -94,8 +94,8 @@ export function loadFullLayout(): FullLayout {
   }
 }
 
-export function saveFullLayout(layout: FullLayout): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
+export function saveFullLayout(layout: FullLayout, userId = "default"): void {
+  try { localStorage.setItem(storageKey(userId), JSON.stringify(layout)); } catch { /* ignore */ }
 }
 
 // Count items that are effectively visible (item.visible AND section.visible)

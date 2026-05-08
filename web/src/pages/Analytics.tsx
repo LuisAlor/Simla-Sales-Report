@@ -19,6 +19,7 @@ import { fmtUsd, fmtInt } from "@/lib/utils";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { Freq } from "@/lib/transforms";
 import { useT } from "@/contexts/I18nContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   loadFullLayout, saveFullLayout, countVisible, COLOR_PALETTE,
   CHART_SECTION,
@@ -360,14 +361,15 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
 
 export function Analytics({ records, items, freq, statusLabels }: Props) {
   const t = useT();
+  const { user } = useAuth();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [layout, setLayout] = useState<FullLayout>(() => loadFullLayout());
+  const [layout, setLayout] = useState<FullLayout>(() => loadFullLayout(user?.id ?? "default"));
 
   const handleLayoutChange = useCallback((next: FullLayout) => {
     setLayout(next);
-    saveFullLayout(next);
-  }, []);
+    saveFullLayout(next, user?.id ?? "default");
+  }, [user?.id]);
 
   const managerCols = useMemo(() => [
     colMgr.accessor("managerName", { header: t("table_manager") }),

@@ -1,6 +1,8 @@
 export interface FilterTemplate {
   id: string;
   name: string;
+  ownerId?: string;
+  visibility?: "private" | "public";
   dateFrom: string;
   dateTo: string;
   freq: string;
