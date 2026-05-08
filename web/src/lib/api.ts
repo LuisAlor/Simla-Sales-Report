@@ -243,7 +243,13 @@ export async function fetchOrdersByDemoDate(
     if (page >= totalPages) break;
     page++;
   }
-  return all;
+  return all.filter((o) => {
+    const demoDate = (o.customFields?.["demo_date"] as string | undefined)?.slice(0, 10);
+    if (!demoDate) return false;
+    if (dateFrom && demoDate < dateFrom) return false;
+    if (dateTo   && demoDate > dateTo)   return false;
+    return true;
+  });
 }
 
 // Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
