@@ -219,10 +219,8 @@ export interface FetchOrdersParams {
 
 const MAX_DEMO_PAGES = 20; // safety cap — 2000 orders max per fetch
 
-// Fetch CRM orders that have a demo_date in the given range.
-// The REST v5 API does not support filtering by custom date fields server-side,
-// so we use createdAt as a server-side pre-filter (same range) to keep pages
-// manageable, then apply exact demo_date filtering client-side.
+// Fetch CRM orders filtered by demo_date custom field.
+// Same [min]/[max] syntax as firstpaymentdate used in fetchOrders.
 export async function fetchOrdersByDemoDate(
   apiKey: string,
   dateFrom?: string,
@@ -230,9 +228,8 @@ export async function fetchOrdersByDemoDate(
   onProgress?: (page: number, total: number) => void,
 ): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
-  // createdAt filter narrows the result set server-side
-  if (dateFrom) filter["createdAtFrom"] = `${dateFrom} 00:00:00`;
-  if (dateTo)   filter["createdAtTo"]   = `${dateTo} 23:59:59`;
+  if (dateFrom) filter["customFields][demo_date][min"] = dateFrom;
+  if (dateTo)   filter["customFields][demo_date][max"] = dateTo;
 
   const all: RawOrder[] = [];
   let page = 1;
@@ -246,16 +243,7 @@ export async function fetchOrdersByDemoDate(
     if (page >= totalPages) break;
     page++;
   }
-
-  // Client-side: keep only orders where demo_date is within the requested range
-  return all.filter((o) => {
-    const demoDate = o.customFields?.["demo_date"] as string | undefined;
-    if (!demoDate) return false;
-    const d = demoDate.slice(0, 10);
-    if (dateFrom && d < dateFrom) return false;
-    if (dateTo   && d > dateTo)   return false;
-    return true;
-  });
+  return all;
 }
 
 // Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
