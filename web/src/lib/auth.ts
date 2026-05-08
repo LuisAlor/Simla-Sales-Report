@@ -1,6 +1,8 @@
 export interface FilterTemplate {
   id: string;
   name: string;
+  ownerId?: string;
+  visibility?: "private" | "public";
   dateFrom: string;
   dateTo: string;
   freq: string;
@@ -19,6 +21,7 @@ export interface User {
   role: 'admin' | 'viewer';
   avatarDataUrl?: string;
   apiKey?: string;
+  tldvApiKey?: string;
   savedFilters?: Record<string, unknown>;
   savedUtms?: { sources: string[]; mediums: string[] };
   savedFilterTemplates?: FilterTemplate[];

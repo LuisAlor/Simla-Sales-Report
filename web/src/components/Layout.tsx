@@ -17,10 +17,11 @@ export interface LayoutProps {
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
   onReset: () => void;
-  onSaveTemplate: (name: string) => void;
+  onSaveTemplate: (name: string, visibility: "private" | "public") => void;
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
   onReorderTemplates: (templates: FilterTemplate[]) => void;
+  onRenameTemplate: (id: string, name: string) => void;
   loading: boolean;
   cachedAt: number | null;
   hasApiKey: boolean;

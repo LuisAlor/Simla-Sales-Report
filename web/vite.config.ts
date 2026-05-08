@@ -19,6 +19,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      "/tldv-api": { target: "https://pasta.tldv.io", changeOrigin: true, secure: true, rewrite: (path) => path.replace(/^\/tldv-api/, "") },
+      "/anthropic-api": { target: "https://api.anthropic.com", changeOrigin: true, secure: true, rewrite: (path) => path.replace(/^\/anthropic-api/, "") },
     },
   },
 });

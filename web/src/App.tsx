@@ -9,6 +9,7 @@ import { Login } from "@/pages/Login";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Profile } from "@/pages/Profile";
 import { ApiSetup } from "@/pages/ApiSetup";
+import { TLDV } from "@/pages/TLDV";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -22,6 +23,7 @@ import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
+import { getUsers } from "@/lib/auth";
 
 function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
   return {
@@ -247,14 +249,23 @@ function AppInner() {
     return result;
   }, [allRecords, filters.managerIds, filters.utmSources, filters.utmMediums]);
 
-  // Filter template handlers
-  const filterTemplates = user?.savedFilterTemplates ?? [];
+  // Filter template handlers — own templates + other users' public ones
+  const ownTemplates = user?.savedFilterTemplates ?? [];
+  const filterTemplates = useMemo(() => {
+    if (!user) return ownTemplates;
+    const others = getUsers()
+      .filter((u) => u.id !== user.id)
+      .flatMap((u) => (u.savedFilterTemplates ?? []).filter((t) => t.visibility === "public"));
+    return [...ownTemplates, ...others];
+  }, [ownTemplates, user]);
 
-  const handleSaveTemplate = useCallback((name: string) => {
+  const handleSaveTemplate = useCallback((name: string, visibility: "private" | "public") => {
     if (!user) return;
     const newTemplate: FilterTemplate = {
       id: Date.now().toString(),
       name,
+      ownerId: user.id,
+      visibility,
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
       freq: filters.freq,
@@ -263,8 +274,8 @@ function AppInner() {
       utmSources: filters.utmSources,
       utmMediums: filters.utmMediums,
     };
-    updateUser({ ...user, savedFilterTemplates: [...filterTemplates, newTemplate] });
-  }, [user, filters, filterTemplates, updateUser]);
+    updateUser({ ...user, savedFilterTemplates: [...ownTemplates, newTemplate] });
+  }, [user, filters, ownTemplates, updateUser]);
 
   const handleApplyTemplate = useCallback((t: FilterTemplate) => {
     setFilters({
@@ -282,13 +293,23 @@ function AppInner() {
 
   const handleDeleteTemplate = useCallback((id: string) => {
     if (!user) return;
-    updateUser({ ...user, savedFilterTemplates: filterTemplates.filter((t) => t.id !== id) });
-  }, [user, filterTemplates, updateUser]);
+    updateUser({ ...user, savedFilterTemplates: ownTemplates.filter((t) => t.id !== id) });
+  }, [user, ownTemplates, updateUser]);
 
   const handleReorderTemplates = useCallback((reordered: FilterTemplate[]) => {
     if (!user) return;
-    updateUser({ ...user, savedFilterTemplates: reordered });
+    // only own templates are stored; reordered may include others' public ones — strip them
+    const reorderedOwn = reordered.filter((t) => !t.ownerId || t.ownerId === user.id);
+    updateUser({ ...user, savedFilterTemplates: reorderedOwn });
   }, [user, updateUser]);
+
+  const handleRenameTemplate = useCallback((id: string, name: string) => {
+    if (!user) return;
+    updateUser({
+      ...user,
+      savedFilterTemplates: ownTemplates.map((t) => t.id === id ? { ...t, name } : t),
+    });
+  }, [user, ownTemplates, updateUser]);
 
   const layoutProps = {
     filters,
@@ -302,6 +323,7 @@ function AppInner() {
     onApplyTemplate: handleApplyTemplate,
     onDeleteTemplate: handleDeleteTemplate,
     onReorderTemplates: handleReorderTemplates,
+    onRenameTemplate: handleRenameTemplate,
     loading: isFetching,
     cachedAt,
     hasApiKey: apiKey.length > 0,
@@ -342,6 +364,7 @@ function AppInner() {
             </PageShell>
           }
         />
+        <Route path="/tldv" element={<TLDV managerSdMap={managerSdMap} />} />
         <Route
           path="/admin"
           element={

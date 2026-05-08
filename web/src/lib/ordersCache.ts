@@ -2,6 +2,7 @@ import type { OrderRecord, ItemRecord } from "./flatten";
 
 const TTL_MS = 30 * 60 * 1000; // 30 minutes
 const PREFIX = "simla_oc_";
+const CACHE_VERSION = "v2";
 
 interface CacheEntry {
   ts: number;
@@ -23,7 +24,7 @@ export function makeKey(
   firstPaymentFrom = "",
   firstPaymentTo = ""
 ): string {
-  const sig = [apiKey.slice(-10), dateFrom, dateTo, [...types].sort().join(","), firstPaymentFrom, firstPaymentTo].join("|");
+  const sig = [CACHE_VERSION, apiKey.slice(-10), dateFrom, dateTo, [...types].sort().join(","), firstPaymentFrom, firstPaymentTo].join("|");
   return PREFIX + btoa(sig).replace(/[+/=]/g, "");
 }
 

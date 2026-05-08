@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Bookmark, Plus, Zap, Info, Settings2, GripVertical, X, RotateCcw, Check, ChevronLeft, ChevronRight, Pencil, Lock, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import dayjs from "dayjs";
 import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
@@ -68,9 +69,11 @@ interface Props {
   onFiltersChange: (f: Partial<Filters>) => void;
   onLoad: () => void;
   onReset: () => void;
-  onSaveTemplate: (name: string) => void;
+  onSaveTemplate: (name: string, visibility: "private" | "public") => void;
   onApplyTemplate: (t: FilterTemplate) => void;
   onDeleteTemplate: (id: string) => void;
+  onReorderTemplates: (templates: FilterTemplate[]) => void;
+  onRenameTemplate: (id: string, name: string) => void;
   loading: boolean;
   cachedAt: number | null;
   hasApiKey: boolean;
@@ -100,9 +103,11 @@ const LABEL_H = "mt-[18px]";
 export function TopFilters({
   filters, managers, availableUtms, filterTemplates,
   onFiltersChange, onLoad, onReset, onSaveTemplate, onApplyTemplate, onDeleteTemplate,
+  onReorderTemplates, onRenameTemplate,
   loading, cachedAt, hasApiKey,
 }: Props) {
   const t = useT();
+  const { user } = useAuth();
 
   const FREQ_OPTIONS: { label: string; value: Freq; title: string }[] = [
     { label: t("filter_freq_day"),   value: "D",  title: t("filter_freq_day_title")   },
@@ -112,12 +117,43 @@ export function TopFilters({
 
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [templateVisibility, setTemplateVisibility] = useState<"private" | "public">("private");
   const [layout, setLayout] = useState<LayoutItem[]>(loadLayout);
   const [showConfig, setShowConfig] = useState(false);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const configRef = useRef<HTMLDivElement>(null);
   const dragIdx = useRef<number | null>(null);
+
+  // Template row: drag-to-reorder + rename + scroll arrows
+  const [tmplDraggingIdx, setTmplDraggingIdx] = useState<number | null>(null);
+  const [tmplDragOverIdx, setTmplDragOverIdx] = useState<number | null>(null);
+  const tmplDragRef = useRef<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const tmplScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = tmplScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = tmplScrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateScrollState); ro.disconnect(); };
+  }, [updateScrollState]);
+
+  useEffect(() => {
+    requestAnimationFrame(updateScrollState);
+  }, [filterTemplates, updateScrollState]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -129,14 +165,15 @@ export function TopFilters({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const isCurrentSaved = filterTemplates.some((t) => matchesTemplate(filters, t));
-  const hasTemplates = filterTemplates.length > 0;
+
+  const isDuplicateFilter = filterTemplates.some((tmpl) => matchesTemplate(filters, tmpl));
 
   function handleSave() {
     const name = templateName.trim();
-    if (!name) return;
-    onSaveTemplate(name);
+    if (!name || isDuplicateFilter) return;
+    onSaveTemplate(name, templateVisibility);
     setTemplateName("");
+    setTemplateVisibility("private");
     setSavingTemplate(false);
   }
 
@@ -357,32 +394,129 @@ export function TopFilters({
       </div>
 
       {/* ── Templates row ── */}
-      {(hasTemplates || !isCurrentSaved) && (
-        <div className="flex items-center gap-2 px-4 py-1.5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60 overflow-x-auto">
+      <div className="relative flex items-stretch border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/60">
+        {/* Left scroll arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => tmplScrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+            className="absolute left-0 top-0 bottom-0 z-10 px-1.5 flex items-center bg-gradient-to-r from-slate-50 dark:from-gray-800 via-slate-50/90 dark:via-gray-800/90 to-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+          >
+            <ChevronLeft size={14} />
+          </button>
+        )}
+
+        {/* Scrollable chip strip */}
+        <div
+          ref={tmplScrollRef}
+          className="flex-1 flex items-center gap-2 px-4 py-1.5 overflow-x-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
           <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-[10px] font-semibold uppercase tracking-wide shrink-0">
             <Bookmark size={9} /> {t("filter_templates_label")}
           </span>
           <div className="w-px h-4 bg-slate-200 dark:bg-gray-700 shrink-0" />
-          {filterTemplates.map((tmpl) => {
+
+          {filterTemplates.map((tmpl, idx) => {
             const isActive = matchesTemplate(filters, tmpl);
+            const isDragging = tmplDraggingIdx === idx;
+            const isOver = tmplDragOverIdx === idx && tmplDraggingIdx !== idx;
+            const isEditing = editingId === tmpl.id;
+            const isOwn = !tmpl.ownerId || tmpl.ownerId === user?.id;
+            const isPublicOther = !isOwn && tmpl.visibility === "public";
             return (
-              <div key={tmpl.id} className="flex items-center gap-0.5 shrink-0 group">
-                <button
-                  onClick={() => onApplyTemplate(tmpl)}
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                    isActive
-                      ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
-                      : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
-                  }`}
-                >{tmpl.name}</button>
-                <button onClick={() => onDeleteTemplate(tmpl.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none" title={t("admin_delete")}>×</button>
+              <div
+                key={tmpl.id}
+                draggable={!isEditing && isOwn}
+                onDragStart={(e) => {
+                  if (isEditing || !isOwn) return;
+                  tmplDragRef.current = idx;
+                  setTmplDraggingIdx(idx);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => { e.preventDefault(); setTmplDragOverIdx(idx); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (tmplDragRef.current !== null && tmplDragRef.current !== idx) {
+                    const next = [...filterTemplates];
+                    const [item] = next.splice(tmplDragRef.current, 1);
+                    next.splice(idx, 0, item);
+                    onReorderTemplates(next);
+                  }
+                  tmplDragRef.current = null;
+                  setTmplDraggingIdx(null);
+                  setTmplDragOverIdx(null);
+                }}
+                onDragEnd={() => { tmplDragRef.current = null; setTmplDraggingIdx(null); setTmplDragOverIdx(null); }}
+                className={`flex items-center gap-0.5 shrink-0 group transition-opacity ${isDragging ? "opacity-30" : "opacity-100"} ${isOver ? "outline outline-2 outline-brand-blue rounded-full" : ""}`}
+              >
+                {isEditing ? (
+                  <div className="flex items-center gap-1 bg-white dark:bg-gray-900 border border-brand-blue/60 rounded-full px-2.5 py-0.5 ring-1 ring-brand-blue/20">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { if (editName.trim()) onRenameTemplate(tmpl.id, editName.trim()); setEditingId(null); }
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      onBlur={() => { if (editName.trim()) onRenameTemplate(tmpl.id, editName.trim()); setEditingId(null); }}
+                      className="text-xs outline-none w-24 bg-transparent text-slate-800 dark:text-slate-100"
+                    />
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); if (editName.trim()) onRenameTemplate(tmpl.id, editName.trim()); setEditingId(null); }}
+                      className="text-brand-blue hover:text-blue-700"
+                    >
+                      <Check size={10} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => onApplyTemplate(tmpl)}
+                      onDoubleClick={() => { if (!isOwn) return; setEditingId(tmpl.id); setEditName(tmpl.name); }}
+                      title={isPublicOther ? t("filter_template_public") : undefined}
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${isOwn ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${
+                        isActive
+                          ? "bg-brand-blue/10 border-brand-blue text-brand-blue"
+                          : "border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-gray-600 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-transparent"
+                      }`}
+                    >
+                      {isPublicOther && <Users size={8} className="inline mr-1 opacity-50" />}
+                      {tmpl.name}
+                    </button>
+                    {isOwn && (
+                      <>
+                        <button
+                          onClick={() => { setEditingId(tmpl.id); setEditName(tmpl.name); }}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-all p-0.5"
+                          title="Renombrar"
+                        >
+                          <Pencil size={9} />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTemplate(tmpl.id)}
+                          className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all text-xs leading-none px-0.5"
+                          title={t("admin_delete")}
+                        >×</button>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             );
           })}
-          {!isCurrentSaved && (
-            savingTemplate ? (
-              <div className="flex items-center gap-1.5 shrink-0 bg-white dark:bg-gray-900 border border-brand-blue/60 rounded-lg px-2 py-1 shadow-sm ring-1 ring-brand-blue/20">
-                <Bookmark size={11} className="text-brand-blue shrink-0" />
+
+          {/* Always-visible save button */}
+          {savingTemplate ? (
+            <div className="flex flex-col gap-1 shrink-0">
+              {isDuplicateFilter && (
+                <span className="text-[9px] text-amber-500 dark:text-amber-400 whitespace-nowrap">
+                  {t("config_duplicate_filter")}
+                </span>
+              )}
+              <div className={`flex items-center gap-1.5 bg-white dark:bg-gray-900 border rounded-lg px-2 py-1 shadow-sm ring-1 ${isDuplicateFilter ? "border-amber-400/60 ring-amber-300/20" : "border-brand-blue/60 ring-brand-blue/20"}`}>
+                <Bookmark size={11} className={isDuplicateFilter ? "text-amber-400 shrink-0" : "text-brand-blue shrink-0"} />
                 <input
                   autoFocus
                   type="text"
@@ -390,34 +524,55 @@ export function TopFilters({
                   onChange={(e) => setTemplateName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSave();
-                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
+                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); setTemplateVisibility("private"); }
                   }}
                   placeholder={t("filter_template_placeholder")}
-                  className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  disabled={isDuplicateFilter}
+                  className="text-xs outline-none w-32 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50"
                 />
+                {/* Visibility toggle */}
                 <button
-                  onClick={handleSave}
-                  title="Guardar"
-                  className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 text-white transition-colors shrink-0"
+                  onClick={() => setTemplateVisibility((v) => v === "private" ? "public" : "private")}
+                  title={templateVisibility === "private" ? t("filter_template_visibility_tip") : t("filter_template_visibility_tip")}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors shrink-0 ${
+                    templateVisibility === "public"
+                      ? "bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 border border-teal-300 dark:border-teal-700"
+                      : "bg-slate-50 dark:bg-gray-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-gray-700 hover:text-slate-600"
+                  }`}
                 >
+                  {templateVisibility === "public"
+                    ? <><Users size={9} className="shrink-0" /> {t("filter_template_public")}</>
+                    : <><Lock size={9} className="shrink-0" /> {t("filter_template_private")}</>
+                  }
+                </button>
+                <button onClick={handleSave} title="Guardar" disabled={isDuplicateFilter} className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shrink-0">
                   <Check size={11} />
                 </button>
-                <button
-                  onClick={() => { setSavingTemplate(false); setTemplateName(""); }}
-                  title="Cancelar"
-                  className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0"
-                >
+                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); setTemplateVisibility("private"); }} title="Cancelar" className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0">
                   <X size={11} />
                 </button>
               </div>
-            ) : (
-              <button onClick={() => setSavingTemplate(true)} className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors">
-                <Plus size={9} /> {t("filter_save_current")}
-              </button>
-            )
+            </div>
+          ) : (
+            <button
+              onClick={() => setSavingTemplate(true)}
+              className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-brand-blue text-[10px] shrink-0 transition-colors"
+            >
+              <Plus size={9} /> {t("filter_save_current")}
+            </button>
           )}
         </div>
-      )}
+
+        {/* Right scroll arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => tmplScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+            className="absolute right-0 top-0 bottom-0 z-10 px-1.5 flex items-center bg-gradient-to-l from-slate-50 dark:from-gray-800 via-slate-50/90 dark:via-gray-800/90 to-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+          >
+            <ChevronRight size={14} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

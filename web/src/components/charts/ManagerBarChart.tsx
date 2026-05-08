@@ -4,9 +4,9 @@ import { useIsDark } from "@/contexts/ThemeContext";
 import { useT } from "@/contexts/I18nContext";
 import { chartTheme } from "@/lib/chartTheme";
 
-interface Props { data: ManagerRow[]; }
+interface Props { data: ManagerRow[]; color?: string; }
 
-export function ManagerBarChart({ data }: Props) {
+export function ManagerBarChart({ data, color = "#00BCD4" }: Props) {
   const isDark = useIsDark();
   const c = chartTheme(isDark);
   const t = useT();
@@ -31,7 +31,7 @@ export function ManagerBarChart({ data }: Props) {
       name: t("chart_series_revenue"),
       type: "bar",
       data: data.map((d) => d.revenue),
-      itemStyle: { color: "#00BCD4", borderRadius: [3, 3, 0, 0] },
+      itemStyle: { color, borderRadius: [3, 3, 0, 0] },
       label: { show: true, position: "top", formatter: (p: { dataIndex: number }) => `${data[p.dataIndex].orders} ${suffix}`, fontSize: 10, color: c.axisLabel },
     }],
     title: { text: t("chart_revenue_manager"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },

@@ -4,9 +4,9 @@ import { useIsDark } from "@/contexts/ThemeContext";
 import { useT } from "@/contexts/I18nContext";
 import { chartTheme } from "@/lib/chartTheme";
 
-interface Props { data: TsPoint[]; }
+interface Props { data: TsPoint[]; color?: string; }
 
-export function OrdersBarChart({ data }: Props) {
+export function OrdersBarChart({ data, color = "#00BCD4" }: Props) {
   const c = chartTheme(useIsDark());
   const t = useT();
   const option = {
@@ -29,7 +29,7 @@ export function OrdersBarChart({ data }: Props) {
       name: t("chart_series_orders"),
       type: "bar",
       data: data.map((d) => d.orders),
-      itemStyle: { color: "#00BCD4", borderRadius: [3, 3, 0, 0] },
+      itemStyle: { color, borderRadius: [3, 3, 0, 0] },
     }],
     title: { text: t("chart_orders_time"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };

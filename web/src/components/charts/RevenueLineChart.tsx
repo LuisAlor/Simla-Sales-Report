@@ -4,9 +4,9 @@ import { useIsDark } from "@/contexts/ThemeContext";
 import { useT } from "@/contexts/I18nContext";
 import { chartTheme } from "@/lib/chartTheme";
 
-interface Props { data: TsPoint[]; }
+interface Props { data: TsPoint[]; color?: string; }
 
-export function RevenueLineChart({ data }: Props) {
+export function RevenueLineChart({ data, color = "#00BCD4" }: Props) {
   const c = chartTheme(useIsDark());
   const t = useT();
   const option = {
@@ -30,9 +30,9 @@ export function RevenueLineChart({ data }: Props) {
       type: "line",
       data: data.map((d) => d.revenue),
       smooth: true,
-      lineStyle: { color: "#00BCD4", width: 2.5 },
-      areaStyle: { color: "rgba(0,188,212,0.08)" },
-      itemStyle: { color: "#00BCD4" },
+      lineStyle: { color, width: 2.5 },
+      areaStyle: { color: color + "14" },
+      itemStyle: { color },
       symbol: "none",
     }],
     title: { text: t("chart_revenue_time"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },

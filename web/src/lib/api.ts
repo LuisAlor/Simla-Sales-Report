@@ -217,6 +217,50 @@ export interface FetchOrdersParams {
   onProgress?: (done: number, total: number) => void;
 }
 
+const MAX_DEMO_PAGES = 20; // safety cap — 2000 orders max per fetch
+
+// Fetch CRM orders filtered by demo_date custom field.
+// Same [min]/[max] syntax as firstpaymentdate used in fetchOrders.
+export async function fetchOrdersByDemoDate(
+  apiKey: string,
+  dateFrom?: string,
+  dateTo?: string,
+  onProgress?: (page: number, total: number) => void,
+): Promise<RawOrder[]> {
+  const filter: Record<string, string | number> = {};
+  if (dateFrom) filter["customFields][demo_date][min"] = dateFrom;
+  if (dateTo)   filter["customFields][demo_date][max"] = dateTo;
+
+  const all: RawOrder[] = [];
+  let page = 1;
+  while (true) {
+    const data = await getJson<{ orders: RawOrder[]; pagination: { totalPageCount: number } }>(
+      "orders", apiKey, { limit: PAGE_LIMIT, page }, filter, {}
+    );
+    all.push(...(data.orders ?? []));
+    const totalPages = Math.min(data.pagination?.totalPageCount ?? 1, MAX_DEMO_PAGES);
+    onProgress?.(page, totalPages);
+    if (page >= totalPages) break;
+    page++;
+  }
+  return all;
+}
+
+// Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
+export async function fetchOrderByMeetingUrl(apiKey: string, meetingUrl: string): Promise<RawOrder | null> {
+  try {
+    const data = await getJson<{ orders: RawOrder[] }>(
+      "orders", apiKey,
+      { limit: 1, page: 1 },
+      { "customFields][record_of_meeting_demo": meetingUrl },
+      {}
+    );
+    return data.orders?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
   if (p.dateFrom) filter["createdAtFrom"] = `${p.dateFrom} 00:00:00`;
