@@ -74,7 +74,19 @@ function formatDemoDate(raw: string): string {
   } catch { return raw; }
 }
 
-function orderToDemoOrder(order: RawOrder): DemoOrder | null {
+function toTitleCase(str: string): string {
+  return str.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+function formatMql(raw: string): string {
+  if (!raw) return "—";
+  const lower = raw.toLowerCase();
+  if (lower.includes("yes") || lower === "1" || lower === "true" || lower === "si" || lower === "sí") return "MQL = Sí";
+  if (lower.includes("no") || lower === "0" || lower === "false") return "MQL = No";
+  return raw;
+}
+
+(order: RawOrder): DemoOrder | null {
   const tldvUrl = (order.customFields?.["record_of_meeting_demo"] as string) ?? "";
   if (!tldvUrl) return null;
   const demoDate = (order.customFields?.["demo_date"] as string) ?? "";
@@ -92,8 +104,8 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
     tldvUrl,
     meetingId,
     invalidUrl: !valid,
-    customerName: [firstName, lastName].filter(Boolean).join(" "),
-    crmField: (order.customFields?.["crm"] as string) || "",
+    customerName: toTitleCase([firstName, lastName].filter(Boolean).join(" ")),
+    crmField: "",
     mqlOrder: (order.customFields?.["mql_order"] as string) || "",
   };
 }
@@ -359,29 +371,21 @@ export function TLDV({ managerSdMap }: Props) {
                         {selectedOrder.customerName}
                       </span>
                     )}
-                    {selectedOrder.crmField && (
-                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                        <Layers size={11} className="text-gray-500 shrink-0" />
-                        {selectedOrder.crmField}
-                      </span>
-                    )}
                     <span className="flex items-center gap-1.5 text-xs text-gray-500">
                       <Calendar size={11} className="text-gray-600 shrink-0" />
                       {formatDemoDate(selectedOrder.demoDate)}
                     </span>
-                    {selectedOrder.mqlOrder && (
-                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Tag size={11} className="text-gray-600 shrink-0" />
-                        {selectedOrder.mqlOrder}
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <Tag size={11} className="text-gray-600 shrink-0" />
+                      {formatMql(selectedOrder.mqlOrder)}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
                   <a href={`https://base.simla.com/orders/${selectedOrder.orderId}/edit`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
                   >
-                    <ExternalLink size={12} /> CRM
+                    <ExternalLink size={12} /> Ir al Pedido
                   </a>
                   {!selectedOrder.invalidUrl && (
                     <a href={tldvMeetingUrl(selectedOrder.meetingId)} target="_blank" rel="noopener noreferrer"
