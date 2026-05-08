@@ -217,6 +217,21 @@ export interface FetchOrdersParams {
   onProgress?: (done: number, total: number) => void;
 }
 
+// Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
+export async function fetchOrderByMeetingUrl(apiKey: string, meetingUrl: string): Promise<RawOrder | null> {
+  try {
+    const data = await getJson<{ orders: RawOrder[] }>(
+      "orders", apiKey,
+      { limit: 1, page: 1 },
+      { "customFields][record_of_meeting_demo": meetingUrl },
+      {}
+    );
+    return data.orders?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
   if (p.dateFrom) filter["createdAtFrom"] = `${p.dateFrom} 00:00:00`;

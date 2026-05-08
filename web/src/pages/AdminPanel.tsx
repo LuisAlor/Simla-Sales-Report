@@ -6,8 +6,9 @@ import { Avatar } from "@/components/Avatar";
 import { fetchUsers } from "@/lib/api";
 import * as authLib from "@/lib/auth";
 import type { User } from "@/lib/auth";
+import { DEFAULT_ANALYSIS_PROMPT } from "@/lib/claudeAnalysis";
 
-type Tab = "usuarios" | "configuracion";
+type Tab = "usuarios" | "configuracion" | "integraciones";
 
 const inputCls = "w-full border border-slate-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal bg-white dark:bg-gray-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500";
 
@@ -30,6 +31,45 @@ export function AdminPanel() {
   const [showKey, setShowKey] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState<"idle" | "validating" | "ok" | "error">("idle");
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+
+  // Integrations tab state
+  const [tldvKeyInput, setTldvKeyInput] = useState(currentUser?.tldvApiKey ?? "");
+  const [showTldvKey, setShowTldvKey] = useState(false);
+  const [tldvKeySaved, setTldvKeySaved] = useState(false);
+
+  const [anthropicKeyInput, setAnthropicKeyInput] = useState(currentUser?.anthropicApiKey ?? "");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [anthropicKeySaved, setAnthropicKeySaved] = useState(false);
+
+  const [analysisPromptInput, setAnalysisPromptInput] = useState(currentUser?.analysisPrompt ?? DEFAULT_ANALYSIS_PROMPT);
+  const [promptSaved, setPromptSaved] = useState(false);
+
+  function handleSaveTldvKey() {
+    if (!currentUser) return;
+    updateUser({ ...currentUser, tldvApiKey: tldvKeyInput.trim() });
+    setTldvKeySaved(true);
+    setTimeout(() => setTldvKeySaved(false), 3000);
+  }
+
+  function handleSaveAnthropicKey() {
+    if (!currentUser) return;
+    updateUser({ ...currentUser, anthropicApiKey: anthropicKeyInput.trim() });
+    setAnthropicKeySaved(true);
+    setTimeout(() => setAnthropicKeySaved(false), 3000);
+  }
+
+  function handleSavePrompt() {
+    if (!currentUser) return;
+    updateUser({ ...currentUser, analysisPrompt: analysisPromptInput });
+    setPromptSaved(true);
+    setTimeout(() => setPromptSaved(false), 3000);
+  }
+
+  function handleResetPrompt() {
+    setAnalysisPromptInput(DEFAULT_ANALYSIS_PROMPT);
+    if (!currentUser) return;
+    updateUser({ ...currentUser, analysisPrompt: undefined });
+  }
 
   function refreshUsers() { setUsers(authLib.getUsers()); }
 
@@ -69,7 +109,7 @@ export function AdminPanel() {
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t("admin_subtitle")}</p>
 
       <div className="flex gap-1 mb-6 bg-slate-200 dark:bg-gray-700 rounded-lg p-1 w-fit">
-        {(["usuarios", "configuracion"] as Tab[]).map((tab) => (
+        {(["usuarios", "configuracion", "integraciones"] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -79,7 +119,7 @@ export function AdminPanel() {
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
           >
-            {tab === "usuarios" ? t("admin_tab_users") : t("admin_tab_config")}
+            {tab === "usuarios" ? t("admin_tab_users") : tab === "configuracion" ? t("admin_tab_config") : t("admin_tab_integrations")}
           </button>
         ))}
       </div>
@@ -196,25 +236,89 @@ export function AdminPanel() {
                   placeholder={t("admin_api_key_placeholder")}
                   className={inputCls + " pr-9"}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowKey((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                >
+                <button type="button" onClick={() => setShowKey((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={handleSaveApiKey}
-                disabled={apiKeyStatus === "validating" || !apiKeyInput.trim()}
-                className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors whitespace-nowrap"
-              >
+              <button type="button" onClick={handleSaveApiKey} disabled={apiKeyStatus === "validating" || !apiKeyInput.trim()} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors whitespace-nowrap">
                 {apiKeyStatus === "validating" ? t("admin_api_validating") : t("admin_save")}
               </button>
             </div>
             {apiKeyStatus === "ok"    && <p className="text-green-500 text-xs mt-2">{t("admin_api_success")}</p>}
             {apiKeyStatus === "error" && <p className="text-red-500 text-xs mt-2">{apiKeyError}</p>}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "integraciones" && (
+        <div className="flex flex-col gap-4">
+          {/* TLDV */}
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_tldv_key_title")}</h3>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mb-4">{t("admin_tldv_key_desc")}</p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showTldvKey ? "text" : "password"}
+                  value={tldvKeyInput}
+                  onChange={(e) => setTldvKeyInput(e.target.value)}
+                  placeholder="tldv_..."
+                  className={inputCls + " pr-9"}
+                />
+                <button type="button" onClick={() => setShowTldvKey((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  {showTldvKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              <button type="button" onClick={handleSaveTldvKey} disabled={!tldvKeyInput.trim()} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors whitespace-nowrap">
+                {t("admin_save")}
+              </button>
+            </div>
+            {tldvKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
+          </div>
+
+          {/* Anthropic */}
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_anthropic_key_title")}</h3>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mb-4">{t("admin_anthropic_key_desc")}</p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showAnthropicKey ? "text" : "password"}
+                  value={anthropicKeyInput}
+                  onChange={(e) => setAnthropicKeyInput(e.target.value)}
+                  placeholder="sk-ant-..."
+                  className={inputCls + " pr-9"}
+                />
+                <button type="button" onClick={() => setShowAnthropicKey((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  {showAnthropicKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              <button type="button" onClick={handleSaveAnthropicKey} disabled={!anthropicKeyInput.trim()} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors whitespace-nowrap">
+                {t("admin_save")}
+              </button>
+            </div>
+            {anthropicKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
+          </div>
+
+          {/* Analysis prompt */}
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_prompt_title")}</h3>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mb-4">{t("admin_prompt_desc")}</p>
+            <textarea
+              rows={10}
+              value={analysisPromptInput}
+              onChange={(e) => setAnalysisPromptInput(e.target.value)}
+              className={inputCls + " font-mono text-xs resize-y"}
+            />
+            <div className="flex items-center gap-2 mt-3">
+              <button type="button" onClick={handleSavePrompt} className="bg-brand-blue hover:bg-blue-700 text-white font-semibold px-4 py-1.5 rounded-md text-sm transition-colors">
+                {t("admin_prompt_save")}
+              </button>
+              <button type="button" onClick={handleResetPrompt} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm transition-colors">
+                {t("admin_prompt_reset")}
+              </button>
+              {promptSaved && <span className="text-green-500 text-xs ml-1">✓ Guardado</span>}
+            </div>
           </div>
         </div>
       )}

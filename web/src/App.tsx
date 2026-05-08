@@ -9,6 +9,7 @@ import { Login } from "@/pages/Login";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { Profile } from "@/pages/Profile";
 import { ApiSetup } from "@/pages/ApiSetup";
+import { TLDV } from "@/pages/TLDV";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -363,6 +364,7 @@ function AppInner() {
             </PageShell>
           }
         />
+        <Route path="/tldv" element={<TLDV managerSdMap={managerSdMap} />} />
         <Route
           path="/admin"
           element={

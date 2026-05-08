@@ -21,6 +21,9 @@ export interface User {
   role: 'admin' | 'viewer';
   avatarDataUrl?: string;
   apiKey?: string;
+  tldvApiKey?: string;
+  anthropicApiKey?: string;
+  analysisPrompt?: string;
   savedFilters?: Record<string, unknown>;
   savedUtms?: { sources: string[]; mediums: string[] };
   savedFilterTemplates?: FilterTemplate[];

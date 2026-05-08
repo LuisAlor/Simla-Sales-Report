@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
-  Cog, GripVertical, RotateCcw, X,
+  Cog, GripVertical, RotateCcw, X, Video,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -220,6 +220,13 @@ export function Sidebar() {
               <BarChart3 size={16} />
             </button>
           </div>
+          {user?.tldvApiKey && (
+            <div onMouseEnter={(e) => openFlyout(e, "tldv")} onMouseLeave={closeFlyoutDelayed}>
+              <button className={iconBtn(location.pathname.startsWith("/tldv"))}>
+                <Video size={16} />
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* ── Admin ── */}
@@ -375,6 +382,22 @@ export function Sidebar() {
                 <Cog size={14} className="shrink-0" />
                 {t("sidebar_admin")}
               </button>
+            </div>
+          )}
+
+          {flyout.moduleId === "tldv" && (
+            <div>
+              <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
+                {t("nav_tldv_module")}
+              </p>
+              <NavLink
+                to="/tldv"
+                onClick={() => setFlyout(null)}
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isActive ? "text-brand-blue font-semibold bg-brand-blue/10" : "text-slate-300 hover:text-white hover:bg-navy-border"}`}
+              >
+                <Video size={14} className="shrink-0" />
+                {t("nav_tldv_demos")}
+              </NavLink>
             </div>
           )}
         </div>,
