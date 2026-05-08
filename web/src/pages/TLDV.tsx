@@ -10,6 +10,9 @@ import {
   Hash,
   Building2,
   Play,
+  UserCircle,
+  Layers,
+  Tag,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
@@ -31,6 +34,9 @@ interface DemoOrder {
   tldvUrl: string;
   meetingId: string;
   invalidUrl: boolean;
+  customerName: string;
+  crmField: string;
+  mqlOrder: string;
 }
 
 function isValidTldvMeetingUrl(url: string): boolean {
@@ -75,6 +81,8 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
   if (!demoDate) return null;
   const valid = isValidTldvMeetingUrl(tldvUrl);
   const meetingId = valid ? extractMeetingId(tldvUrl) : `invalid_${order.id}`;
+  const firstName = order.customer?.firstName ?? "";
+  const lastName = order.customer?.lastName ?? "";
   return {
     orderId: order.id,
     orderNumber: order.number,
@@ -84,6 +92,9 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
     tldvUrl,
     meetingId,
     invalidUrl: !valid,
+    customerName: [firstName, lastName].filter(Boolean).join(" "),
+    crmField: (order.customFields?.["crm"] as string) || "",
+    mqlOrder: (order.customFields?.["mql_order"] as string) || "",
   };
 }
 
@@ -342,20 +353,28 @@ export function TLDV({ managerSdMap }: Props) {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                    {selectedOrder.managerSd && (
-                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <User size={11} className="text-gray-600" />
-                        {managerSdMap[selectedOrder.managerSd] ?? selectedOrder.managerSd}
+                    {selectedOrder.customerName && (
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <UserCircle size={12} className="text-gray-500 shrink-0" />
+                        {selectedOrder.customerName}
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5 text-xs text-gray-600">
-                      <Calendar size={11} className="text-gray-700" />
+                    {selectedOrder.crmField && (
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <Layers size={11} className="text-gray-500 shrink-0" />
+                        {selectedOrder.crmField}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <Calendar size={11} className="text-gray-600 shrink-0" />
                       {formatDemoDate(selectedOrder.demoDate)}
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs text-gray-600">
-                      <Hash size={11} className="text-gray-700" />
-                      {selectedOrder.orderNumber}
-                    </span>
+                    {selectedOrder.mqlOrder && (
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Tag size={11} className="text-gray-600 shrink-0" />
+                        {selectedOrder.mqlOrder}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
@@ -479,27 +498,32 @@ export function TLDV({ managerSdMap }: Props) {
                       {highlights.length === 0 && (
                         <p className="text-gray-700 text-sm text-center py-10">{t("tldv_no_highlights")}</p>
                       )}
-                      {highlights.map((h, i) => {
-                        const title = h.title ?? h.text ?? h.type ?? "Highlight";
-                        const body = h.description ?? h.content;
-                        const ts = h.startTime ?? h.timestamp;
-                        return (
-                          <div key={h.id ?? i} className="bg-gray-800/40 border border-gray-700/40 rounded-xl px-4 py-3.5 relative overflow-hidden">
-                            <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full"
-                              style={{ background: "linear-gradient(to bottom, #06b6d4, #3b82f6)" }} />
-                            <div className="pl-3 flex flex-col gap-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="text-sm font-semibold text-gray-100 leading-snug">{title}</p>
-                                {ts != null && (
-                                  <span className="text-xs text-gray-600 shrink-0 mt-0.5 font-mono">{formatTime(ts)}</span>
+                      {highlights.length > 0 && (
+                        <div className="bg-gray-800/30 border border-gray-700/40 rounded-2xl px-6 py-5 flex flex-col gap-5">
+                          {highlights.map((h, i) => {
+                            const title = h.title ?? h.text ?? h.type;
+                            const body = h.description ?? h.content;
+                            const ts = h.startTime ?? h.timestamp;
+                            if (!title && !body) return null;
+                            return (
+                              <div key={h.id ?? i} className="flex flex-col gap-1.5">
+                                {title && (
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0 mt-1.5" />
+                                    <p className="text-sm font-semibold text-gray-200 leading-snug">{title}</p>
+                                    {ts != null && (
+                                      <span className="text-[10px] text-gray-600 font-mono shrink-0">{formatTime(ts)}</span>
+                                    )}
+                                  </div>
+                                )}
+                                {body && (
+                                  <p className="text-sm text-gray-400 leading-relaxed pl-3.5">{body}</p>
                                 )}
                               </div>
-                              {h.speaker && <p className="text-xs text-cyan-400">{h.speaker}</p>}
-                              {body && <p className="text-sm text-gray-400 leading-relaxed">{body}</p>}
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
                       {highlightsError && <p className="text-red-400 text-sm">{highlightsError}</p>}
                     </>
                   )}
