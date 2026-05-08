@@ -217,8 +217,12 @@ export interface FetchOrdersParams {
   onProgress?: (done: number, total: number) => void;
 }
 
-// Fetch CRM orders filtered by the demo_date custom field date range.
-// Falls back to client-side filtering if the server ignores the custom field filter.
+const MAX_DEMO_PAGES = 20; // safety cap — 2000 orders max per fetch
+
+// Fetch CRM orders that have a demo_date in the given range.
+// The REST v5 API does not support filtering by custom date fields server-side,
+// so we use createdAt as a server-side pre-filter (same range) to keep pages
+// manageable, then apply exact demo_date filtering client-side.
 export async function fetchOrdersByDemoDate(
   apiKey: string,
   dateFrom?: string,
@@ -226,8 +230,9 @@ export async function fetchOrdersByDemoDate(
   onProgress?: (page: number, total: number) => void,
 ): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
-  if (dateFrom) filter["customFields][demo_date][gte][abs"] = dateFrom;
-  if (dateTo)   filter["customFields][demo_date][lte][abs"] = dateTo;
+  // createdAt filter narrows the result set server-side
+  if (dateFrom) filter["createdAtFrom"] = `${dateFrom} 00:00:00`;
+  if (dateTo)   filter["createdAtTo"]   = `${dateTo} 23:59:59`;
 
   const all: RawOrder[] = [];
   let page = 1;
@@ -236,26 +241,21 @@ export async function fetchOrdersByDemoDate(
       "orders", apiKey, { limit: PAGE_LIMIT, page }, filter, {}
     );
     all.push(...(data.orders ?? []));
-    const totalPages = data.pagination?.totalPageCount ?? 1;
+    const totalPages = Math.min(data.pagination?.totalPageCount ?? 1, MAX_DEMO_PAGES);
     onProgress?.(page, totalPages);
     if (page >= totalPages) break;
     page++;
   }
 
-  // Client-side fallback: keep only orders with demo_date in the requested range
-  // (in case the server-side custom field filter is not supported)
-  const filtered = all.filter((o) => {
+  // Client-side: keep only orders where demo_date is within the requested range
+  return all.filter((o) => {
     const demoDate = o.customFields?.["demo_date"] as string | undefined;
     if (!demoDate) return false;
-    const d = demoDate.slice(0, 10); // normalise to YYYY-MM-DD
+    const d = demoDate.slice(0, 10);
     if (dateFrom && d < dateFrom) return false;
     if (dateTo   && d > dateTo)   return false;
     return true;
   });
-
-  // If the server filter worked (returned far fewer results), use the server results;
-  // otherwise use the client-filtered list.
-  return filtered.length > 0 || all.length === 0 ? filtered : all;
 }
 
 // Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo

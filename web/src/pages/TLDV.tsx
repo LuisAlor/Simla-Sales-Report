@@ -379,12 +379,7 @@ export function TLDV({ managerSdMap }: Props) {
             <div className="flex-1 overflow-y-auto">
               {activeTab === "transcript" && (
                 <div className="p-6 flex flex-col gap-2">
-                  {transcriptLoading && (
-                    <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
-                      <RefreshCw size={14} className="animate-spin" />
-                      {t("tldv_loading_meetings")}
-                    </div>
-                  )}
+                  {transcriptLoading && <TranscriptSkeleton />}
                   {transcriptError && (
                     <p className="text-red-500 text-sm">{transcriptError}</p>
                   )}
@@ -430,12 +425,7 @@ export function TLDV({ managerSdMap }: Props) {
                     </div>
                   )}
 
-                  {analysisLoading && (
-                    <div className="flex items-center justify-center gap-2 py-12 text-slate-400 dark:text-slate-500">
-                      <RefreshCw size={18} className="animate-spin" />
-                      <span className="text-sm">{t("tldv_analyzing")}</span>
-                    </div>
-                  )}
+                  {analysisLoading && <AnalysisSkeleton />}
 
                   {analysisText && !analysisLoading && (
                     <>
@@ -467,6 +457,45 @@ export function TLDV({ managerSdMap }: Props) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function TranscriptSkeleton() {
+  const widths = ["w-3/4", "w-full", "w-5/6", "w-2/3", "w-full", "w-4/5"];
+  return (
+    <div className="flex flex-col gap-3 animate-pulse">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="rounded-lg border border-slate-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-gray-800">
+          <div className="h-2.5 w-20 bg-slate-200 dark:bg-gray-600 rounded mb-3" />
+          <div className={`h-2 ${widths[i * 2 % widths.length]} bg-slate-100 dark:bg-gray-700 rounded mb-1.5`} />
+          <div className={`h-2 ${widths[(i * 2 + 1) % widths.length]} bg-slate-100 dark:bg-gray-700 rounded`} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AnalysisSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 animate-pulse py-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6">
+        <div className="h-3 w-32 bg-slate-200 dark:bg-gray-600 rounded mb-4" />
+        <div className="flex flex-col gap-2">
+          {["w-full","w-5/6","w-4/5","w-full","w-3/4"].map((w, i) => (
+            <div key={i} className={`h-2 ${w} bg-slate-100 dark:bg-gray-700 rounded`} />
+          ))}
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6">
+        <div className="h-3 w-24 bg-slate-200 dark:bg-gray-600 rounded mb-4" />
+        <div className="flex flex-col gap-2">
+          {["w-full","w-4/5","w-5/6"].map((w, i) => (
+            <div key={i} className={`h-2 ${w} bg-slate-100 dark:bg-gray-700 rounded`} />
+          ))}
+        </div>
+      </div>
+      <p className="text-center text-xs text-slate-400 dark:text-slate-500 pt-2">Analizando…</p>
     </div>
   );
 }
