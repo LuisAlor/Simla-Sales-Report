@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
-  Cog, GripVertical, RotateCcw, X, Video,
+  Cog, GripVertical, RotateCcw, Video,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,10 +53,7 @@ export function Sidebar() {
     user ? loadNavOrder(user.id) : (ALL_PAGES.map((p) => p.to) as PageTo[])
   );
 
-  const [showReorder, setShowReorder] = useState(false);
-  const [reorderAnchorTop, setReorderAnchorTop] = useState(0);
-  const reorderPanelRef = useRef<HTMLDivElement>(null);
-  const reorderBtnRef = useRef<HTMLButtonElement>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const dragSrcRef = useRef<number | null>(null);
   const dragOverRef = useRef<number | null>(null);
 
@@ -74,18 +71,10 @@ export function Sidebar() {
     };
   }, []);
 
+  // Reset reorder mode whenever the flyout closes
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (
-        reorderPanelRef.current && !reorderPanelRef.current.contains(e.target as Node) &&
-        reorderBtnRef.current  && !reorderBtnRef.current.contains(e.target as Node)
-      ) {
-        setShowReorder(false);
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    if (!flyout) setReorderMode(false);
+  }, [flyout]);
 
   useEffect(() => () => { if (flyoutTimer.current) clearTimeout(flyoutTimer.current); }, []);
 
@@ -257,58 +246,6 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* ── Nav reorder panel (portal, anchored below flyout) ── */}
-      {showReorder && createPortal(
-        <div
-          ref={reorderPanelRef}
-          style={{ position: "fixed", left: W, top: reorderAnchorTop, zIndex: 10000, minWidth: 200 }}
-          onMouseEnter={cancelCloseFlyout}
-          onMouseLeave={closeFlyoutDelayed}
-          className="bg-navy border border-navy-border rounded-tr-lg rounded-br-lg shadow-xl overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-3 py-2 border-b border-navy-border">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-              {t("nav_reorder_title")}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={resetNavOrder}
-                title={t("nav_reorder_reset")}
-                className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-brand-blue transition-colors"
-              >
-                <RotateCcw size={9} /> {t("nav_reorder_reset")}
-              </button>
-              <button onClick={() => setShowReorder(false)} className="text-slate-500 hover:text-slate-200 transition-colors">
-                <X size={12} />
-              </button>
-            </div>
-          </div>
-          <div className="p-2 flex flex-col gap-0.5">
-            {orderedPages.map((page, idx) => {
-              const PageIcon = page.Icon;
-              const label = t(page.labelKey as Parameters<typeof t>[0]);
-              return (
-                <div
-                  key={page.to}
-                  data-nav-item={idx}
-                  draggable
-                  onDragStart={(e) => handleNavDragStart(e, idx)}
-                  onDragOver={(e) => handleNavDragOver(e, idx)}
-                  onDrop={() => handleNavDrop(idx)}
-                  onDragEnd={handleNavDragEnd}
-                  className="flex items-center gap-2 px-2 py-2 rounded-md text-slate-300 hover:bg-navy-border transition-colors cursor-grab active:cursor-grabbing select-none"
-                >
-                  <GripVertical size={11} className="text-slate-600 shrink-0" />
-                  <PageIcon size={13} className="shrink-0 text-slate-400" />
-                  <span className="text-xs">{label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>,
-        document.body
-      )}
-
       {/* ── Flyout portal ── */}
       {flyout && createPortal(
         <div
@@ -319,29 +256,59 @@ export function Sidebar() {
         >
           {flyout.moduleId === "analytics" && (
             <div>
+              {/* Header row */}
               <div className="flex items-center justify-between px-4 py-2 border-b border-navy-border">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
                   {t("nav_analytics")}
                 </p>
-                <button
-                  ref={reorderBtnRef}
-                  onClick={(e) => {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    setReorderAnchorTop(rect.top);
-                    setShowReorder((v) => !v);
-                  }}
-                  title={t("nav_reorder_title")}
-                  className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
-                    showReorder
-                      ? "text-brand-blue bg-brand-blue/10"
-                      : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
-                  }`}
-                >
-                  <GripVertical size={13} />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {reorderMode && (
+                    <button
+                      onClick={resetNavOrder}
+                      title={t("nav_reorder_reset")}
+                      className="flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:text-brand-blue transition-colors"
+                    >
+                      <RotateCcw size={11} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setReorderMode((v) => !v)}
+                    title={t("nav_reorder_title")}
+                    className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
+                      reorderMode
+                        ? "text-brand-blue bg-brand-blue/10"
+                        : "text-slate-500 hover:text-slate-300 hover:bg-navy-border"
+                    }`}
+                  >
+                    <GripVertical size={13} />
+                  </button>
+                </div>
               </div>
-              {orderedPages.map((page) => {
+
+              {/* Nav items — normal or reorder mode */}
+              {orderedPages.map((page, idx) => {
                 const PageIcon = page.Icon;
+                const label = t(page.labelKey as Parameters<typeof t>[0]);
+
+                if (reorderMode) {
+                  return (
+                    <div
+                      key={page.to}
+                      data-nav-item={idx}
+                      draggable
+                      onDragStart={(e) => handleNavDragStart(e, idx)}
+                      onDragOver={(e) => handleNavDragOver(e, idx)}
+                      onDrop={() => handleNavDrop(idx)}
+                      onDragEnd={handleNavDragEnd}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-navy-border transition-colors cursor-grab active:cursor-grabbing select-none"
+                    >
+                      <GripVertical size={12} className="text-slate-600 shrink-0" />
+                      <PageIcon size={14} className="shrink-0 text-slate-400" />
+                      {label}
+                    </div>
+                  );
+                }
+
                 const isActive = page.end
                   ? location.pathname === page.to
                   : location.pathname.startsWith(page.to);
@@ -358,7 +325,7 @@ export function Sidebar() {
                     }`}
                   >
                     <PageIcon size={14} className="shrink-0" />
-                    {t(page.labelKey as Parameters<typeof t>[0])}
+                    {label}
                   </NavLink>
                 );
               })}

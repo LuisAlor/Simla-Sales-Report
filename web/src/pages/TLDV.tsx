@@ -84,6 +84,7 @@ export function TLDV({ managerSdMap }: Props) {
 
   const [demoOrders, setDemoOrders] = useState<DemoOrder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,16 +109,23 @@ export function TLDV({ managerSdMap }: Props) {
     if (!simlaApiKey) return;
     setLoading(true);
     setLoadError(null);
+    setLoadProgress(null);
     setDemoOrders([]);
     setSelectedId(null);
     try {
-      const raw = await fetchOrdersByDemoDate(simlaApiKey, dateFrom || undefined, dateTo || undefined);
+      const raw = await fetchOrdersByDemoDate(
+        simlaApiKey,
+        dateFrom || undefined,
+        dateTo || undefined,
+        (page, total) => setLoadProgress({ page, total }),
+      );
       const demos = raw.map(orderToDemoOrder).filter(Boolean) as DemoOrder[];
       setDemoOrders(demos);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+      setLoadProgress(null);
     }
   }
 
@@ -219,7 +227,9 @@ export function TLDV({ managerSdMap }: Props) {
             {loading ? (
               <>
                 <RefreshCw size={13} className="animate-spin" />
-                {t("tldv_loading_meetings")}
+                {loadProgress
+                  ? `Página ${loadProgress.page} de ${loadProgress.total}…`
+                  : t("tldv_loading_meetings")}
               </>
             ) : (
               <>
@@ -228,6 +238,14 @@ export function TLDV({ managerSdMap }: Props) {
               </>
             )}
           </button>
+          {loading && loadProgress && (
+            <div className="w-full bg-slate-200 dark:bg-gray-700 rounded-full h-1 overflow-hidden">
+              <div
+                className="bg-brand-blue h-1 rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((loadProgress.page / loadProgress.total) * 100)}%` }}
+              />
+            </div>
+          )}
           {loadError && <p className="text-red-500 text-xs">{loadError}</p>}
           {!simlaApiKey && (
             <p className="text-yellow-600 dark:text-yellow-400 text-xs">{t("tldv_simla_missing")}</p>

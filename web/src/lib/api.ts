@@ -217,11 +217,13 @@ export interface FetchOrdersParams {
   onProgress?: (done: number, total: number) => void;
 }
 
-// Fetch CRM orders filtered by the demo_date custom field date range
+// Fetch CRM orders filtered by the demo_date custom field date range.
+// Falls back to client-side filtering if the server ignores the custom field filter.
 export async function fetchOrdersByDemoDate(
   apiKey: string,
   dateFrom?: string,
   dateTo?: string,
+  onProgress?: (page: number, total: number) => void,
 ): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
   if (dateFrom) filter["customFields][demo_date][gte][abs"] = dateFrom;
@@ -234,10 +236,26 @@ export async function fetchOrdersByDemoDate(
       "orders", apiKey, { limit: PAGE_LIMIT, page }, filter, {}
     );
     all.push(...(data.orders ?? []));
-    if (page >= (data.pagination?.totalPageCount ?? 1)) break;
+    const totalPages = data.pagination?.totalPageCount ?? 1;
+    onProgress?.(page, totalPages);
+    if (page >= totalPages) break;
     page++;
   }
-  return all;
+
+  // Client-side fallback: keep only orders with demo_date in the requested range
+  // (in case the server-side custom field filter is not supported)
+  const filtered = all.filter((o) => {
+    const demoDate = o.customFields?.["demo_date"] as string | undefined;
+    if (!demoDate) return false;
+    const d = demoDate.slice(0, 10); // normalise to YYYY-MM-DD
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo   && d > dateTo)   return false;
+    return true;
+  });
+
+  // If the server filter worked (returned far fewer results), use the server results;
+  // otherwise use the client-filtered list.
+  return filtered.length > 0 || all.length === 0 ? filtered : all;
 }
 
 // Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
