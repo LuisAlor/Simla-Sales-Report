@@ -60,17 +60,6 @@ export async function fetchTldvHighlights(apiKey: string, meetingId: string): Pr
   return Array.isArray(raw) ? raw : [];
 }
 
-export async function fetchTldvAnalysis(apiKey: string, meetingId: string, prompt: string): Promise<string> {
-  const res = await fetch(`${TLDV_BASE}/meetings/${meetingId}/ask`, {
-    method: "POST",
-    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: prompt }),
-  });
-  if (!res.ok) throw new Error(`TLDV ask ${res.status}`);
-  const data = await res.json();
-  return data.answer ?? data.result ?? data.response ?? data.text ?? JSON.stringify(data);
-}
-
 export function tldvMeetingUrl(meetingId: string) {
   return `https://tldv.io/app/meetings/${meetingId}`;
 }

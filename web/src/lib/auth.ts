@@ -22,7 +22,6 @@ export interface User {
   avatarDataUrl?: string;
   apiKey?: string;
   tldvApiKey?: string;
-  analysisPrompt?: string;
   savedFilters?: Record<string, unknown>;
   savedUtms?: { sources: string[]; mediums: string[] };
   savedFilterTemplates?: FilterTemplate[];

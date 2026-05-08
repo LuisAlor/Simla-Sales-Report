@@ -6,8 +6,6 @@ import { Avatar } from "@/components/Avatar";
 import { fetchUsers } from "@/lib/api";
 import * as authLib from "@/lib/auth";
 import type { User } from "@/lib/auth";
-const DEFAULT_ANALYSIS_PROMPT =
-  "Analiza este demo de venta. Evalúa: apertura, detección de necesidades, presentación de valor, manejo de objeciones y cierre. Indica fortalezas, áreas de mejora y acciones concretas para el asesor.";
 
 type Tab = "usuarios" | "configuracion" | "integraciones";
 
@@ -38,27 +36,12 @@ export function AdminPanel() {
   const [showTldvKey, setShowTldvKey] = useState(false);
   const [tldvKeySaved, setTldvKeySaved] = useState(false);
 
-  const [analysisPromptInput, setAnalysisPromptInput] = useState(currentUser?.analysisPrompt ?? DEFAULT_ANALYSIS_PROMPT);
-  const [promptSaved, setPromptSaved] = useState(false);
 
   function handleSaveTldvKey() {
     if (!currentUser) return;
     updateUser({ ...currentUser, tldvApiKey: tldvKeyInput.trim() });
     setTldvKeySaved(true);
     setTimeout(() => setTldvKeySaved(false), 3000);
-  }
-
-  function handleSavePrompt() {
-    if (!currentUser) return;
-    updateUser({ ...currentUser, analysisPrompt: analysisPromptInput });
-    setPromptSaved(true);
-    setTimeout(() => setPromptSaved(false), 3000);
-  }
-
-  function handleResetPrompt() {
-    setAnalysisPromptInput(DEFAULT_ANALYSIS_PROMPT);
-    if (!currentUser) return;
-    updateUser({ ...currentUser, analysisPrompt: undefined });
   }
 
   function refreshUsers() { setUsers(authLib.getUsers()); }
@@ -266,26 +249,6 @@ export function AdminPanel() {
             {tldvKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
           </div>
 
-          {/* Analysis prompt */}
-          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_prompt_title")}</h3>
-            <p className="text-slate-400 dark:text-slate-500 text-xs mb-4">{t("admin_prompt_desc")}</p>
-            <textarea
-              rows={10}
-              value={analysisPromptInput}
-              onChange={(e) => setAnalysisPromptInput(e.target.value)}
-              className={inputCls + " font-mono text-xs resize-y"}
-            />
-            <div className="flex items-center gap-2 mt-3">
-              <button type="button" onClick={handleSavePrompt} className="bg-brand-blue hover:bg-blue-700 text-white font-semibold px-4 py-1.5 rounded-md text-sm transition-colors">
-                {t("admin_prompt_save")}
-              </button>
-              <button type="button" onClick={handleResetPrompt} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm transition-colors">
-                {t("admin_prompt_reset")}
-              </button>
-              {promptSaved && <span className="text-green-500 text-xs ml-1">✓ Guardado</span>}
-            </div>
-          </div>
         </div>
       )}
     </div>

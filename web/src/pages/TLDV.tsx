@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Video,
   ExternalLink,
@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { fetchTldvTranscript, fetchTldvAnalysis, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
-import type { TldvTranscriptSegment } from "@/lib/tldvApi";
+import { fetchTldvTranscript, fetchTldvHighlights, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
+import type { TldvTranscriptSegment, TldvHighlight } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
 
@@ -27,16 +27,23 @@ interface DemoOrder {
   meetingId: string;
 }
 
-const ANALYSIS_CACHE_PREFIX = "simla_tldv_analysis_v2_";
+const HIGHLIGHTS_CACHE_PREFIX = "simla_tldv_highlights_v2_";
 
-function loadCachedAnalysis(meetingId: string): string | null {
+function loadCachedHighlights(meetingId: string): TldvHighlight[] | null {
   try {
-    return localStorage.getItem(`${ANALYSIS_CACHE_PREFIX}${meetingId}`);
+    const raw = localStorage.getItem(`${HIGHLIGHTS_CACHE_PREFIX}${meetingId}`);
+    return raw ? (JSON.parse(raw) as TldvHighlight[]) : null;
   } catch { return null; }
 }
 
-function saveCachedAnalysis(meetingId: string, text: string) {
-  try { localStorage.setItem(`${ANALYSIS_CACHE_PREFIX}${meetingId}`, text); } catch { /* ignore */ }
+function saveCachedHighlights(meetingId: string, items: TldvHighlight[]) {
+  try { localStorage.setItem(`${HIGHLIGHTS_CACHE_PREFIX}${meetingId}`, JSON.stringify(items)); } catch { /* ignore */ }
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function formatDemoDate(raw: string): string {
@@ -61,9 +68,6 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
     meetingId,
   };
 }
-
-const DEFAULT_PROMPT =
-  "Analiza este demo de venta. Evalúa: apertura, detección de necesidades, presentación de valor, manejo de objeciones y cierre. Indica fortalezas, áreas de mejora y acciones concretas para el asesor.";
 
 const SPEAKER_COLORS = [
   "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
@@ -94,16 +98,12 @@ export function TLDV({ managerSdMap }: Props) {
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
-  const [analysisText, setAnalysisText] = useState<string | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [highlights, setHighlights] = useState<TldvHighlight[] | null>(null);
+  const [highlightsLoading, setHighlightsLoading] = useState(false);
+  const [highlightsError, setHighlightsError] = useState<string | null>(null);
 
   const tldvApiKey = user?.tldvApiKey ?? "";
   const simlaApiKey = user?.apiKey ?? "";
-  const analysisPrompt = user?.analysisPrompt ?? DEFAULT_PROMPT;
-
-  // abort controller for analysis
-  const analysisAbort = useRef<AbortController | null>(null);
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -142,31 +142,27 @@ export function TLDV({ managerSdMap }: Props) {
       .finally(() => setTranscriptLoading(false));
   }, [selectedId, tldvApiKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load cached analysis when meeting changes
+  // Load cached highlights when meeting changes
   useEffect(() => {
-    if (!selectedId) { setAnalysisText(null); return; }
-    const cached = loadCachedAnalysis(selectedId);
-    setAnalysisText(cached);
-    setAnalysisError(null);
+    if (!selectedId) { setHighlights(null); return; }
+    const cached = loadCachedHighlights(selectedId);
+    setHighlights(cached);
+    setHighlightsError(null);
   }, [selectedId]);
 
-  async function handleRunAnalysis() {
+  async function handleLoadHighlights() {
     const selected = demoOrders.find((d) => d.meetingId === selectedId);
     if (!selected || !tldvApiKey) return;
-    analysisAbort.current?.abort();
-    analysisAbort.current = new AbortController();
-    setAnalysisLoading(true);
-    setAnalysisError(null);
+    setHighlightsLoading(true);
+    setHighlightsError(null);
     try {
-      const result = await fetchTldvAnalysis(tldvApiKey, selected.meetingId, analysisPrompt);
-      setAnalysisText(result);
-      saveCachedAnalysis(selected.meetingId, result);
+      const items = await fetchTldvHighlights(tldvApiKey, selected.meetingId);
+      setHighlights(items);
+      saveCachedHighlights(selected.meetingId, items);
     } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        setAnalysisError(err instanceof Error ? err.message : String(err));
-      }
+      setHighlightsError(err instanceof Error ? err.message : String(err));
     } finally {
-      setAnalysisLoading(false);
+      setHighlightsLoading(false);
     }
   }
 
@@ -399,8 +395,9 @@ export function TLDV({ managerSdMap }: Props) {
               )}
 
               {activeTab === "analysis" && (
-                <div className="p-6 flex flex-col gap-4">
-                  {!analysisText && !analysisLoading && (
+                <div className="p-6 flex flex-col gap-3">
+                  {/* Not loaded yet */}
+                  {highlights === null && !highlightsLoading && (
                     <div className="flex flex-col items-center justify-center gap-4 py-12">
                       <Sparkles size={40} className="text-slate-300 dark:text-slate-600" />
                       <div className="text-center">
@@ -411,29 +408,26 @@ export function TLDV({ managerSdMap }: Props) {
                           {t("tldv_analysis_hint")}
                         </p>
                         <button
-                          onClick={handleRunAnalysis}
-                          disabled={analysisLoading}
-                          className="flex items-center gap-2 bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors mx-auto"
+                          onClick={handleLoadHighlights}
+                          className="flex items-center gap-2 bg-brand-blue hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors mx-auto"
                         >
                           <Sparkles size={14} />
                           {t("tldv_run_analysis")}
                         </button>
                       </div>
-                      {analysisError && (
-                        <p className="text-red-500 text-sm">{analysisError}</p>
-                      )}
+                      {highlightsError && <p className="text-red-500 text-sm">{highlightsError}</p>}
                     </div>
                   )}
 
-                  {analysisLoading && <AnalysisSkeleton />}
+                  {highlightsLoading && <AnalysisSkeleton />}
 
-                  {analysisText && !analysisLoading && (
+                  {highlights !== null && !highlightsLoading && (
                     <>
                       <div className="flex justify-end">
                         <button
                           onClick={() => {
-                            try { localStorage.removeItem(`${ANALYSIS_CACHE_PREFIX}${selectedId}`); } catch { /* ignore */ }
-                            setAnalysisText(null);
+                            try { localStorage.removeItem(`${HIGHLIGHTS_CACHE_PREFIX}${selectedId}`); } catch { /* ignore */ }
+                            setHighlights(null);
                           }}
                           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-brand-blue transition-colors"
                         >
@@ -441,14 +435,39 @@ export function TLDV({ managerSdMap }: Props) {
                           {t("tldv_run_analysis")}
                         </button>
                       </div>
-                      <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6">
-                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                          {analysisText}
+
+                      {highlights.length === 0 && (
+                        <p className="text-slate-400 dark:text-slate-500 text-sm text-center py-8">
+                          {t("tldv_no_highlights")}
                         </p>
-                      </div>
-                      {analysisError && (
-                        <p className="text-red-500 text-sm">{analysisError}</p>
                       )}
+
+                      {highlights.map((h, i) => {
+                        const title = h.title ?? h.text ?? h.type ?? "Highlight";
+                        const body = h.description ?? h.content;
+                        const ts = h.startTime ?? h.timestamp;
+                        return (
+                          <div
+                            key={h.id ?? i}
+                            className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 px-4 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-snug">{title}</p>
+                              {ts != null && (
+                                <span className="text-xs text-slate-400 shrink-0 mt-0.5">{formatTime(ts)}</span>
+                              )}
+                            </div>
+                            {h.speaker && (
+                              <p className="text-xs text-brand-blue mb-1">{h.speaker}</p>
+                            )}
+                            {body && (
+                              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{body}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {highlightsError && <p className="text-red-500 text-sm">{highlightsError}</p>}
                     </>
                   )}
                 </div>
