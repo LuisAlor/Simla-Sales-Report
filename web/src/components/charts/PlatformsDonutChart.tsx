@@ -4,9 +4,10 @@ import { PALETTE } from "@/lib/mappings";
 
 interface Props {
   data: PlatformRow[];
+  title?: string;
 }
 
-export function PlatformsDonutChart({ data }: Props) {
+export function PlatformsDonutChart({ data, title }: Props) {
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const option = {
@@ -40,7 +41,7 @@ export function PlatformsDonutChart({ data }: Props) {
         emphasis: { label: { show: true, fontSize: 13, fontWeight: "bold", color: "#FFFFFF" } },
       },
     ],
-    title: { text: "Источники лидов по платформам", textStyle: { fontSize: 14, color: "#FFFFFF" }, top: 8, left: 12 },
+    title: { text: title ?? "", textStyle: { fontSize: 14, color: "#FFFFFF" }, top: 8, left: 12 },
   };
 
   return <ReactECharts option={option} style={{ height: 320 }} notMerge lazyUpdate />;

@@ -5,6 +5,7 @@ import {
   STATUS_LABELS,
   PAID_STATUS_CODE,
   REFUND_STATUS_CODE,
+  PLATFORM_LABELS,
   type StageEntry,
 } from "./mappings";
 
@@ -209,7 +210,8 @@ export interface PlatformRow {
 export function platformsBreakdown(records: OrderRecord[]): PlatformRow[] {
   const map = new Map<string, number>();
   for (const r of records) {
-    const p = r.cfPrevPlatform ?? "(desconocido)";
+    const raw = r.cfPrevPlatform ?? "";
+    const p = raw ? (PLATFORM_LABELS[raw.toLowerCase()] ?? raw) : "(Desconocido)";
     map.set(p, (map.get(p) ?? 0) + 1);
   }
   return [...map.entries()]

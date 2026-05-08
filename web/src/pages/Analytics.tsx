@@ -38,7 +38,7 @@ const colCust = createColumnHelper<RepeatCustomer>();
 
 function ChartCard({ info, children }: { info?: string; children: React.ReactNode }) {
   return (
-    <div className="relative bg-white dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700/60 rounded-xl p-3 shadow-sm">
+    <div className="relative bg-white dark:bg-gray-800/80 border border-slate-200/80 dark:border-gray-700/60 rounded-xl p-3 shadow-sm overflow-hidden">
       {info && <div className="absolute top-3 right-3 z-10"><InfoTooltip text={info} /></div>}
       {children}
     </div>
@@ -332,7 +332,7 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("charts_configure_title")}</h3>
             <div className="relative group/hint">
               <button className="w-4 h-4 rounded-full bg-slate-200 dark:bg-gray-600 text-slate-500 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center hover:bg-slate-300 dark:hover:bg-gray-500 transition-colors">i</button>
-              <div className="absolute top-full left-0 mt-2 hidden group-hover/hint:block z-20 w-56 pointer-events-none">
+              <div className="absolute top-full right-0 mt-2 hidden group-hover/hint:block z-20 w-56 pointer-events-none">
                 <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                   {t("charts_configure_hint")}
                 </div>
