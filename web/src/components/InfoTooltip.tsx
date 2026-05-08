@@ -3,15 +3,27 @@ import { createPortal } from "react-dom";
 
 interface Props { text: string; }
 
+const TOOLTIP_W = 240;
+const MARGIN = 8;
+
 export function InfoTooltip({ text }: Props) {
   const [visible, setVisible] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, arrowLeft: TOOLTIP_W / 2 });
 
   function show() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.top - 8, left: r.left + r.width / 2 });
+      const btnCenterX = r.left + r.width / 2;
+
+      // Clamp tooltip so it never overflows the viewport
+      const rawLeft = btnCenterX - TOOLTIP_W / 2;
+      const left = Math.max(MARGIN, Math.min(rawLeft, window.innerWidth - TOOLTIP_W - MARGIN));
+
+      // Arrow points at the button center regardless of tooltip shift
+      const arrowLeft = Math.max(12, Math.min(btnCenterX - left, TOOLTIP_W - 12));
+
+      setPos({ top: r.top - 8, left, arrowLeft });
     }
     setVisible(true);
   }
@@ -40,11 +52,21 @@ export function InfoTooltip({ text }: Props) {
 
       {visible && createPortal(
         <div
-          style={{ position: "fixed", top: pos.top, left: pos.left, transform: "translate(-50%, -100%)", zIndex: 9999 }}
-          className="mb-2 max-w-[240px] px-3 py-2 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-lg shadow-xl pointer-events-none whitespace-normal leading-relaxed"
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            transform: "translateY(-100%)",
+            zIndex: 9999,
+            width: TOOLTIP_W,
+          }}
+          className="mb-2 px-3 py-2 bg-slate-800 dark:bg-slate-700 text-white text-xs rounded-lg shadow-xl pointer-events-none whitespace-normal leading-relaxed"
         >
           {text}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700" />
+          <span
+            style={{ left: pos.arrowLeft }}
+            className="absolute top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"
+          />
         </div>,
         document.body
       )}
