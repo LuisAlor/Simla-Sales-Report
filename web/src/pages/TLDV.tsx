@@ -519,47 +519,97 @@ export function TLDV({ managerSdMap }: Props) {
   );
 }
 
-// ── Loading animation (chart + circular progress ring) ──────────────────────
+// ── Loading animation (video frame scanner + circular progress ring) ─────────
 function SearchAnimation({ page, total }: { page: number; total: number }) {
   const pct = total > 0 ? Math.round((page / total) * 100) : 0;
   const R = 50;
   const circ = 2 * Math.PI * R;
   const offset = circ * (1 - pct / 100);
-  const bars = [52, 76, 40, 92, 61, 84, 47, 80, 58, 73, 44, 88, 65, 70];
+
+  const rows = [
+    { w: "78%", delay: "0s" },
+    { w: "100%", delay: "0.18s" },
+    { w: "86%", delay: "0.36s" },
+    { w: "62%", delay: "0.54s" },
+    { w: "94%", delay: "0.72s" },
+    { w: "71%", delay: "0.90s" },
+  ];
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-10">
       <style>{`
-        @keyframes tldvBar {
-          0%   { transform: scaleY(1);    opacity: 0.9; }
-          100% { transform: scaleY(0.32); opacity: 0.45; }
+        @keyframes scanLine {
+          0%   { top: 4px;              opacity: 0; }
+          8%   { opacity: 1; }
+          92%  { opacity: 1; }
+          100% { top: calc(100% - 4px); opacity: 0; }
+        }
+        @keyframes recBlink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.1; }
+        }
+        @keyframes rowGlow {
+          0%   { opacity: 0.12; }
+          100% { opacity: 0.5; }
         }
       `}</style>
 
-      {/* Animated bar chart */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl px-8 py-6 shadow-2xl backdrop-blur-sm">
-        <div className="flex items-end gap-2 h-28">
-          {bars.map((h, i) => (
-            <div key={i} className="w-[18px] rounded-t-sm"
-              style={{
-                height: `${h}%`,
-                background: "linear-gradient(to top, #06b6d4, #3b82f6)",
-                transformOrigin: "bottom",
-                animation: `tldvBar 1.6s ease-in-out ${i * 0.11}s infinite alternate`,
-              }}
+      {/* Video-frame analyzer */}
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="relative rounded-xl overflow-hidden bg-gray-800/60 border border-gray-700/60"
+          style={{ width: 304, height: 180 }}
+        >
+          {/* Viewfinder corner marks */}
+          {[
+            "top-2.5 left-2.5 border-t-2 border-l-2 rounded-tl",
+            "top-2.5 right-2.5 border-t-2 border-r-2 rounded-tr",
+            "bottom-2.5 left-2.5 border-b-2 border-l-2 rounded-bl",
+            "bottom-2.5 right-2.5 border-b-2 border-r-2 rounded-br",
+          ].map((cls, i) => (
+            <div key={i} className={`absolute w-4 h-4 border-cyan-500/60 ${cls}`} />
+          ))}
+
+          {/* Simulated transcript lines */}
+          <div className="px-7 pt-9 pb-5 flex flex-col gap-2.5">
+            {rows.map(({ w, delay }, i) => (
+              <div
+                key={i}
+                className="h-1.5 rounded-full"
+                style={{
+                  width: w,
+                  background: "linear-gradient(to right, #06b6d4, #3b82f6)",
+                  animation: `rowGlow 1.4s ease-in-out ${delay} infinite alternate`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Scanning light */}
+          <div
+            className="absolute inset-x-0 h-px"
+            style={{
+              background: "linear-gradient(to right, transparent 0%, #06b6d4 40%, #3b82f6 60%, transparent 100%)",
+              boxShadow: "0 0 12px 3px rgba(6,182,212,0.35)",
+              animation: "scanLine 2.4s ease-in-out infinite",
+            }}
+          />
+
+          {/* REC indicator */}
+          <div className="absolute top-2.5 right-3 flex items-center gap-1.5">
+            <div
+              className="w-2 h-2 rounded-full bg-red-500"
+              style={{ animation: "recBlink 1.1s ease-in-out infinite" }}
             />
-          ))}
+            <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
+          </div>
         </div>
-        <div className="flex justify-between mt-3 px-0.5">
-          {["Ene","Feb","Mar","Abr","May","Jun"].map((m) => (
-            <span key={m} className="text-[10px] text-gray-700">{m}</span>
-          ))}
-        </div>
+        <p className="text-xs text-gray-600 tracking-wide">Buscando grabaciones de demos…</p>
       </div>
 
       {/* Circular progress ring */}
       <div className="flex items-center gap-6">
-        <div className="relative w-28 h-28">
+        <div className="relative w-24 h-24">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
             <circle cx="60" cy="60" r={R} fill="none" stroke="#1f2937" strokeWidth="10" />
             <circle cx="60" cy="60" r={R} fill="none"
@@ -577,12 +627,12 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
               </linearGradient>
             </defs>
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-white">
+          <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
             {pct}%
           </span>
         </div>
         <div className="flex flex-col gap-0.5">
-          <p className="text-white font-semibold text-lg leading-tight">
+          <p className="text-white font-semibold text-base leading-tight">
             {total > 0 ? `Página ${page} de ${total}` : "Iniciando…"}
           </p>
           <p className="text-gray-500 text-sm">{pct}% completado</p>
