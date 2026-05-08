@@ -5,6 +5,10 @@ import {
   RefreshCw,
   AlertTriangle,
   Sparkles,
+  Calendar,
+  User,
+  Hash,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
@@ -56,6 +60,8 @@ function formatDemoDate(raw: string): string {
 function orderToDemoOrder(order: RawOrder): DemoOrder | null {
   const tldvUrl = (order.customFields?.["record_of_meeting_demo"] as string) ?? "";
   if (!tldvUrl) return null;
+  const demoDate = (order.customFields?.["demo_date"] as string) ?? "";
+  if (!demoDate) return null;
   const meetingId = extractMeetingId(tldvUrl);
   if (!meetingId) return null;
   return {
@@ -63,7 +69,7 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
     orderNumber: order.number,
     projectName: (order.customFields?.["name_komp_z"] as string) || order.number || String(order.id),
     managerSd: (order.customFields?.["manager_sd"] as string) || "",
-    demoDate: (order.customFields?.["demo_date"] as string) || order.createdAt || "",
+    demoDate,
     tldvUrl,
     meetingId,
   };
@@ -280,21 +286,31 @@ export function TLDV({ managerSdMap }: Props) {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-                      {demo.projectName}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 size={12} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                        {demo.projectName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         {formatDemoDate(demo.demoDate)}
                       </span>
-                      {managerName && (
+                    </div>
+                    {managerName && (
+                      <div className="flex items-center gap-1.5">
+                        <User size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
                         <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {managerName}
                         </span>
-                      )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <Hash size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                      <span className="text-xs text-slate-400 dark:text-slate-500">{demo.orderNumber}</span>
                     </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">#{demo.orderNumber}</p>
                   </div>
                   <Video size={13} className="text-slate-300 dark:text-slate-600 shrink-0 mt-1" />
                 </div>
