@@ -4,9 +4,9 @@ import { useIsDark } from "@/contexts/ThemeContext";
 import { useT } from "@/contexts/I18nContext";
 import { chartTheme } from "@/lib/chartTheme";
 
-interface Props { data: ProductRow[]; }
+interface Props { data: ProductRow[]; color?: string; }
 
-export function TopProductsChart({ data }: Props) {
+export function TopProductsChart({ data, color = "#00BCD4" }: Props) {
   const c = chartTheme(useIsDark());
   const t = useT();
   const sorted = [...data].sort((a, b) => a.revenue - b.revenue);
@@ -30,7 +30,7 @@ export function TopProductsChart({ data }: Props) {
       name: t("chart_series_revenue"),
       type: "bar",
       data: sorted.map((d) => d.revenue),
-      itemStyle: { color: "#00BCD4", borderRadius: [0, 3, 3, 0] },
+      itemStyle: { color, borderRadius: [0, 3, 3, 0] },
     }],
     title: { text: t("chart_top_products"), textStyle: { fontSize: 14, color: c.title }, top: 8, left: 12 },
   };

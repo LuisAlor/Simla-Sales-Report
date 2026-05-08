@@ -163,9 +163,11 @@ export function TopFilters({
   }, []);
 
 
+  const isDuplicateFilter = filterTemplates.some((tmpl) => matchesTemplate(filters, tmpl));
+
   function handleSave() {
     const name = templateName.trim();
-    if (!name) return;
+    if (!name || isDuplicateFilter) return;
     onSaveTemplate(name);
     setTemplateName("");
     setSavingTemplate(false);
@@ -493,26 +495,34 @@ export function TopFilters({
 
           {/* Always-visible save button */}
           {savingTemplate ? (
-            <div className="flex items-center gap-1.5 shrink-0 bg-white dark:bg-gray-900 border border-brand-blue/60 rounded-lg px-2 py-1 shadow-sm ring-1 ring-brand-blue/20">
-              <Bookmark size={11} className="text-brand-blue shrink-0" />
-              <input
-                autoFocus
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave();
-                  if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
-                }}
-                placeholder={t("filter_template_placeholder")}
-                className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-              />
-              <button onClick={handleSave} title="Guardar" className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 text-white transition-colors shrink-0">
-                <Check size={11} />
-              </button>
-              <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} title="Cancelar" className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0">
-                <X size={11} />
-              </button>
+            <div className="flex flex-col gap-1 shrink-0">
+              {isDuplicateFilter && (
+                <span className="text-[9px] text-amber-500 dark:text-amber-400 whitespace-nowrap">
+                  {t("config_duplicate_filter")}
+                </span>
+              )}
+              <div className={`flex items-center gap-1.5 bg-white dark:bg-gray-900 border rounded-lg px-2 py-1 shadow-sm ring-1 ${isDuplicateFilter ? "border-amber-400/60 ring-amber-300/20" : "border-brand-blue/60 ring-brand-blue/20"}`}>
+                <Bookmark size={11} className={isDuplicateFilter ? "text-amber-400 shrink-0" : "text-brand-blue shrink-0"} />
+                <input
+                  autoFocus
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave();
+                    if (e.key === "Escape") { setSavingTemplate(false); setTemplateName(""); }
+                  }}
+                  placeholder={t("filter_template_placeholder")}
+                  disabled={isDuplicateFilter}
+                  className="text-xs outline-none w-36 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50"
+                />
+                <button onClick={handleSave} title="Guardar" disabled={isDuplicateFilter} className="flex items-center justify-center w-5 h-5 rounded-md bg-brand-blue hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors shrink-0">
+                  <Check size={11} />
+                </button>
+                <button onClick={() => { setSavingTemplate(false); setTemplateName(""); }} title="Cancelar" className="flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors shrink-0">
+                  <X size={11} />
+                </button>
+              </div>
             </div>
           ) : (
             <button
