@@ -88,7 +88,7 @@ export interface ProductRow {
 export function topProducts(items: ItemRecord[], n = 15): ProductRow[] {
   const map = new Map<string, ProductRow>();
   for (const item of items) {
-    const key = item.productName ?? "(sin nombre)";
+    const key = item.productName || "(sin nombre)";
     const existing = map.get(key) ?? { productName: key, quantity: 0, revenue: 0 };
     map.set(key, { productName: key, quantity: existing.quantity + item.quantity, revenue: existing.revenue + item.revenue });
   }
