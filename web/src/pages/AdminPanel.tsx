@@ -6,7 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { fetchUsers } from "@/lib/api";
 import * as authLib from "@/lib/auth";
 import type { User } from "@/lib/auth";
-import { DEFAULT_ANALYSIS_PROMPT } from "@/lib/claudeAnalysis";
+const DEFAULT_ANALYSIS_PROMPT =
+  "Analiza este demo de venta. Evalúa: apertura, detección de necesidades, presentación de valor, manejo de objeciones y cierre. Indica fortalezas, áreas de mejora y acciones concretas para el asesor.";
 
 type Tab = "usuarios" | "configuracion" | "integraciones";
 
@@ -37,10 +38,6 @@ export function AdminPanel() {
   const [showTldvKey, setShowTldvKey] = useState(false);
   const [tldvKeySaved, setTldvKeySaved] = useState(false);
 
-  const [anthropicKeyInput, setAnthropicKeyInput] = useState(currentUser?.anthropicApiKey ?? "");
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
-  const [anthropicKeySaved, setAnthropicKeySaved] = useState(false);
-
   const [analysisPromptInput, setAnalysisPromptInput] = useState(currentUser?.analysisPrompt ?? DEFAULT_ANALYSIS_PROMPT);
   const [promptSaved, setPromptSaved] = useState(false);
 
@@ -49,13 +46,6 @@ export function AdminPanel() {
     updateUser({ ...currentUser, tldvApiKey: tldvKeyInput.trim() });
     setTldvKeySaved(true);
     setTimeout(() => setTldvKeySaved(false), 3000);
-  }
-
-  function handleSaveAnthropicKey() {
-    if (!currentUser) return;
-    updateUser({ ...currentUser, anthropicApiKey: anthropicKeyInput.trim() });
-    setAnthropicKeySaved(true);
-    setTimeout(() => setAnthropicKeySaved(false), 3000);
   }
 
   function handleSavePrompt() {
@@ -274,30 +264,6 @@ export function AdminPanel() {
               </button>
             </div>
             {tldvKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
-          </div>
-
-          {/* Anthropic */}
-          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_anthropic_key_title")}</h3>
-            <p className="text-slate-400 dark:text-slate-500 text-xs mb-4">{t("admin_anthropic_key_desc")}</p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input
-                  type={showAnthropicKey ? "text" : "password"}
-                  value={anthropicKeyInput}
-                  onChange={(e) => setAnthropicKeyInput(e.target.value)}
-                  placeholder="sk-ant-..."
-                  className={inputCls + " pr-9"}
-                />
-                <button type="button" onClick={() => setShowAnthropicKey((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                  {showAnthropicKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <button type="button" onClick={handleSaveAnthropicKey} disabled={!anthropicKeyInput.trim()} className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors whitespace-nowrap">
-                {t("admin_save")}
-              </button>
-            </div>
-            {anthropicKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
           </div>
 
           {/* Analysis prompt */}

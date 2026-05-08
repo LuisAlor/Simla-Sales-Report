@@ -217,6 +217,29 @@ export interface FetchOrdersParams {
   onProgress?: (done: number, total: number) => void;
 }
 
+// Fetch CRM orders filtered by the demo_date custom field date range
+export async function fetchOrdersByDemoDate(
+  apiKey: string,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<RawOrder[]> {
+  const filter: Record<string, string | number> = {};
+  if (dateFrom) filter["customFields][demo_date][min"] = dateFrom;
+  if (dateTo)   filter["customFields][demo_date][max"] = dateTo;
+
+  const all: RawOrder[] = [];
+  let page = 1;
+  while (true) {
+    const data = await getJson<{ orders: RawOrder[]; pagination: { totalPageCount: number } }>(
+      "orders", apiKey, { limit: PAGE_LIMIT, page }, filter, {}
+    );
+    all.push(...(data.orders ?? []));
+    if (page >= (data.pagination?.totalPageCount ?? 1)) break;
+    page++;
+  }
+  return all;
+}
+
 // Search Simla orders by TLDV meeting URL stored in custom field record_of_meeting_demo
 export async function fetchOrderByMeetingUrl(apiKey: string, meetingUrl: string): Promise<RawOrder | null> {
   try {

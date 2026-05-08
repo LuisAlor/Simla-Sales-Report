@@ -40,6 +40,46 @@ export async function fetchTldvTranscript(apiKey: string, meetingId: string): Pr
   return Array.isArray(raw) ? raw : [];
 }
 
+export interface TldvHighlight {
+  id?: string;
+  title?: string;
+  text?: string;
+  description?: string;
+  content?: string;
+  speaker?: string;
+  startTime?: number;
+  timestamp?: number;
+  type?: string;
+}
+
+export async function fetchTldvHighlights(apiKey: string, meetingId: string): Promise<TldvHighlight[]> {
+  const res = await fetch(`${TLDV_BASE}/meetings/${meetingId}/highlights`, { headers: { "x-api-key": apiKey } });
+  if (!res.ok) throw new Error(`TLDV highlights ${res.status}`);
+  const data = await res.json();
+  const raw = data.highlights ?? data.data ?? data;
+  return Array.isArray(raw) ? raw : [];
+}
+
+export async function fetchTldvAnalysis(apiKey: string, meetingId: string, prompt: string): Promise<string> {
+  const res = await fetch(`${TLDV_BASE}/meetings/${meetingId}/ask`, {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: prompt }),
+  });
+  if (!res.ok) throw new Error(`TLDV ask ${res.status}`);
+  const data = await res.json();
+  return data.answer ?? data.result ?? data.response ?? data.text ?? JSON.stringify(data);
+}
+
 export function tldvMeetingUrl(meetingId: string) {
   return `https://tldv.io/app/meetings/${meetingId}`;
+}
+
+export function extractMeetingId(tldvUrl: string): string {
+  try {
+    const parts = new URL(tldvUrl).pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] ?? "";
+  } catch {
+    return tldvUrl.split("/").filter(Boolean).pop() ?? "";
+  }
 }
