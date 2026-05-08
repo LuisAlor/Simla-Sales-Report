@@ -86,7 +86,7 @@ function formatMql(raw: string): string {
   return raw;
 }
 
-(order: RawOrder): DemoOrder | null {
+function orderToDemoOrder(order: RawOrder): DemoOrder | null {
   const tldvUrl = (order.customFields?.["record_of_meeting_demo"] as string) ?? "";
   if (!tldvUrl) return null;
   const demoDate = (order.customFields?.["demo_date"] as string) ?? "";
