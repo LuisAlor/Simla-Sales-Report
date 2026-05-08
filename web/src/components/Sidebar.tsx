@@ -4,12 +4,11 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3, TrendingDown, LineChart,
   ChevronDown, Cog, LogOut,
-  Clock, ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import dayjs from "dayjs";
 
 export type { Filters } from "@/lib/filters";
 
@@ -23,7 +22,6 @@ export function Sidebar() {
   const location = useLocation();
   const t = useT();
   const [logoError, setLogoError] = useState(false);
-  const [now, setNow] = useState(() => dayjs());
   const [isCollapsed, setIsCollapsed] = useState(
     () => localStorage.getItem(COLLAPSED_KEY) === "1"
   );
@@ -47,11 +45,6 @@ export function Sidebar() {
   }
 
   useEffect(() => () => { if (flyoutTimer.current) clearTimeout(flyoutTimer.current); }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(dayjs()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     const onOnline  = () => setIsOnline(true);
@@ -92,10 +85,6 @@ export function Sidebar() {
   ];
 
   const adminLabel = t("sidebar_admin");
-
-  const tz = Intl.DateTimeFormat("en", { timeZoneName: "shortOffset" })
-    .formatToParts(now.toDate())
-    .find((p) => p.type === "timeZoneName")?.value ?? "UTC";
 
   const isModuleActive = (m: (typeof MODULES)[0]) =>
     m.pages.some((p) => (p.end ? location.pathname === p.to : location.pathname.startsWith(p.to)));
@@ -151,11 +140,6 @@ export function Sidebar() {
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight">Simla.com</p>
-              <p className="text-slate-500 text-[10px] tabular-nums flex items-center gap-1 whitespace-nowrap">
-                <Clock size={9} className="shrink-0" />
-                {now.format("DD/MM/YYYY HH:mm:ss")}
-                <span>({tz})</span>
-              </p>
             </div>
           )}
         </div>
