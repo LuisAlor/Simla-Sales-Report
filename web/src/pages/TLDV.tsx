@@ -29,6 +29,16 @@ interface DemoOrder {
   demoDate: string;
   tldvUrl: string;
   meetingId: string;
+  invalidUrl: boolean;
+}
+
+function isValidTldvMeetingUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/").filter(Boolean);
+    return (u.hostname === "tldv.io" || u.hostname.endsWith(".tldv.io")) &&
+      parts[0] === "app" && parts[1] === "meetings" && (parts[2]?.length ?? 0) > 0;
+  } catch { return false; }
 }
 
 const HIGHLIGHTS_CACHE_PREFIX = "simla_tldv_highlights_v2_";
@@ -62,16 +72,17 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
   if (!tldvUrl) return null;
   const demoDate = (order.customFields?.["demo_date"] as string) ?? "";
   if (!demoDate) return null;
-  const meetingId = extractMeetingId(tldvUrl);
-  if (!meetingId) return null;
+  const valid = isValidTldvMeetingUrl(tldvUrl);
+  const meetingId = valid ? extractMeetingId(tldvUrl) : `invalid_${order.id}`;
   return {
     orderId: order.id,
     orderNumber: order.number,
-    projectName: (order.customFields?.["name_komp_z"] as string) || order.number || String(order.id),
+    projectName: (order.customFields?.["name_komp_z"] as string) || "Proyecto sin nombre",
     managerSd: (order.customFields?.["manager_sd"] as string) || "",
     demoDate,
     tldvUrl,
     meetingId,
+    invalidUrl: !valid,
   };
 }
 
@@ -281,7 +292,9 @@ export function TLDV({ managerSdMap }: Props) {
                 onClick={() => { setSelectedId(demo.meetingId); setActiveTab("transcript"); }}
                 className={`w-full text-left px-4 py-3 border-b border-slate-100 dark:border-gray-700 transition-colors ${
                   isSelected
-                    ? "bg-brand-blue/10 border-l-2 border-l-brand-blue"
+                    ? demo.invalidUrl
+                      ? "bg-yellow-50/60 dark:bg-yellow-900/10 border-l-2 border-l-yellow-400"
+                      : "bg-brand-blue/10 border-l-2 border-l-brand-blue"
                     : "hover:bg-slate-50 dark:hover:bg-gray-700"
                 }`}
               >
@@ -311,8 +324,17 @@ export function TLDV({ managerSdMap }: Props) {
                       <Hash size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
                       <span className="text-xs text-slate-400 dark:text-slate-500">{demo.orderNumber}</span>
                     </div>
+                    {demo.invalidUrl && (
+                      <div className="flex items-center gap-1 mt-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded px-1.5 py-0.5 w-fit">
+                        <AlertTriangle size={10} className="text-yellow-600 dark:text-yellow-400 shrink-0" />
+                        <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">Enlace inválido — requiere supervisión</span>
+                      </div>
+                    )}
                   </div>
-                  <Video size={13} className="text-slate-300 dark:text-slate-600 shrink-0 mt-1" />
+                  {demo.invalidUrl
+                    ? <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-1" />
+                    : <Video size={13} className="text-slate-300 dark:text-slate-600 shrink-0 mt-1" />
+                  }
                 </div>
               </button>
             );
@@ -333,9 +355,17 @@ export function TLDV({ managerSdMap }: Props) {
             <div className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">
-                    {selectedOrder.projectName}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {selectedOrder.projectName}
+                    </h3>
+                    {selectedOrder.invalidUrl && (
+                      <span className="flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
+                        <AlertTriangle size={11} />
+                        Requiere supervisión
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                     {selectedOrder.managerSd && (
                       <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -369,27 +399,48 @@ export function TLDV({ managerSdMap }: Props) {
                 </div>
               </div>
 
-              {/* Tab bar */}
-              <div className="flex gap-1 mt-3">
-                {(["transcript", "analysis"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                      activeTab === tab
-                        ? "bg-brand-blue text-white"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_tab_analysis")}
-                  </button>
-                ))}
-              </div>
+              {/* Tab bar — hidden for invalid URLs */}
+              {!selectedOrder.invalidUrl && (
+                <div className="flex gap-1 mt-3">
+                  {(["transcript", "analysis"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        activeTab === tab
+                          ? "bg-brand-blue text-white"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_tab_analysis")}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Tab content */}
             <div className="flex-1 overflow-y-auto">
-              {activeTab === "transcript" && (
+              {selectedOrder.invalidUrl && (
+                <div className="p-6">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl p-5 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={20} className="text-yellow-500 shrink-0" />
+                      <p className="text-yellow-800 dark:text-yellow-200 font-semibold text-sm">Enlace de grabación inválido</p>
+                    </div>
+                    <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                      El vendedor registró un enlace que no corresponde a una reunión de TLDV. Revisa el pedido y corrige el campo <strong>record_of_meeting_demo</strong>.
+                    </p>
+                    <div className="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg px-3 py-2">
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 font-mono break-all">{selectedOrder.tldvUrl}</p>
+                    </div>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      Formato válido: <span className="font-mono">https://tldv.io/app/meetings/&lt;id&gt;</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!selectedOrder.invalidUrl && activeTab === "transcript" && (
                 <div className="p-6 flex flex-col gap-2">
                   {transcriptLoading && <TranscriptSkeleton />}
                   {transcriptError && (
@@ -410,7 +461,7 @@ export function TLDV({ managerSdMap }: Props) {
                 </div>
               )}
 
-              {activeTab === "analysis" && (
+              {!selectedOrder.invalidUrl && activeTab === "analysis" && (
                 <div className="p-6 flex flex-col gap-3">
                   {/* Not loaded yet */}
                   {highlights === null && !highlightsLoading && (
