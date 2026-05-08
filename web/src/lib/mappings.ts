@@ -84,3 +84,24 @@ export const PALETTE = [
   "#00BCD4", "#2563EB", "#7C3AED", "#F59E0B",
   "#10B981", "#EF4444", "#6366F1", "#94A3B8",
 ];
+
+export const PLATFORM_LABELS: Record<string, string> = {
+  "otra":         "Otra",
+  "ninguna":      "Ninguna",
+  "desconocida":  "Desconocida",
+  "desconocido":  "Desconocido",
+  "manychat":     "ManyChat",
+  "facebook":     "Facebook",
+  "instagram":    "Instagram",
+  "whatsapp":     "WhatsApp",
+  "telegram":     "Telegram",
+  "linkedin":     "LinkedIn",
+  "twitter":      "Twitter / X",
+  "tiktok":       "TikTok",
+  "google":       "Google",
+  "youtube":      "YouTube",
+  "email":        "Email",
+  "web":          "Web",
+  "referido":     "Referido",
+  "referral":     "Referido",
+};

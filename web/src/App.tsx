@@ -360,7 +360,7 @@ function AppInner() {
           path="/funnel"
           element={
             <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
-              <Funnel records={records} freq={filters.freq} />
+              <Funnel records={records} freq={filters.freq} statusLabels={statusLabels} />
             </PageShell>
           }
         />

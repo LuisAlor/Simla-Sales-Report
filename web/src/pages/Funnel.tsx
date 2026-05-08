@@ -4,23 +4,14 @@ import { KpiCard } from "@/components/KpiCard";
 import { DarkKpiCard } from "@/components/DarkKpiCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { DataTable } from "@/components/DataTable";
-import { FunnelLinesChart } from "@/components/charts/FunnelLinesChart";
 import { FunnelBarChart } from "@/components/charts/FunnelBarChart";
 import { PlatformsDonutChart } from "@/components/charts/PlatformsDonutChart";
 import {
-  funnelStageCounts,
-  funnelOverTime,
   financialKpis,
   platformsBreakdown,
   type StageRow,
   type Freq,
 } from "@/lib/transforms";
-import type { ColumnDef } from "@tanstack/react-table";
-import {
-  FUNNEL_KEY_STAGES,
-  FUNNEL_NEGATIVE_STAGES,
-  FUNNEL_POSTSALES_STAGES,
-} from "@/lib/mappings";
 import { fmtInt, fmtUsd } from "@/lib/utils";
 import type { OrderRecord } from "@/lib/flatten";
 import { useT } from "@/contexts/I18nContext";
@@ -28,39 +19,12 @@ import { useT } from "@/contexts/I18nContext";
 interface Props {
   records: OrderRecord[];
   freq: Freq;
+  statusLabels: Record<string, string>;
 }
 
 const colStage = createColumnHelper<StageRow>();
 
-interface FunnelSectionProps {
-  title: string;
-  rows: StageRow[];
-  tsData: ReturnType<typeof funnelOverTime>;
-  chartTitle: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  stageCols: ColumnDef<StageRow, any>[];
-}
-
-function FunnelSection({ title, rows, tsData, chartTitle, stageCols }: FunnelSectionProps) {
-  return (
-    <>
-      <SectionHeader>{title}</SectionHeader>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
-        <div className="bg-navy-light border border-navy-border rounded-lg p-3">
-          <DataTable data={rows} columns={stageCols} dark />
-        </div>
-        <div className="col-span-2 bg-navy-light border border-navy-border rounded-lg p-3">
-          {tsData.length > 0 && <FunnelLinesChart data={tsData} title={chartTitle} />}
-        </div>
-      </div>
-      <div className="bg-navy-light border border-navy-border rounded-lg p-3 mt-3">
-        <FunnelBarChart data={rows} title={chartTitle} />
-      </div>
-    </>
-  );
-}
-
-export function Funnel({ records, freq }: Props) {
+export function Funnel({ records, freq: _freq, statusLabels }: Props) {
   const t = useT();
 
   const stageCols = useMemo(() => [
@@ -82,13 +46,16 @@ export function Funnel({ records, freq }: Props) {
   const fk   = useMemo(() => financialKpis(records),       [records]);
   const plat = useMemo(() => platformsBreakdown(records),  [records]);
 
-  const keyRows = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES),      [records]);
-  const negRows = useMemo(() => funnelStageCounts(records, FUNNEL_NEGATIVE_STAGES), [records]);
-  const psRows  = useMemo(() => funnelStageCounts(records, FUNNEL_POSTSALES_STAGES),[records]);
-
-  const keyTs = useMemo(() => funnelOverTime(records, FUNNEL_KEY_STAGES,      freq), [records, freq]);
-  const negTs = useMemo(() => funnelOverTime(records, FUNNEL_NEGATIVE_STAGES, freq), [records, freq]);
-  const psTs  = useMemo(() => funnelOverTime(records, FUNNEL_POSTSALES_STAGES, freq),[records, freq]);
+  const dynamicRows = useMemo(() => {
+    const base = records.length;
+    return Object.entries(statusLabels)
+      .map(([code, label]) => {
+        const count = records.filter((r) => r.status === code).length;
+        return { statusCode: code, label, count, crPct: base > 0 ? Math.round((count / base) * 1000) / 10 : 0 };
+      })
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [records, statusLabels]);
 
   return (
     <div>
@@ -112,14 +79,27 @@ export function Funnel({ records, freq }: Props) {
         <DarkKpiCard label="Net Total"       value={fmtUsd(fk.netTotal)}   color="#86EFAC" />
       </div>
 
-      <FunnelSection title={t("funnel_key_stages")}      rows={keyRows} tsData={keyTs} chartTitle={t("funnel_key_stages")}      stageCols={stageCols} />
-      <FunnelSection title={t("funnel_negative_stages")} rows={negRows} tsData={negTs} chartTitle={t("funnel_negative_stages")} stageCols={stageCols} />
-      <FunnelSection title={t("funnel_postsale_stages")} rows={psRows}  tsData={psTs}  chartTitle={t("funnel_postsale_stages")} stageCols={stageCols} />
+      {dynamicRows.length > 0 && (
+        <>
+          <SectionHeader>{t("funnel_key_stages")}</SectionHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">
+            <div className="bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3">
+              <DataTable data={dynamicRows} columns={stageCols} dark />
+            </div>
+            <div className="col-span-2 bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3">
+              {/* no time chart needed for this simplified view */}
+            </div>
+          </div>
+          <div className="bg-navy-light border border-navy-border rounded-lg overflow-hidden p-3 mt-3">
+            <FunnelBarChart data={dynamicRows} title={t("funnel_key_stages")} />
+          </div>
+        </>
+      )}
 
       <SectionHeader>{t("funnel_lead_sources")}</SectionHeader>
       {plat.length > 0 ? (
         <div className="bg-navy-light border border-navy-border rounded-lg p-3 mt-2">
-          <PlatformsDonutChart data={plat} />
+          <PlatformsDonutChart data={plat} title={t("funnel_lead_sources")} />
         </div>
       ) : (
         <p className="text-slate-500 text-sm mt-2">{t("funnel_no_platform")}</p>
