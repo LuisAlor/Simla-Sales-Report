@@ -469,7 +469,7 @@ export function TLDV({ managerSdMap }: Props) {
                         <button
                           onClick={() => {
                             try { localStorage.removeItem(`${HIGHLIGHTS_CACHE_PREFIX}${selectedId}`); } catch { /* ignore */ }
-                            setHighlights(null);
+                            handleLoadHighlights();
                           }}
                           className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-cyan-400 transition-colors"
                         >
