@@ -198,7 +198,7 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
     const canToggle = canHide(sec.visible, removeCount);
     return (
       <div className="rounded-lg border border-slate-200 dark:border-gray-600 overflow-hidden">
-        <div className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-50 dark:bg-gray-750">
+        <div className="flex items-center gap-1.5 px-2.5 py-2 bg-slate-100 dark:bg-gray-700">
           <button
             onClick={() => toggleOpen(id)}
             className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
@@ -306,12 +306,22 @@ function ConfigPanel({ layout, onChange, onClose }: ConfigPanelProps) {
       <div className="flex-1 bg-black/40" onClick={onClose} />
       <div className="w-80 bg-white dark:bg-gray-800 shadow-2xl flex flex-col border-l border-slate-200 dark:border-gray-700">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("charts_configure_title")}</h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-500">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("charts_configure_title")}</h3>
+            <div className="relative group/hint">
+              <button className="w-4 h-4 rounded-full bg-slate-200 dark:bg-gray-600 text-slate-500 dark:text-slate-300 text-[10px] font-bold flex items-center justify-center hover:bg-slate-300 dark:hover:bg-gray-500 transition-colors">i</button>
+              <div className="absolute top-full left-0 mt-2 hidden group-hover/hint:block z-20 w-56 pointer-events-none">
+                <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {t("charts_configure_hint")}
+                </div>
+                <div className="absolute -top-1 left-3 w-2 h-2 bg-white dark:bg-gray-900 border-l border-t border-slate-200 dark:border-gray-700 rotate-45" />
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-500 dark:text-slate-400">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 px-4 py-2">{t("charts_configure_hint")}</p>
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
           {(["summary", "temporal", "distribution", "products", "detail"] as SectionId[]).map((id) => (
             <SectionRow key={id} id={id} />
