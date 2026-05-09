@@ -115,7 +115,7 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfNumUsers:       cfStr(cf, "crm_num_of_users_new"),
     cfClientBase:     cfStr(cf, "tamano_de_base_de_clientes"),
     cfLeadsPerDay:    cfStr(cf, "leads_por_dia"),
-    cfSector:         cfStr(cf, "sector"),
+    cfSector:         cfSelectName(cf, "sector"),
     cfWinProbability: cfStr(cf, "win_probability"),
     cfIsReferral:     cfStr(cf, "is_client_referral_order"),
     cfReturning:      cfStr(cf, "cliente_retornado"),

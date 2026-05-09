@@ -5,9 +5,10 @@ import { PALETTE } from "@/lib/mappings";
 interface Props {
   data: PlatformRow[];
   title?: string;
+  centerLabel?: string;
 }
 
-export function PlatformsDonutChart({ data, title }: Props) {
+export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: Props) {
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const option = {
@@ -21,7 +22,7 @@ export function PlatformsDonutChart({ data, title }: Props) {
         left: "center",
         top: "middle",
         style: {
-          text: `${total.toLocaleString()}\nregistros`,
+          text: `${total.toLocaleString()}\n${centerLabel}`,
           textAlign: "center",
           fill: "#FFFFFF",
           fontSize: 16,
