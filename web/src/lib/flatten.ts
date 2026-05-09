@@ -17,7 +17,7 @@ function cfStr(cf: Record<string, unknown>, key: string): string | null {
   return String(v);
 }
 
-// For select-type custom fields that return {code, name} objects
+// For select-type custom fields that return {code, name} objects — returns display name
 function cfSelectName(cf: Record<string, unknown>, key: string): string | null {
   const v = cf[key];
   if (v === null || v === undefined) return null;
@@ -26,6 +26,15 @@ function cfSelectName(cf: Record<string, unknown>, key: string): string | null {
     return obj["name"] ?? obj["code"] ?? null;
   }
   return String(v);
+}
+
+// For select-type custom fields whose code is numeric (e.g. payment_first_period_license → "6")
+function cfSelectFloat(cf: Record<string, unknown>, key: string): number {
+  const v = cf[key];
+  if (v === null || v === undefined) return 0;
+  const raw = typeof v === "object" ? (v as Record<string, unknown>)["code"] ?? "" : v;
+  const n = parseFloat(String(raw));
+  return isNaN(n) ? 0 : n;
 }
 
 function cfList(cf: Record<string, unknown>, key: string): string[] {
@@ -123,7 +132,7 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfWhatsappType:   cfStr(cf, "tipo_de_whatsapp"),
     cfSegment:        cfStr(cf, "segment_lida"),
     cfFirstPayment:   cfFloat(cf, "the_amount_of_the_first_payment"),
-    cfPaymentPeriod:  cfFloat(cf, "payment_first_period_license"),
+    cfPaymentPeriod:  cfSelectFloat(cf, "payment_first_period_license"),
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
     managerSd:        cfSelectName(cf, "manager_sd"),
