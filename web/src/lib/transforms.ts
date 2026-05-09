@@ -2,7 +2,6 @@ import dayjs from "dayjs";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import type { OrderRecord, ItemRecord } from "./flatten";
 import {
-  STATUS_LABELS,
   PAID_STATUS_CODE,
   REFUND_STATUS_CODE,
   PLATFORM_LABELS,
@@ -128,15 +127,15 @@ export interface StageRow {
   crPct: number;
 }
 
-export function funnelStageCounts(records: OrderRecord[], stages: StageEntry[]): StageRow[] {
-  const base = records.length;
-  return stages.map(([statusCode, popadalCode]) => {
+export function funnelStageCounts(records: OrderRecord[], stages: StageEntry[], base?: number): StageRow[] {
+  const denominator = base ?? records.length;
+  return stages.map(([label, popadalCode]) => {
     const count = records.filter((r) => hasStage(r, popadalCode)).length;
     return {
-      statusCode,
-      label: STATUS_LABELS[statusCode] ?? statusCode,
+      statusCode: popadalCode,
+      label,
       count,
-      crPct: base > 0 ? Math.round((count / base) * 1000) / 10 : 0,
+      crPct: denominator > 0 ? Math.round((count / denominator) * 1000) / 10 : 0,
     };
   });
 }
@@ -157,15 +156,14 @@ export function funnelOverTime(
     const d = bucket(r.createdAt, freq);
     if (!bucketMap.has(d)) bucketMap.set(d, new Map());
     const stageMap = bucketMap.get(d)!;
-    for (const [statusCode, popadalCode] of stages) {
+    for (const [label, popadalCode] of stages) {
       if (hasStage(r, popadalCode)) {
-        const label = STATUS_LABELS[statusCode] ?? statusCode;
         stageMap.set(label, (stageMap.get(label) ?? 0) + 1);
       }
     }
   }
 
-  const stageLabels = stages.map(([sc]) => STATUS_LABELS[sc] ?? sc);
+  const stageLabels = stages.map(([label]) => label);
   return [...bucketMap.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, stageMap]) => {
