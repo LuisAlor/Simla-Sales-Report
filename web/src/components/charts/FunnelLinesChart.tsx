@@ -10,6 +10,13 @@ interface Props {
 export function FunnelLinesChart({ data, title = "" }: Props) {
   const stageKeys = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== "date") : [];
 
+  const stageTotals = stageKeys.map((key, i) => ({
+    key,
+    total: data.reduce((s, d) => s + (Number(d[key]) || 0), 0),
+    color: FUNNEL_COLORS[i % FUNNEL_COLORS.length],
+  }));
+  const sum = stageTotals.reduce((s, st) => s + st.total, 0);
+
   const series = stageKeys.map((key, i) => ({
     name: key,
     type: "line",
@@ -20,6 +27,8 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
     symbol: "circle",
     symbolSize: 5,
   }));
+
+  const chartHeight = Math.max(260, stageKeys.length * 24 + 50);
 
   const option = {
     backgroundColor: "transparent",
@@ -34,23 +43,13 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
         const rows = params
           .filter((p) => Number(p.value) > 0)
           .sort((a, b) => Number(b.value) - Number(a.value))
-          .map((p) => `<div style="display:flex;justify-content:space-between;gap:16px"><span style="color:${p.color}">● ${p.seriesName}</span><b>${p.value}</b></div>`)
+          .map((p) => `<div style="display:flex;justify-content:space-between;gap:16px"><span style="color:${p.color}">— ${p.seriesName}</span><b>${p.value}</b></div>`)
           .join("");
         return `<div style="min-width:220px"><div style="font-weight:bold;margin-bottom:6px;color:#F1F5F9">${date}</div>${rows}<div style="border-top:1px solid #374151;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between"><span style="color:#94A3B8">Sum</span><b style="color:#F1F5F9">${total}</b></div></div>`;
       },
     },
-    legend: {
-      data: stageKeys,
-      bottom: 0,
-      left: 0,
-      orient: "horizontal" as const,
-      textStyle: { color: "#CBD5E1", fontSize: 11 },
-      icon: "roundRect",
-      itemWidth: 14,
-      itemHeight: 4,
-      type: "scroll" as const,
-    },
-    grid: { top: 36, bottom: 80, left: 16, right: 16, containLabel: true },
+    legend: { show: false },
+    grid: { top: title ? 38 : 16, bottom: 20, left: 16, right: 8, containLabel: true },
     xAxis: {
       type: "category",
       data: data.map((d) => d.date),
@@ -64,8 +63,29 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
       axisLabel: { color: "#94A3B8", fontSize: 11 },
     },
     series,
-    title: { text: title, textStyle: { fontSize: 14, color: "#FFFFFF" }, top: 8, left: 12 },
+    ...(title ? { title: { text: title, textStyle: { fontSize: 13, color: "#FFFFFF" }, top: 8, left: 12 } } : {}),
   };
 
-  return <ReactECharts option={option} style={{ height: Math.max(320, 80 + stageKeys.length * 18) }} notMerge lazyUpdate />;
+  return (
+    <div className="flex gap-3">
+      {/* Chart */}
+      <div className="flex-1 min-w-0">
+        <ReactECharts option={option} style={{ height: chartHeight }} notMerge lazyUpdate />
+      </div>
+      {/* Stage totals table — right */}
+      <div className="flex-shrink-0 w-52 flex flex-col self-start" style={{ marginTop: title ? 38 : 16 }}>
+        {stageTotals.map((st) => (
+          <div key={st.key} className="flex items-center gap-2 py-[5px] border-b border-white/5 last:border-0">
+            <div className="w-5 h-[2px] flex-shrink-0 rounded" style={{ backgroundColor: st.color }} />
+            <span className="flex-1 text-[10px] text-slate-300 truncate" title={st.key}>{st.key}</span>
+            <span className="text-[10px] font-semibold text-white">{st.total}</span>
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
+          <span className="text-[10px] text-slate-400">Sum</span>
+          <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{sum}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
