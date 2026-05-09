@@ -29,14 +29,14 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     },
     legend: {
       type: "scroll" as const,
-      orient: "vertical" as const,
-      right: 4,
-      top: "center",
+      orient: "horizontal" as const,
+      bottom: 4,
+      left: "center",
       textStyle: { color: "#CBD5E1", fontSize: 11 },
       pageIconSize: 10,
       pageTextStyle: { color: "#94A3B8" },
-      itemWidth: 12,
-      itemHeight: 8,
+      itemWidth: 10,
+      itemHeight: 6,
       formatter: (name: string) => {
         const item = data.find((d) => d.platform === name);
         return item ? `${name}  ${item.count}` : name;
@@ -45,14 +45,14 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     graphic: [
       {
         type: "text",
-        left: "30%",
-        top: "46%",
+        left: "center",
+        top: "middle",
+        z: 100,
         style: {
           text: `${total.toLocaleString()}\n${centerLabel}`,
           textAlign: "center",
-          textVerticalAlign: "middle",
           fill: "#FFFFFF",
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: "bold",
           lineHeight: 22,
         },
@@ -62,8 +62,8 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
       {
         name: title ?? "",
         type: "pie",
-        radius: ["38%", "62%"],
-        center: ["30%", "52%"],
+        radius: ["38%", "60%"],
+        center: ["50%", "50%"],
         data: data.map((r) => ({ name: r.platform, value: r.count })),
         label: {
           show: true,
@@ -87,8 +87,8 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     ],
     title: {
       text: title ?? "",
-      textStyle: { fontSize: 14, color: "#FFFFFF" },
-      top: 8,
+      textStyle: { fontSize: 13, color: "#FFFFFF" },
+      top: 6,
       left: 12,
     },
   };
