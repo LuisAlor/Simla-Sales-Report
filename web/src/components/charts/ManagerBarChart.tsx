@@ -1,5 +1,6 @@
 import ReactECharts from "echarts-for-react";
 import type { ManagerRow } from "@/lib/transforms";
+import { NO_MANAGER_KEY } from "@/lib/transforms";
 import { useIsDark } from "@/contexts/ThemeContext";
 import { useT } from "@/contexts/I18nContext";
 import { chartTheme } from "@/lib/chartTheme";
@@ -11,13 +12,15 @@ export function ManagerBarChart({ data, color = "#00BCD4" }: Props) {
   const c = chartTheme(isDark);
   const t = useT();
   const suffix = t("chart_orders_suffix");
+  const noManagerLabel = t("chart_no_manager");
+  const displayName = (name: string) => name === NO_MANAGER_KEY ? noManagerLabel : name;
   const option = {
     backgroundColor: c.bg,
     tooltip: { trigger: "axis", ...c.tooltip },
     grid: { top: 48, bottom: 40, left: 16, right: 16, containLabel: true },
     xAxis: {
       type: "category",
-      data: data.map((d) => d.managerName),
+      data: data.map((d) => displayName(d.managerName)),
       axisLabel: { color: c.axisLabel, fontSize: 11, rotate: 0, interval: 0, overflow: "truncate", width: 90 },
       axisLine: { lineStyle: { color: c.axisLine } },
       axisTick: { show: false },

@@ -464,7 +464,10 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
       {visibleKpis.length > 0 && (
         <>
           <SectionHeader>{t("analytics_section_summary")}</SectionHeader>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
+          <div
+            className="grid gap-3 mt-2"
+            style={{ gridTemplateColumns: `repeat(auto-fit, minmax(180px, 1fr))` }}
+          >
             {visibleKpis.map((kpi) => (
               <KpiCard
                 key={kpi.id}
