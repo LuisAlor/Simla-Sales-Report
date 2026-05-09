@@ -1,6 +1,12 @@
 import ReactECharts from "echarts-for-react";
 import type { PlatformRow } from "@/lib/transforms";
-import { PALETTE } from "@/lib/mappings";
+
+const EXTENDED_PALETTE = [
+  "#00BCD4", "#2563EB", "#7C3AED", "#F59E0B", "#10B981",
+  "#EF4444", "#6366F1", "#94A3B8", "#F97316", "#EC4899",
+  "#84CC16", "#14B8A6", "#A855F7", "#EAB308", "#3B82F6",
+  "#22C55E", "#DC2626", "#9333EA", "#0891B2", "#D97706",
+];
 
 interface Props {
   data: PlatformRow[];
@@ -13,19 +19,40 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
 
   const option = {
     backgroundColor: "transparent",
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)", backgroundColor: "#252A45", borderColor: "#2D3452", textStyle: { color: "#CBD5E1" } },
-    legend: { orient: "vertical" as const, right: 0, top: "center", textStyle: { color: "#CBD5E1", fontSize: 11 } },
-    color: PALETTE,
+    color: EXTENDED_PALETTE,
+    tooltip: {
+      trigger: "item",
+      formatter: "{b}: {c} ({d}%)",
+      backgroundColor: "#252A45",
+      borderColor: "#2D3452",
+      textStyle: { color: "#CBD5E1" },
+    },
+    legend: {
+      type: "scroll" as const,
+      orient: "vertical" as const,
+      right: 4,
+      top: "center",
+      textStyle: { color: "#CBD5E1", fontSize: 11 },
+      pageIconSize: 10,
+      pageTextStyle: { color: "#94A3B8" },
+      itemWidth: 12,
+      itemHeight: 8,
+      formatter: (name: string) => {
+        const item = data.find((d) => d.platform === name);
+        return item ? `${name}  ${item.count}` : name;
+      },
+    },
     graphic: [
       {
         type: "text",
-        left: "center",
-        top: "middle",
+        left: "30%",
+        top: "46%",
         style: {
           text: `${total.toLocaleString()}\n${centerLabel}`,
           textAlign: "center",
+          textVerticalAlign: "middle",
           fill: "#FFFFFF",
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: "bold",
           lineHeight: 22,
         },
@@ -33,17 +60,38 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     ],
     series: [
       {
-        name: "Plataforma",
+        name: title ?? "",
         type: "pie",
-        radius: ["45%", "68%"],
-        center: ["38%", "50%"],
+        radius: ["38%", "62%"],
+        center: ["30%", "52%"],
         data: data.map((r) => ({ name: r.platform, value: r.count })),
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 13, fontWeight: "bold", color: "#FFFFFF" } },
+        label: {
+          show: true,
+          formatter: "{d}%",
+          color: "#FFFFFF",
+          fontSize: 10,
+          fontWeight: "bold",
+          textBorderWidth: 0,
+        },
+        labelLine: {
+          show: true,
+          length: 8,
+          length2: 6,
+          lineStyle: { color: "#4B5563" },
+        },
+        emphasis: {
+          label: { show: true, fontSize: 13, fontWeight: "bold", color: "#FFFFFF" },
+          scaleSize: 4,
+        },
       },
     ],
-    title: { text: title ?? "", textStyle: { fontSize: 14, color: "#FFFFFF" }, top: 8, left: 12 },
+    title: {
+      text: title ?? "",
+      textStyle: { fontSize: 14, color: "#FFFFFF" },
+      top: 8,
+      left: 12,
+    },
   };
 
-  return <ReactECharts option={option} style={{ height: 320 }} notMerge lazyUpdate />;
+  return <ReactECharts option={option} style={{ height: 380 }} notMerge lazyUpdate />;
 }

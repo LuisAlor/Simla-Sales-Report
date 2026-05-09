@@ -5,10 +5,9 @@ import { FUNNEL_COLORS } from "@/lib/mappings";
 interface Props {
   data: FunnelTsPoint[];
   title?: string;
-  yLabel?: string;
 }
 
-export function FunnelLinesChart({ data, title = "", yLabel = "Cantidad" }: Props) {
+export function FunnelLinesChart({ data, title = "" }: Props) {
   const stageKeys = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== "date") : [];
 
   const series = stageKeys.map((key, i) => ({
@@ -51,7 +50,7 @@ export function FunnelLinesChart({ data, title = "", yLabel = "Cantidad" }: Prop
       itemHeight: 4,
       type: "scroll" as const,
     },
-    grid: { top: 48, bottom: 80, left: 16, right: 16, containLabel: true },
+    grid: { top: 36, bottom: 80, left: 16, right: 16, containLabel: true },
     xAxis: {
       type: "category",
       data: data.map((d) => d.date),
@@ -61,8 +60,6 @@ export function FunnelLinesChart({ data, title = "", yLabel = "Cantidad" }: Prop
     },
     yAxis: {
       type: "value",
-      name: yLabel,
-      nameTextStyle: { color: "#94A3B8", fontSize: 10 },
       splitLine: { lineStyle: { color: "#2D3452" } },
       axisLabel: { color: "#94A3B8", fontSize: 11 },
     },

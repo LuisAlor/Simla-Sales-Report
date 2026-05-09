@@ -70,7 +70,8 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
   const sector = useMemo(() => sectorBreakdown(records),    [records]);
 
   // ── Stage counts for CR tables ───────────────────────────────────────────────
-  const keyRows  = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES, factRegs), [records, factRegs]);
+  const keyRows  = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES,      factRegs), [records, factRegs]);
+  const negRows  = useMemo(() => funnelStageCounts(records, FUNNEL_NEGATIVE_STAGES, factRegs), [records, factRegs]);
   const postRows = useMemo(() => funnelStageCounts(records, FUNNEL_POSTSALES_STAGES, factRegs), [records, factRegs]);
 
   // ── Time-series data for line charts ─────────────────────────────────────────
@@ -94,42 +95,47 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
         <KpiCard label={t("funnel_mobile")}             value={fmtInt(mobileCount)} />
       </div>
 
-      {/* ── Key stages line chart + CR table ──────────────────────────────────── */}
-      <SectionHeader>{t("funnel_key_stages")}</SectionHeader>
-      <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4 mt-2">
-        <FunnelLinesChart data={keyTs} title={t("funnel_key_stages")} />
-      </div>
-      {keyRows.some((r) => r.count > 0) && (
-        <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden mt-3">
-          <DataTable data={keyRows} columns={crCols} dark />
-        </div>
-      )}
-
-      {/* ── Negative stages line chart ─────────────────────────────────────────── */}
-      <SectionHeader>{t("funnel_negative_stages")}</SectionHeader>
-      <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4 mt-2">
-        <FunnelLinesChart data={negTs} title={t("funnel_negative_stages")} />
-      </div>
-
-      {/* ── Post-sales stages line chart + CR table ───────────────────────────── */}
-      <SectionHeader>{t("funnel_postsale_stages")}</SectionHeader>
-      <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4 mt-2">
-        <FunnelLinesChart data={postTs} title={t("funnel_postsale_stages")} />
-      </div>
-      {postRows.some((r) => r.count > 0) && (
-        <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden mt-3">
-          <DataTable data={postRows} columns={crCols} dark />
-        </div>
-      )}
-
-      {/* ── Financial KPIs ─────────────────────────────────────────────────────── */}
+      {/* ── Financial KPIs (Sales indicators — FIRST section) ──────────────────── */}
       <SectionHeader>{t("funnel_sales_indicators")}</SectionHeader>
-      <div className="flex flex-wrap gap-3 mt-2">
+      <div className="flex flex-wrap gap-3 mt-2 w-full">
         <DarkKpiCard label={t("funnel_kpi_total_sales")} value={fmtInt(fk.totalSales)}  color="#F59E0B" />
         <DarkKpiCard label="MRR"                          value={fmtUsd(fk.mrr)}         color="#F59E0B" />
         <DarkKpiCard label="SARPU"                        value={fmtUsd(fk.sarpu)}       color="#60A5FA" />
         <DarkKpiCard label={t("funnel_kpi_refunded")}    value={fmtUsd(fk.refunded)}    color="#F87171" />
         <DarkKpiCard label={t("funnel_kpi_net_total")}   value={fmtUsd(fk.netTotal)}    color="#86EFAC" />
+      </div>
+
+      {/* ── Key stages: table left + chart right ─────────────────────────────── */}
+      <SectionHeader>{t("funnel_key_stages")}</SectionHeader>
+      <div className="grid grid-cols-3 gap-4 mt-2">
+        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <DataTable data={keyRows} columns={crCols} dark />
+        </div>
+        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <FunnelLinesChart data={keyTs} title={t("funnel_key_stages")} />
+        </div>
+      </div>
+
+      {/* ── Negative stages: table left + chart right ───────────────────────── */}
+      <SectionHeader>{t("funnel_negative_stages")}</SectionHeader>
+      <div className="grid grid-cols-3 gap-4 mt-2">
+        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <DataTable data={negRows} columns={crCols} dark />
+        </div>
+        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <FunnelLinesChart data={negTs} title={t("funnel_negative_stages")} />
+        </div>
+      </div>
+
+      {/* ── Post-sales stages: table left + chart right ─────────────────────── */}
+      <SectionHeader>{t("funnel_postsale_stages")}</SectionHeader>
+      <div className="grid grid-cols-3 gap-4 mt-2">
+        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <DataTable data={postRows} columns={crCols} dark />
+        </div>
+        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <FunnelLinesChart data={postTs} title={t("funnel_postsale_stages")} />
+        </div>
       </div>
 
       {/* ── Lead sources + Sector ───────────────────────────────────────────────── */}
