@@ -185,8 +185,10 @@ export interface FinancialKpis {
 }
 
 export function financialKpis(records: OrderRecord[]): FinancialKpis {
-  const paid = records.filter((r) => hasStage(r, PAID_STATUS_CODE));
-  const refund = records.filter((r) => hasStage(r, REFUND_STATUS_CODE));
+  // Use popadal code when available; fall back to cfFirstPayment > 0 when the
+  // stage wasn't recorded in popadal_v_statusy (e.g. orders pre-dating the field)
+  const paid = records.filter((r) => hasStage(r, PAID_STATUS_CODE) || r.cfFirstPayment > 0);
+  const refund = records.filter((r) => hasStage(r, REFUND_STATUS_CODE) || r.cfRefunded > 0);
 
   const sarpu = paid.reduce((s, r) => s + r.cfFirstPayment, 0);
   const mrr = paid.reduce((s, r) => s + (r.cfPaymentPeriod > 0 ? r.cfFirstPayment / r.cfPaymentPeriod : 0), 0);

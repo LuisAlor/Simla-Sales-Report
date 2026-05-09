@@ -126,8 +126,6 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfPaymentPeriod:  cfFloat(cf, "payment_first_period_license"),
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
-    // DEBUG — remove once popadal codes are confirmed correct:
-    ...(() => { if (cf["popadal_v_statusy"]) console.debug("[popadal raw]", o.id, cf["popadal_v_statusy"]); return {}; })(),
     managerSd:        cfSelectName(cf, "manager_sd"),
     cfDesktop: ["true", "1", true, 1].includes(cf["amplitude_creator_first_login_desktop"] as string | boolean | number),
     cfMobile:  ["true", "1", true, 1].includes(cf["amplitude_creator_first_login_mobile"]  as string | boolean | number),

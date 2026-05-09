@@ -108,10 +108,12 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
       {/* ── Key stages: table left + chart right ─────────────────────────────── */}
       <SectionHeader>{t("funnel_key_stages")}</SectionHeader>
       <div className="grid grid-cols-3 gap-4 mt-2">
-        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+        <div className="relative col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <DataTable data={keyRows} columns={crCols} dark />
         </div>
-        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+        <div className="relative col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <FunnelLinesChart data={keyTs} title={t("funnel_key_stages")} />
         </div>
       </div>
@@ -119,10 +121,12 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
       {/* ── Negative stages: table left + chart right ───────────────────────── */}
       <SectionHeader>{t("funnel_negative_stages")}</SectionHeader>
       <div className="grid grid-cols-3 gap-4 mt-2">
-        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+        <div className="relative col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <DataTable data={negRows} columns={crCols} dark />
         </div>
-        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+        <div className="relative col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <FunnelLinesChart data={negTs} title={t("funnel_negative_stages")} />
         </div>
       </div>
@@ -130,10 +134,12 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
       {/* ── Post-sales stages: table left + chart right ─────────────────────── */}
       <SectionHeader>{t("funnel_postsale_stages")}</SectionHeader>
       <div className="grid grid-cols-3 gap-4 mt-2">
-        <div className="col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+        <div className="relative col-span-1 bg-navy-light border border-navy-border rounded-xl overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <DataTable data={postRows} columns={crCols} dark />
         </div>
-        <div className="col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+        <div className="relative col-span-2 bg-navy-light border border-navy-border rounded-xl overflow-hidden p-4">
+          <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
           <FunnelLinesChart data={postTs} title={t("funnel_postsale_stages")} />
         </div>
       </div>
@@ -142,14 +148,16 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
       <SectionHeader>{t("funnel_lead_sources")}</SectionHeader>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
         {plat.length > 0 ? (
-          <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+          <div className="relative bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+            <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
             <PlatformsDonutChart data={plat} title={t("funnel_lead_sources")} centerLabel={t("funnel_center_platform")} />
           </div>
         ) : (
           <p className="text-slate-500 text-sm">{t("funnel_no_platform")}</p>
         )}
         {sector.length > 0 ? (
-          <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+          <div className="relative bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+            <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-xl" style={{ background: "linear-gradient(90deg,#06b6d4,#3b82f6)" }} />
             <PlatformsDonutChart data={sector} title={t("funnel_sector")} centerLabel={t("funnel_center_sector")} />
           </div>
         ) : (
