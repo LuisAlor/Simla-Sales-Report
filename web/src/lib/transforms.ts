@@ -135,7 +135,7 @@ export function funnelStageCounts(records: OrderRecord[], stages: StageEntry[], 
       statusCode: popadalCode,
       label,
       count,
-      crPct: denominator > 0 ? Math.round((count / denominator) * 1000) / 10 : 0,
+      crPct: denominator > 0 ? Math.round((count / denominator) * 100) : 0,
     };
   });
 }
