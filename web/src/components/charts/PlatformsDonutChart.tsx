@@ -14,7 +14,7 @@ interface Props {
   centerLabel?: string;
 }
 
-export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: Props) {
+export function PlatformsDonutChart({ data, title }: Props) {
   const total = data.reduce((s, d) => s + d.count, 0);
 
   const option = {
@@ -27,73 +27,56 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
       borderColor: "#2D3452",
       textStyle: { color: "#CBD5E1" },
     },
-    legend: {
-      type: "scroll" as const,
-      orient: "vertical" as const,
-      right: 6,
-      top: "middle",
-      itemGap: 6,
-      textStyle: { color: "#CBD5E1", fontSize: 10 },
-      pageIconSize: 10,
-      pageTextStyle: { color: "#94A3B8" },
-      itemWidth: 10,
-      itemHeight: 6,
-      formatter: (name: string) => {
-        const item = data.find((d) => d.platform === name);
-        return item ? `${name}  ${item.count}` : name;
-      },
-    },
-    graphic: [
-      {
-        type: "text",
-        left: "33%",
-        top: "middle",
-        bounding: "raw",
-        z: 100,
-        style: {
-          text: `${total.toLocaleString()}\n${centerLabel}`,
-          textAlign: "center",
-          fill: "#FFFFFF",
-          fontSize: 15,
-          fontWeight: "bold",
-          lineHeight: 22,
-        },
-      },
-    ],
+    legend: { show: false },
     series: [
       {
         name: title ?? "",
         type: "pie",
-        radius: ["38%", "60%"],
-        center: ["33%", "52%"],
+        radius: ["42%", "68%"],
+        center: ["50%", "50%"],
         data: data.map((r) => ({ name: r.platform, value: r.count })),
         label: {
           show: true,
           formatter: "{d}%",
           color: "#FFFFFF",
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: "bold",
           textBorderWidth: 0,
         },
         labelLine: {
           show: true,
-          length: 8,
-          length2: 6,
+          length: 6,
+          length2: 4,
           lineStyle: { color: "#4B5563" },
         },
-        emphasis: {
-          label: { show: true, fontSize: 13, fontWeight: "bold", color: "#FFFFFF" },
-          scaleSize: 4,
-        },
+        emphasis: { scaleSize: 4 },
       },
     ],
-    title: {
-      text: title ?? "",
-      textStyle: { fontSize: 13, color: "#FFFFFF" },
-      top: 6,
-      left: 12,
-    },
   };
 
-  return <ReactECharts option={option} style={{ height: 360 }} notMerge lazyUpdate />;
+  return (
+    <div>
+      {title && <p className="text-sm font-semibold text-white mb-3 px-1">{title}</p>}
+      <div className="flex gap-4 items-center">
+        {/* Legend table — left */}
+        <div className="flex-shrink-0 w-48 flex flex-col">
+          {data.map((item, i) => (
+            <div key={item.platform} className="flex items-center gap-2 py-[4px] border-b border-white/5 last:border-0">
+              <div className="w-5 h-[2px] flex-shrink-0 rounded" style={{ backgroundColor: EXTENDED_PALETTE[i % EXTENDED_PALETTE.length] }} />
+              <span className="flex-1 text-[10px] text-slate-300 truncate" title={item.platform}>{item.platform}</span>
+              <span className="text-[10px] font-semibold text-white ml-1">{item.count}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
+            <span className="text-[10px] text-slate-400">Sum</span>
+            <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{total}</span>
+          </div>
+        </div>
+        {/* Donut — right */}
+        <div className="flex-1 min-w-0">
+          <ReactECharts option={option} style={{ height: Math.max(220, data.length * 18 + 40) }} notMerge lazyUpdate />
+        </div>
+      </div>
+    </div>
+  );
 }
