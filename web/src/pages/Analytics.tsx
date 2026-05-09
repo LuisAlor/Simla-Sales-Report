@@ -13,7 +13,7 @@ import { ManagerBarChart } from "@/components/charts/ManagerBarChart";
 import { TopProductsChart } from "@/components/charts/TopProductsChart";
 import {
   revenueOverTime, ordersByStatus, ordersByManager, topProducts, repeatCustomers,
-  type ManagerRow, type RepeatCustomer,
+  NO_MANAGER_KEY, type ManagerRow, type RepeatCustomer,
 } from "@/lib/transforms";
 import { fmtUsd, fmtInt } from "@/lib/utils";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
@@ -373,7 +373,10 @@ export function Analytics({ records, items, freq, statusLabels }: Props) {
   }, [user?.id]);
 
   const managerCols = useMemo(() => [
-    colMgr.accessor("managerName", { header: t("table_manager") }),
+    colMgr.accessor("managerName", {
+      header: t("table_manager"),
+      cell: (i) => i.getValue() === NO_MANAGER_KEY ? t("chart_no_manager") : i.getValue(),
+    }),
     colMgr.accessor("orders",      { header: t("table_orders"),     cell: (i) => fmtInt(i.getValue()) }),
     colMgr.accessor("revenue",     { header: t("table_revenue"),    cell: (i) => fmtUsd(i.getValue()) }),
     colMgr.accessor("avgOrder",    { header: t("table_avg_ticket"), cell: (i) => fmtUsd(i.getValue()) }),
