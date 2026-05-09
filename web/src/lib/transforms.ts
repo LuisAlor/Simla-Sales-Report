@@ -208,26 +208,30 @@ export interface PlatformRow {
   count: number;
 }
 
+const NO_DATA = "No rellenado";
+
 export function platformsBreakdown(records: OrderRecord[]): PlatformRow[] {
   const map = new Map<string, number>();
   for (const r of records) {
-    const raw = r.cfPrevPlatform ?? "";
-    const p = raw ? (PLATFORM_LABELS[raw.toLowerCase()] ?? raw) : "(Desconocido)";
-    map.set(p, (map.get(p) ?? 0) + 1);
+    const raw = (r.cfPrevPlatform ?? "").trim();
+    const label = raw ? (PLATFORM_LABELS[raw.toLowerCase()] ?? raw) : NO_DATA;
+    const key = label === "No rellenado" ? NO_DATA : label;
+    map.set(key, (map.get(key) ?? 0) + 1);
   }
   return [...map.entries()]
     .map(([platform, count]) => ({ platform, count }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.platform === NO_DATA ? 1 : b.platform === NO_DATA ? -1 : b.count - a.count);
 }
 
 export function sectorBreakdown(records: OrderRecord[]): PlatformRow[] {
   const map = new Map<string, number>();
   for (const r of records) {
-    const raw = r.cfSector ?? "";
-    const name = raw ? (SECTOR_LABELS[raw.toLowerCase()] ?? raw) : "(Desconocido)";
-    map.set(name, (map.get(name) ?? 0) + 1);
+    const raw = (r.cfSector ?? "").trim();
+    const name = raw ? (SECTOR_LABELS[raw.toLowerCase()] ?? raw) : NO_DATA;
+    const key = name === "No rellenado" ? NO_DATA : name;
+    map.set(key, (map.get(key) ?? 0) + 1);
   }
   return [...map.entries()]
     .map(([platform, count]) => ({ platform, count }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.platform === NO_DATA ? 1 : b.platform === NO_DATA ? -1 : b.count - a.count);
 }

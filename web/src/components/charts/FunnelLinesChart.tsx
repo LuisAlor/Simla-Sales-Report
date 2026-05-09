@@ -45,7 +45,7 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
           .sort((a, b) => Number(b.value) - Number(a.value))
           .map((p) => `<div style="display:flex;justify-content:space-between;gap:16px"><span style="color:${p.color}">— ${p.seriesName}</span><b>${p.value}</b></div>`)
           .join("");
-        return `<div style="min-width:220px"><div style="font-weight:bold;margin-bottom:6px;color:#F1F5F9">${date}</div>${rows}<div style="border-top:1px solid #374151;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between"><span style="color:#94A3B8">Sum</span><b style="color:#F1F5F9">${total}</b></div></div>`;
+        return `<div style="min-width:220px"><div style="font-weight:bold;margin-bottom:6px;color:#F1F5F9">${date}</div>${rows}<div style="border-top:1px solid #374151;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between"><span style="color:#94A3B8">Total</span><b style="color:#F1F5F9">${total}</b></div></div>`;
       },
     },
     legend: { show: false },
@@ -82,7 +82,7 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
           </div>
         ))}
         <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
-          <span className="text-[10px] text-slate-400">Sum</span>
+          <span className="text-[10px] text-slate-400">Total</span>
           <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{sum}</span>
         </div>
       </div>
