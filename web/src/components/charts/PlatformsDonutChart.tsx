@@ -29,10 +29,11 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     },
     legend: {
       type: "scroll" as const,
-      orient: "horizontal" as const,
-      bottom: 4,
-      left: "center",
-      textStyle: { color: "#CBD5E1", fontSize: 11 },
+      orient: "vertical" as const,
+      right: 6,
+      top: "middle",
+      itemGap: 6,
+      textStyle: { color: "#CBD5E1", fontSize: 10 },
       pageIconSize: 10,
       pageTextStyle: { color: "#94A3B8" },
       itemWidth: 10,
@@ -45,14 +46,15 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     graphic: [
       {
         type: "text",
-        left: "center",
+        left: "33%",
         top: "middle",
+        bounding: "raw",
         z: 100,
         style: {
           text: `${total.toLocaleString()}\n${centerLabel}`,
           textAlign: "center",
           fill: "#FFFFFF",
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: "bold",
           lineHeight: 22,
         },
@@ -63,7 +65,7 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
         name: title ?? "",
         type: "pie",
         radius: ["38%", "60%"],
-        center: ["50%", "50%"],
+        center: ["33%", "52%"],
         data: data.map((r) => ({ name: r.platform, value: r.count })),
         label: {
           show: true,
@@ -93,5 +95,5 @@ export function PlatformsDonutChart({ data, title, centerLabel = "registros" }: 
     },
   };
 
-  return <ReactECharts option={option} style={{ height: 380 }} notMerge lazyUpdate />;
+  return <ReactECharts option={option} style={{ height: 360 }} notMerge lazyUpdate />;
 }
