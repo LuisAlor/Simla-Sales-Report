@@ -98,6 +98,31 @@ export const PALETTE = [
   "#10B981", "#EF4444", "#6366F1", "#94A3B8",
 ];
 
+export const SECTOR_LABELS: Record<string, string> = {
+  "desconocido":              "Desconocido",
+  "farma":                    "Farmacéutico",
+  "salud-clinicas":           "Salud (Clínicas)",
+  "moda-textil":              "Moda / Textil",
+  "regalos-flores":           "Regalos / Flores",
+  "eventos-fiestas":          "Eventos / Fiestas",
+  "turismo-viajes":           "Turismo / Viajes",
+  "inmobiliario":             "Inmobiliario",
+  "educacion":                "Educación",
+  "marketing-publicidad":     "Marketing / Publicidad",
+  "tecnologia-software":      "Tecnología / Software",
+  "servicios-profesionales":  "Servicios profesionales",
+  "reclutamiento":            "Reclutamiento",
+  "automotriz":               "Automotriz",
+  "logistica-entregas":       "Logística / Entregas",
+  "deportes":                 "Deportes",
+  "limpieza-higiene":         "Limpieza / Higiene",
+  "bebes-ninos":              "Bebés / Niños",
+  "retail-ecommerce":         "Retail / eCommerce",
+  "dropshipping":             "Dropshipping",
+  "cosmeticos":               "Cosméticos",
+  "otro":                     "Otro",
+};
+
 export const PLATFORM_LABELS: Record<string, string> = {
   "ninguna":               "Ninguna",
   "desconocida":           "Desconocida",

@@ -9,6 +9,7 @@ import { PlatformsDonutChart } from "@/components/charts/PlatformsDonutChart";
 import {
   financialKpis,
   platformsBreakdown,
+  sectorBreakdown,
   funnelStageCounts,
   funnelOverTime,
   type StageRow,
@@ -64,8 +65,9 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
   // ── Financial KPIs ───────────────────────────────────────────────────────────
   const fk = useMemo(() => financialKpis(records), [records]);
 
-  // ── Platform breakdown ───────────────────────────────────────────────────────
-  const plat = useMemo(() => platformsBreakdown(records), [records]);
+  // ── Platform / Sector breakdown ──────────────────────────────────────────────
+  const plat   = useMemo(() => platformsBreakdown(records), [records]);
+  const sector = useMemo(() => sectorBreakdown(records),    [records]);
 
   // ── Stage counts for CR tables ───────────────────────────────────────────────
   const keyRows  = useMemo(() => funnelStageCounts(records, FUNNEL_KEY_STAGES, factRegs), [records, factRegs]);
@@ -130,15 +132,24 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
         <DarkKpiCard label={t("funnel_kpi_net_total")}   value={fmtUsd(fk.netTotal)}    color="#86EFAC" />
       </div>
 
-      {/* ── Lead sources ────────────────────────────────────────────────────────── */}
+      {/* ── Lead sources + Sector ───────────────────────────────────────────────── */}
       <SectionHeader>{t("funnel_lead_sources")}</SectionHeader>
-      {plat.length > 0 ? (
-        <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3 mt-2">
-          <PlatformsDonutChart data={plat} title={t("funnel_lead_sources")} />
-        </div>
-      ) : (
-        <p className="text-slate-500 text-sm mt-2">{t("funnel_no_platform")}</p>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
+        {plat.length > 0 ? (
+          <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+            <PlatformsDonutChart data={plat} title={t("funnel_lead_sources")} centerLabel={t("funnel_center_platform")} />
+          </div>
+        ) : (
+          <p className="text-slate-500 text-sm">{t("funnel_no_platform")}</p>
+        )}
+        {sector.length > 0 ? (
+          <div className="bg-navy-light border border-navy-border rounded-xl overflow-hidden p-3">
+            <PlatformsDonutChart data={sector} title={t("funnel_sector")} centerLabel={t("funnel_center_sector")} />
+          </div>
+        ) : (
+          <p className="text-slate-500 text-sm">{t("funnel_no_sector")}</p>
+        )}
+      </div>
     </div>
   );
 }
