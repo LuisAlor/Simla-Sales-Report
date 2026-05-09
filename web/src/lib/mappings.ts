@@ -100,7 +100,7 @@ export const PALETTE = [
 ];
 
 export const SECTOR_LABELS: Record<string, string> = {
-  "desconocido":              "Desconocido",
+  "desconocido":              "No rellenado",
   "farma":                    "Farmacéutico",
   "salud-clinicas":           "Salud (Clínicas)",
   "moda-textil":              "Moda / Textil",
@@ -125,9 +125,9 @@ export const SECTOR_LABELS: Record<string, string> = {
 };
 
 export const PLATFORM_LABELS: Record<string, string> = {
-  "ninguna":               "Ninguna",
-  "desconocida":           "Desconocida",
-  "desconocido":           "Desconocido",
+  "ninguna":               "No rellenado",
+  "desconocida":           "No rellenado",
+  "desconocido":           "No rellenado",
   "otra":                  "Otra",
   "kommo":                 "Kommo",
   "clientify":             "Clientify",

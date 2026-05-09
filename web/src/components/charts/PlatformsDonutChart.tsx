@@ -58,7 +58,11 @@ export function PlatformsDonutChart({ data, title }: Props) {
     <div>
       {title && <p className="text-sm font-semibold text-white mb-3 px-1">{title}</p>}
       <div className="flex gap-4 items-center">
-        {/* Legend table — left */}
+        {/* Donut — left */}
+        <div className="flex-1 min-w-0">
+          <ReactECharts option={option} style={{ height: Math.max(220, data.length * 18 + 40) }} notMerge lazyUpdate />
+        </div>
+        {/* Legend table — right */}
         <div className="flex-shrink-0 w-48 flex flex-col">
           {data.map((item, i) => (
             <div key={item.platform} className="flex items-center gap-2 py-[4px] border-b border-white/5 last:border-0">
@@ -68,13 +72,9 @@ export function PlatformsDonutChart({ data, title }: Props) {
             </div>
           ))}
           <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
-            <span className="text-[10px] text-slate-400">Sum</span>
+            <span className="text-[10px] text-slate-400">Total</span>
             <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{total}</span>
           </div>
-        </div>
-        {/* Donut — right */}
-        <div className="flex-1 min-w-0">
-          <ReactECharts option={option} style={{ height: Math.max(220, data.length * 18 + 40) }} notMerge lazyUpdate />
         </div>
       </div>
     </div>
