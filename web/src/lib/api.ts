@@ -271,8 +271,8 @@ export async function fetchOrders(p: FetchOrdersParams): Promise<RawOrder[]> {
   const filter: Record<string, string | number> = {};
   if (p.dateFrom) filter["createdAtFrom"] = `${p.dateFrom} 00:00:00`;
   if (p.dateTo)   filter["createdAtTo"]   = `${p.dateTo} 23:59:59`;
-  if (p.firstPaymentFrom) filter["customFields][firstpaymentdate][gte][abs"] = p.firstPaymentFrom;
-  if (p.firstPaymentTo)   filter["customFields][firstpaymentdate][lte][abs"] = p.firstPaymentTo;
+  if (p.firstPaymentFrom) filter["customFields][firstpaymentdate][min"] = p.firstPaymentFrom;
+  if (p.firstPaymentTo)   filter["customFields][firstpaymentdate][max"] = p.firstPaymentTo;
   if (p.orderType) filter["orderType"] = p.orderType;
 
   const arrayFilter: Record<string, string[]> = {};

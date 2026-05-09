@@ -612,10 +612,12 @@ function EmptyState() {
 
 // ── Loading animation (video frame scanner + circular progress ring) ─────────
 function SearchAnimation({ page, total }: { page: number; total: number }) {
+  const indeterminate = total === 0;
   const pct = total > 0 ? Math.round((page / total) * 100) : 0;
   const R = 50;
   const circ = 2 * Math.PI * R;
-  const offset = circ * (1 - pct / 100);
+  // Indeterminate: show a 25% arc that spins. Determinate: show filled arc.
+  const offset = indeterminate ? circ * 0.75 : circ * (1 - pct / 100);
 
   const rows = [
     { w: "78%", delay: "0s" },
@@ -642,6 +644,10 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
         @keyframes rowGlow {
           0%   { opacity: 0.12; }
           100% { opacity: 0.5; }
+        }
+        @keyframes ringSpinCw {
+          from { transform: rotate(-90deg); }
+          to   { transform: rotate(270deg); }
         }
       `}</style>
 
@@ -701,7 +707,14 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
       {/* Circular progress ring */}
       <div className="flex items-center gap-6">
         <div className="relative w-24 h-24">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <svg
+            className="w-full h-full"
+            viewBox="0 0 120 120"
+            style={indeterminate
+              ? { animation: "ringSpinCw 1.1s linear infinite" }
+              : { transform: "rotate(-90deg)" }
+            }
+          >
             <circle cx="60" cy="60" r={R} fill="none" stroke="#1f2937" strokeWidth="10" />
             <circle cx="60" cy="60" r={R} fill="none"
               stroke="url(#tldv-ring)"
@@ -709,7 +722,7 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
               strokeLinecap="round"
               strokeDasharray={circ}
               strokeDashoffset={offset}
-              style={{ transition: "stroke-dashoffset 0.45s ease" }}
+              style={indeterminate ? undefined : { transition: "stroke-dashoffset 0.45s ease" }}
             />
             <defs>
               <linearGradient id="tldv-ring" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -718,15 +731,19 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
               </linearGradient>
             </defs>
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
-            {pct}%
-          </span>
+          {!indeterminate && (
+            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
+              {pct}%
+            </span>
+          )}
         </div>
         <div className="flex flex-col gap-0.5">
           <p className="text-white font-semibold text-base leading-tight">
-            {total > 0 ? `Página ${page} de ${total}` : "Iniciando…"}
+            {indeterminate ? "Iniciando…" : `Página ${page} de ${total}`}
           </p>
-          <p className="text-gray-500 text-sm">{pct}% completado</p>
+          <p className="text-gray-500 text-sm">
+            {indeterminate ? "Conectando con CRM…" : `${pct}% completado`}
+          </p>
         </div>
       </div>
     </div>
