@@ -33,8 +33,8 @@ export function DataTable<T>({ data, columns, dark = false }: Props<T>) {
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const headerBg   = d ? "bg-navy-light"      : "bg-slate-50";
-  const headerText = d ? "text-slate-400"      : "text-slate-500";
+  const headerBg   = d ? "bg-slate-900/70 border-b border-cyan-500/25" : "bg-slate-100 border-b border-blue-200";
+  const headerText = d ? "text-slate-300"      : "text-slate-600";
   const rowHover   = d ? "hover:bg-navy-border": "hover:bg-slate-50";
   const borderColor = d ? "border-navy-border" : "border-slate-200";
   const cellText   = d ? "text-slate-300"      : "text-slate-700";

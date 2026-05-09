@@ -97,7 +97,7 @@ export function Funnel({ records, freq, statusLabels: _statusLabels }: Props) {
 
       {/* ── Financial KPIs (Sales indicators — FIRST section) ──────────────────── */}
       <SectionHeader>{t("funnel_sales_indicators")}</SectionHeader>
-      <div className="flex flex-wrap gap-3 mt-2 w-full">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
         <DarkKpiCard label={t("funnel_kpi_total_sales")} value={fmtInt(fk.totalSales)}  color="#F59E0B" />
         <DarkKpiCard label="MRR"                          value={fmtUsd(fk.mrr)}         color="#F59E0B" />
         <DarkKpiCard label="SARPU"                        value={fmtUsd(fk.sarpu)}       color="#60A5FA" />
