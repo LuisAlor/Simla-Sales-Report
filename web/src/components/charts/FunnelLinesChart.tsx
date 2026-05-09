@@ -5,9 +5,10 @@ import { FUNNEL_COLORS } from "@/lib/mappings";
 interface Props {
   data: FunnelTsPoint[];
   title?: string;
+  yLabel?: string;
 }
 
-export function FunnelLinesChart({ data, title = "" }: Props) {
+export function FunnelLinesChart({ data, title, yLabel = "N°" }: Props) {
   const stageKeys = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== "date") : [];
 
   const stageTotals = stageKeys.map((key, i) => ({
@@ -49,7 +50,7 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
       },
     },
     legend: { show: false },
-    grid: { top: title ? 38 : 16, bottom: 20, left: 16, right: 8, containLabel: true },
+    grid: { top: 24, bottom: 24, left: 40, right: 8, containLabel: false },
     xAxis: {
       type: "category",
       data: data.map((d) => d.date),
@@ -59,21 +60,24 @@ export function FunnelLinesChart({ data, title = "" }: Props) {
     },
     yAxis: {
       type: "value",
+      name: yLabel,
+      nameLocation: "end" as const,
+      nameTextStyle: { color: "#94A3B8", fontSize: 10, align: "left", padding: [0, 0, 4, 4] },
       splitLine: { lineStyle: { color: "#2D3452" } },
       axisLabel: { color: "#94A3B8", fontSize: 11 },
     },
     series,
-    ...(title ? { title: { text: title, textStyle: { fontSize: 13, color: "#FFFFFF" }, top: 8, left: 12 } } : {}),
   };
 
   return (
     <div className="flex gap-3">
       {/* Chart */}
       <div className="flex-1 min-w-0">
+        {title && <p className="text-sm font-semibold text-white mb-3">{title}</p>}
         <ReactECharts option={option} style={{ height: chartHeight }} notMerge lazyUpdate />
       </div>
       {/* Stage totals table — right */}
-      <div className="flex-shrink-0 w-52 flex flex-col self-start" style={{ marginTop: title ? 38 : 16 }}>
+      <div className="flex-shrink-0 w-52 flex flex-col self-start" style={{ marginTop: title ? 32 : 0 }}>
         {stageTotals.map((st) => (
           <div key={st.key} className="flex items-center gap-2 py-[5px] border-b border-white/5 last:border-0">
             <div className="w-5 h-[2px] flex-shrink-0 rounded" style={{ backgroundColor: st.color }} />
