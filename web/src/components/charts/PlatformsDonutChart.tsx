@@ -1,4 +1,5 @@
 import ReactECharts from "echarts-for-react";
+import { useState } from "react";
 import type { PlatformRow } from "@/lib/transforms";
 
 const EXTENDED_PALETTE = [
@@ -15,7 +16,19 @@ interface Props {
 }
 
 export function PlatformsDonutChart({ data, title }: Props) {
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+
   const total = data.reduce((s, d) => s + d.count, 0);
+
+  function toggleSlice(name: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  }
+
+  const visibleData = data.filter((r) => !hidden.has(r.platform));
 
   const option = {
     backgroundColor: "transparent",
@@ -34,7 +47,12 @@ export function PlatformsDonutChart({ data, title }: Props) {
         type: "pie",
         radius: ["42%", "68%"],
         center: ["50%", "50%"],
-        data: data.map((r) => ({ name: r.platform, value: r.count })),
+        // Keep original colour index per item so colours don't shift on hide
+        data: visibleData.map((r) => ({
+          name: r.platform,
+          value: r.count,
+          itemStyle: { color: EXTENDED_PALETTE[data.indexOf(r) % EXTENDED_PALETTE.length] },
+        })),
         label: {
           show: true,
           formatter: "{d}%",
@@ -62,15 +80,29 @@ export function PlatformsDonutChart({ data, title }: Props) {
         <div className="flex-1 min-w-0">
           <ReactECharts option={option} style={{ height: Math.max(220, data.length * 18 + 40) }} notMerge lazyUpdate />
         </div>
-        {/* Legend table — right */}
+        {/* Legend table — right, clickable to toggle slices */}
         <div className="flex-shrink-0 w-48 flex flex-col">
-          {data.map((item, i) => (
-            <div key={item.platform} className="flex items-center gap-2 py-[4px] border-b border-white/5 last:border-0">
-              <div className="w-5 h-[2px] flex-shrink-0 rounded" style={{ backgroundColor: EXTENDED_PALETTE[i % EXTENDED_PALETTE.length] }} />
-              <span className="flex-1 text-[10px] text-slate-300 truncate" title={item.platform}>{item.platform}</span>
-              <span className="text-[10px] font-semibold text-white ml-1">{item.count}</span>
-            </div>
-          ))}
+          {data.map((item, i) => {
+            const isHidden = hidden.has(item.platform);
+            return (
+              <div
+                key={item.platform}
+                onClick={() => toggleSlice(item.platform)}
+                className="flex items-center gap-2 py-[4px] border-b border-white/5 last:border-0 cursor-pointer select-none hover:opacity-80 transition-opacity"
+                style={{ opacity: isHidden ? 0.3 : 1 }}
+                title={isHidden ? "Click to show" : "Click to hide"}
+              >
+                <div
+                  className="w-5 h-[2px] flex-shrink-0 rounded transition-colors"
+                  style={{ backgroundColor: isHidden ? "#4B5563" : EXTENDED_PALETTE[i % EXTENDED_PALETTE.length] }}
+                />
+                <span className="flex-1 text-[10px] text-slate-300 truncate" title={item.platform}>
+                  {isHidden ? <s className="opacity-60">{item.platform}</s> : item.platform}
+                </span>
+                <span className="text-[10px] font-semibold text-white ml-1">{item.count}</span>
+              </div>
+            );
+          })}
           <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
             <span className="text-[10px] text-slate-400">Total</span>
             <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{total}</span>

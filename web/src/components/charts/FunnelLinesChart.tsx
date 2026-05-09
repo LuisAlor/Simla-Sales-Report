@@ -1,4 +1,5 @@
 import ReactECharts from "echarts-for-react";
+import { useState } from "react";
 import type { FunnelTsPoint } from "@/lib/transforms";
 import { FUNNEL_COLORS } from "@/lib/mappings";
 
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export function FunnelLinesChart({ data, title, yLabel = "N°" }: Props) {
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+
   const stageKeys = data.length > 0 ? Object.keys(data[0]).filter((k) => k !== "date") : [];
 
   const stageTotals = stageKeys.map((key, i) => ({
@@ -18,16 +21,28 @@ export function FunnelLinesChart({ data, title, yLabel = "N°" }: Props) {
   }));
   const sum = stageTotals.reduce((s, st) => s + st.total, 0);
 
-  const series = stageKeys.map((key, i) => ({
-    name: key,
-    type: "line",
-    data: data.map((d) => d[key]),
-    smooth: false,
-    lineStyle: { color: FUNNEL_COLORS[i % FUNNEL_COLORS.length], width: 2 },
-    itemStyle: { color: FUNNEL_COLORS[i % FUNNEL_COLORS.length] },
-    symbol: "circle",
-    symbolSize: 5,
-  }));
+  function toggleSeries(key: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  // Preserve original colour index even when some series are filtered out
+  const series = stageKeys
+    .map((key, i) => ({ key, i }))
+    .filter(({ key }) => !hidden.has(key))
+    .map(({ key, i }) => ({
+      name: key,
+      type: "line",
+      data: data.map((d) => d[key]),
+      smooth: false,
+      lineStyle: { color: FUNNEL_COLORS[i % FUNNEL_COLORS.length], width: 2 },
+      itemStyle: { color: FUNNEL_COLORS[i % FUNNEL_COLORS.length] },
+      symbol: "circle",
+      symbolSize: 5,
+    }));
 
   const chartHeight = Math.max(260, stageKeys.length * 24 + 50);
 
@@ -76,15 +91,29 @@ export function FunnelLinesChart({ data, title, yLabel = "N°" }: Props) {
         {title && <p className="text-sm font-semibold text-white mb-3">{title}</p>}
         <ReactECharts option={option} style={{ height: chartHeight }} notMerge lazyUpdate />
       </div>
-      {/* Stage totals table — right */}
+      {/* Stage totals table — right, clickable to toggle series */}
       <div className="flex-shrink-0 w-52 flex flex-col self-start" style={{ marginTop: title ? 32 : 0 }}>
-        {stageTotals.map((st) => (
-          <div key={st.key} className="flex items-center gap-2 py-[5px] border-b border-white/5 last:border-0">
-            <div className="w-5 h-[2px] flex-shrink-0 rounded" style={{ backgroundColor: st.color }} />
-            <span className="flex-1 text-[10px] text-slate-300 truncate" title={st.key}>{st.key}</span>
-            <span className="text-[10px] font-semibold text-white">{st.total}</span>
-          </div>
-        ))}
+        {stageTotals.map((st) => {
+          const isHidden = hidden.has(st.key);
+          return (
+            <div
+              key={st.key}
+              onClick={() => toggleSeries(st.key)}
+              className="flex items-center gap-2 py-[5px] border-b border-white/5 last:border-0 cursor-pointer select-none transition-opacity hover:opacity-80"
+              style={{ opacity: isHidden ? 0.3 : 1 }}
+              title={isHidden ? "Click to show" : "Click to hide"}
+            >
+              <div
+                className="w-5 h-[2px] flex-shrink-0 rounded transition-all"
+                style={{ backgroundColor: isHidden ? "#4B5563" : st.color }}
+              />
+              <span className="flex-1 text-[10px] text-slate-300 truncate" title={st.key}>
+                {isHidden ? <s className="opacity-60">{st.key}</s> : st.key}
+              </span>
+              <span className="text-[10px] font-semibold text-white">{st.total}</span>
+            </div>
+          );
+        })}
         <div className="flex items-center justify-between pt-2 mt-1 border-t border-white/20">
           <span className="text-[10px] text-slate-400">Total</span>
           <span className="text-[11px] font-bold text-white bg-blue-700/40 px-2 py-0.5 rounded">{sum}</span>
