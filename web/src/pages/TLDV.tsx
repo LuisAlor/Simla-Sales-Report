@@ -11,7 +11,6 @@ import {
   Building2,
   Play,
   UserCircle,
-  Layers,
   Tag,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";

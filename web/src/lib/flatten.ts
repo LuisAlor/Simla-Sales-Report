@@ -79,6 +79,8 @@ export interface OrderRecord {
   cfRefunded: number;
   popadalVStatusy: string[];
   managerSd: string | null;
+  cfDesktop: boolean;
+  cfMobile:  boolean;
 }
 
 export function flattenOrder(o: RawOrder): OrderRecord {
@@ -125,6 +127,8 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
     managerSd:        cfSelectName(cf, "manager_sd"),
+    cfDesktop: cf["amplitude_creator_first_login_desktop"] === true || cf["amplitude_creator_first_login_desktop"] === "true",
+    cfMobile:  cf["amplitude_creator_first_login_mobile"]  === true || cf["amplitude_creator_first_login_mobile"]  === "true",
   };
 }
 
