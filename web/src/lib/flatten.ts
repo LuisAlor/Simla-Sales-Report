@@ -127,8 +127,8 @@ export function flattenOrder(o: RawOrder): OrderRecord {
     cfRefunded:       cfFloat(cf, "refunded_amount"),
     popadalVStatusy:  cfList(cf, "popadal_v_statusy"),
     managerSd:        cfSelectName(cf, "manager_sd"),
-    cfDesktop: cf["amplitude_creator_first_login_desktop"] === true || cf["amplitude_creator_first_login_desktop"] === "true",
-    cfMobile:  cf["amplitude_creator_first_login_mobile"]  === true || cf["amplitude_creator_first_login_mobile"]  === "true",
+    cfDesktop: ["true", "1", true, 1].includes(cf["amplitude_creator_first_login_desktop"] as string | boolean | number),
+    cfMobile:  ["true", "1", true, 1].includes(cf["amplitude_creator_first_login_mobile"]  as string | boolean | number),
   };
 }
 
