@@ -569,13 +569,7 @@ export function TLDV({ managerSdMap }: Props) {
                   )}
 
                   {/* Loading */}
-                  {aiReportLoading && (
-                    <div className="flex flex-col items-center justify-center gap-3 py-16">
-                      <Bot size={28} className="text-violet-400 animate-pulse" />
-                      <p className="text-gray-400 text-sm">{t("tldv_ai_generating")}</p>
-                      <p className="text-gray-600 text-xs">{t("tldv_model_used")} {openaiModel}</p>
-                    </div>
-                  )}
+                  {aiReportLoading && <AiLoadingAnimation model={openaiModel} />}
 
                   {/* Report rendered */}
                   {!aiReportLoading && aiReport !== null && openaiApiKey && (
@@ -615,35 +609,123 @@ export function TLDV({ managerSdMap }: Props) {
   );
 }
 
-// ── AI Report renderer — simple markdown-like formatting ────────────────────
+// ── AI loading animation ─────────────────────────────────────────────────────
+const AI_STEPS = [
+  "tldv_ai_step_reading",
+  "tldv_ai_step_keywords",
+  "tldv_ai_step_scoring",
+  "tldv_ai_step_writing",
+] as const;
+
+function AiLoadingAnimation({ model }: { model: string }) {
+  const [step, setStep] = useState(0);
+  const t = useT();
+
+  useEffect(() => {
+    const id = setInterval(() => setStep((s) => (s + 1) % AI_STEPS.length), 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-6 py-14 select-none">
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0);    opacity: 0.5; }
+          50%       { transform: translateY(-6px); opacity: 1;   }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0);   }
+        }
+      `}</style>
+      {/* Animated rings + icon */}
+      <div className="relative flex items-center justify-center w-20 h-20">
+        <span className="absolute inset-0 rounded-full border-2 border-violet-500/20 animate-[ping_2s_ease-in-out_infinite]" />
+        <span className="absolute inset-2 rounded-full border border-violet-400/30 animate-[ping_2s_ease-in-out_0.5s_infinite]" />
+        <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg,#7c3aed22,#6366f133)" }}>
+          <Bot size={26} className="text-violet-400" />
+          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-violet-500 flex items-center justify-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          </span>
+        </div>
+      </div>
+
+      {/* Cycling step text */}
+      <div className="text-center min-h-[2.5rem]">
+        <p key={step} className="text-gray-300 text-sm font-medium animate-[fadeIn_0.4s_ease]">
+          {t(AI_STEPS[step] as Parameters<typeof t>[0])}
+        </p>
+        <p className="text-gray-600 text-xs mt-1">{model}</p>
+      </div>
+
+      {/* Three bouncing dots */}
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-violet-500"
+            style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── AI Report renderer ────────────────────────────────────────────────────────
 function AiReportRenderer({ text }: { text: string }) {
   const lines = text.split("\n");
+  const sections: { heading: string | null; lines: string[] }[] = [];
+  let current: { heading: string | null; lines: string[] } = { heading: null, lines: [] };
+
+  for (const line of lines) {
+    if (line.startsWith("## ") || line.startsWith("# ")) {
+      if (current.heading !== null || current.lines.some((l) => l.trim())) {
+        sections.push(current);
+      }
+      current = { heading: line.replace(/^#+\s/, ""), lines: [] };
+    } else {
+      current.lines.push(line);
+    }
+  }
+  if (current.heading !== null || current.lines.some((l) => l.trim())) sections.push(current);
+
   return (
-    <div className="bg-gray-800/30 border border-gray-700/40 rounded-2xl px-6 py-5 flex flex-col gap-1.5 text-sm leading-relaxed">
-      {lines.map((line, i) => {
-        if (!line.trim()) return <div key={i} className="h-2" />;
-        if (line.startsWith("## "))
-          return <p key={i} className="text-base font-bold text-violet-300 mt-3 mb-1">{line.slice(3)}</p>;
-        if (line.startsWith("# "))
-          return <p key={i} className="text-lg font-bold text-white mt-2">{line.slice(2)}</p>;
-        if (line.startsWith("- ") || line.startsWith("* "))
-          return (
-            <div key={i} className="flex gap-2 text-gray-300 pl-2">
-              <span className="text-violet-400 shrink-0 mt-0.5">•</span>
-              <span>{formatInline(line.slice(2))}</span>
+    <div className="flex flex-col gap-3 text-sm leading-relaxed">
+      {sections.map((sec, si) => (
+        <div key={si} className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+          {sec.heading && (
+            <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+              <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
+              <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{sec.heading}</p>
             </div>
-          );
-        if (/^\d+\.\s/.test(line)) {
-          const [num, ...rest] = line.split(/\.\s(.+)/);
-          return (
-            <div key={i} className="flex gap-2 text-gray-300 pl-2">
-              <span className="text-violet-400 shrink-0 font-mono text-xs mt-0.5">{num}.</span>
-              <span>{formatInline(rest.join(""))}</span>
-            </div>
-          );
-        }
-        return <p key={i} className="text-gray-300">{formatInline(line)}</p>;
-      })}
+          )}
+          <div className="px-4 py-3 flex flex-col gap-1">
+            {sec.lines.map((line, i) => {
+              if (!line.trim()) return null;
+              if (line.startsWith("- ") || line.startsWith("* "))
+                return (
+                  <div key={i} className="flex gap-2 text-gray-300">
+                    <span className="text-violet-400 shrink-0 mt-[3px] text-[10px]">▸</span>
+                    <span>{formatInline(line.slice(2))}</span>
+                  </div>
+                );
+              if (/^\d+\.\s/.test(line)) {
+                const match = line.match(/^(\d+)\.\s(.+)/);
+                if (match)
+                  return (
+                    <div key={i} className="flex gap-2 text-gray-300">
+                      <span className="text-violet-400 shrink-0 font-mono text-[10px] mt-[3px] w-4 text-right">{match[1]}.</span>
+                      <span>{formatInline(match[2])}</span>
+                    </div>
+                  );
+              }
+              return <p key={i} className="text-gray-300">{formatInline(line)}</p>;
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -652,7 +734,7 @@ function formatInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) =>
     part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
+      ? <strong key={i} className="text-gray-100 font-semibold">{part.slice(2, -2)}</strong>
       : part
   );
 }
