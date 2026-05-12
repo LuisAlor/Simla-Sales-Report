@@ -12,6 +12,7 @@ import {
   Play,
   UserCircle,
   Tag,
+  Bot,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
@@ -19,6 +20,7 @@ import { fetchTldvTranscript, fetchTldvHighlights, tldvMeetingUrl, extractMeetin
 import type { TldvTranscriptSegment, TldvHighlight } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
+import { callOpenAI, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
 
 interface Props {
   managerSdMap: Record<string, string>;
@@ -48,6 +50,7 @@ function isValidTldvMeetingUrl(url: string): boolean {
 }
 
 const HIGHLIGHTS_CACHE_PREFIX = "simla_tldv_highlights_v2_";
+const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
 
 function loadCachedHighlights(meetingId: string): TldvHighlight[] | null {
   try {
@@ -58,6 +61,14 @@ function loadCachedHighlights(meetingId: string): TldvHighlight[] | null {
 
 function saveCachedHighlights(meetingId: string, items: TldvHighlight[]) {
   try { localStorage.setItem(`${HIGHLIGHTS_CACHE_PREFIX}${meetingId}`, JSON.stringify(items)); } catch { /* ignore */ }
+}
+
+function loadCachedAiReport(meetingId: string): string | null {
+  try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`); } catch { return null; }
+}
+
+function saveCachedAiReport(meetingId: string, report: string) {
+  try { localStorage.setItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`, report); } catch { /* ignore */ }
 }
 
 function formatTime(seconds: number): string {
@@ -132,7 +143,7 @@ export function TLDV({ managerSdMap }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"transcript" | "analysis">("transcript");
+  const [activeTab, setActiveTab] = useState<"transcript" | "analysis" | "ai_report">("transcript");
 
   const [transcript, setTranscript] = useState<TldvTranscriptSegment[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
@@ -142,8 +153,15 @@ export function TLDV({ managerSdMap }: Props) {
   const [highlightsLoading, setHighlightsLoading] = useState(false);
   const [highlightsError, setHighlightsError] = useState<string | null>(null);
 
+  const [aiReport, setAiReport] = useState<string | null>(null);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
+  const [aiReportError, setAiReportError] = useState<string | null>(null);
+
   const tldvApiKey = user?.tldvApiKey ?? "";
   const simlaApiKey = user?.apiKey ?? "";
+  const openaiApiKey = user?.openaiApiKey ?? "";
+  const openaiModel = user?.openaiModel ?? DEFAULT_OPENAI_MODEL;
+  const openaiPrompt = user?.openaiPrompt ?? DEFAULT_AI_PROMPT;
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -188,6 +206,12 @@ export function TLDV({ managerSdMap }: Props) {
     setHighlightsError(null);
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!selectedId) { setAiReport(null); return; }
+    setAiReport(loadCachedAiReport(selectedId));
+    setAiReportError(null);
+  }, [selectedId]);
+
   async function handleLoadHighlights() {
     const selected = demoOrders.find((d) => d.meetingId === selectedId);
     if (!selected || !tldvApiKey) return;
@@ -201,6 +225,29 @@ export function TLDV({ managerSdMap }: Props) {
       setHighlightsError(err instanceof Error ? err.message : String(err));
     } finally {
       setHighlightsLoading(false);
+    }
+  }
+
+  async function handleGenerateAiReport(forceRegenerate = false) {
+    if (!selectedId || !openaiApiKey) return;
+    if (!forceRegenerate) {
+      const cached = loadCachedAiReport(selectedId);
+      if (cached) { setAiReport(cached); return; }
+    }
+    if (transcript.length === 0) { setAiReportError("no_transcript"); return; }
+    setAiReportLoading(true);
+    setAiReportError(null);
+    try {
+      const transcriptText = transcript
+        .map((seg) => `[${seg.speaker}]: ${seg.text}`)
+        .join("\n");
+      const report = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt, transcriptText);
+      setAiReport(report);
+      saveCachedAiReport(selectedId, report);
+    } catch (err) {
+      setAiReportError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAiReportLoading(false);
     }
   }
 
@@ -399,15 +446,16 @@ export function TLDV({ managerSdMap }: Props) {
               {/* Underline tabs */}
               {!selectedOrder.invalidUrl && (
                 <div className="flex">
-                  {(["transcript", "analysis"] as const).map((tab) => (
+                  {(["transcript", "analysis", "ai_report"] as const).map((tab) => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors ${
+                      className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                         activeTab === tab
                           ? "border-cyan-500 text-cyan-400"
                           : "border-transparent text-gray-600 hover:text-gray-400"
                       }`}
                     >
-                      {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_tab_analysis")}
+                      {tab === "ai_report" && <Bot size={13} />}
+                      {tab === "transcript" ? t("tldv_tab_transcript") : tab === "analysis" ? t("tldv_tab_analysis") : t("tldv_ai_report_tab")}
                     </button>
                   ))}
                 </div>
@@ -533,11 +581,122 @@ export function TLDV({ managerSdMap }: Props) {
                 </div>
               )}
 
+              {/* AI Report */}
+              {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
+                <div className="p-6 flex flex-col gap-4">
+                  {/* No API key configured */}
+                  {!openaiApiKey && (
+                    <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
+                        <Bot size={26} className="text-violet-400/60" />
+                      </div>
+                      <p className="text-gray-400 text-sm max-w-xs">{t("tldv_ai_no_key")}</p>
+                    </div>
+                  )}
+
+                  {/* Has API key */}
+                  {openaiApiKey && !aiReportLoading && aiReport === null && (
+                    <div className="flex flex-col items-center justify-center gap-5 py-16">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
+                        <Bot size={26} className="text-violet-400/60" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
+                        <p className="text-gray-600 text-sm mb-5 max-w-xs">
+                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${transcript.length} segmentos · ${openaiModel}`}
+                        </p>
+                        <button
+                          onClick={() => handleGenerateAiReport(false)}
+                          disabled={transcript.length === 0}
+                          className="flex items-center gap-2 text-white font-semibold px-5 py-2.5 rounded-xl text-sm mx-auto hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40"
+                          style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)" }}
+                        >
+                          <Bot size={14} /> {t("tldv_ai_generate")}
+                        </button>
+                      </div>
+                      {aiReportError && aiReportError !== "no_transcript" && (
+                        <p className="text-red-400 text-sm">{aiReportError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Loading */}
+                  {aiReportLoading && (
+                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                      <Bot size={28} className="text-violet-400 animate-pulse" />
+                      <p className="text-gray-400 text-sm">{t("tldv_ai_generating")}</p>
+                      <p className="text-gray-600 text-xs">{openaiModel}</p>
+                    </div>
+                  )}
+
+                  {/* Report rendered */}
+                  {!aiReportLoading && aiReport !== null && openaiApiKey && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Bot size={14} className="text-violet-400" />
+                          <span className="text-xs text-gray-500">{openaiModel}</span>
+                        </div>
+                        <button
+                          onClick={() => handleGenerateAiReport(true)}
+                          className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
+                        >
+                          <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
+                        </button>
+                      </div>
+                      <AiReportRenderer text={aiReport} />
+                    </>
+                  )}
+                </div>
+              )}
+
             </div>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+// ── AI Report renderer — simple markdown-like formatting ────────────────────
+function AiReportRenderer({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <div className="bg-gray-800/30 border border-gray-700/40 rounded-2xl px-6 py-5 flex flex-col gap-1.5 text-sm leading-relaxed">
+      {lines.map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-2" />;
+        if (line.startsWith("## "))
+          return <p key={i} className="text-base font-bold text-violet-300 mt-3 mb-1">{line.slice(3)}</p>;
+        if (line.startsWith("# "))
+          return <p key={i} className="text-lg font-bold text-white mt-2">{line.slice(2)}</p>;
+        if (line.startsWith("- ") || line.startsWith("* "))
+          return (
+            <div key={i} className="flex gap-2 text-gray-300 pl-2">
+              <span className="text-violet-400 shrink-0 mt-0.5">•</span>
+              <span>{formatInline(line.slice(2))}</span>
+            </div>
+          );
+        if (/^\d+\.\s/.test(line)) {
+          const [num, ...rest] = line.split(/\.\s(.+)/);
+          return (
+            <div key={i} className="flex gap-2 text-gray-300 pl-2">
+              <span className="text-violet-400 shrink-0 font-mono text-xs mt-0.5">{num}.</span>
+              <span>{formatInline(rest.join(""))}</span>
+            </div>
+          );
+        }
+        return <p key={i} className="text-gray-300">{formatInline(line)}</p>;
+      })}
+    </div>
+  );
+}
+
+function formatInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>
+      : part
   );
 }
 

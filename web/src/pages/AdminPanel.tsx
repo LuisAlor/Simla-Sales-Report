@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { fetchUsers } from "@/lib/api";
 import * as authLib from "@/lib/auth";
 import type { User } from "@/lib/auth";
+import { OPENAI_MODELS, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
 
 type Tab = "usuarios" | "configuracion" | "integraciones";
 
@@ -31,17 +32,30 @@ export function AdminPanel() {
   const [apiKeyStatus, setApiKeyStatus] = useState<"idle" | "validating" | "ok" | "error">("idle");
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
-  // Integrations tab state
+  // Integrations tab — TLDV
   const [tldvKeyInput, setTldvKeyInput] = useState(currentUser?.tldvApiKey ?? "");
   const [showTldvKey, setShowTldvKey] = useState(false);
   const [tldvKeySaved, setTldvKeySaved] = useState(false);
-
 
   function handleSaveTldvKey() {
     if (!currentUser) return;
     updateUser({ ...currentUser, tldvApiKey: tldvKeyInput.trim() });
     setTldvKeySaved(true);
     setTimeout(() => setTldvKeySaved(false), 3000);
+  }
+
+  // Integrations tab — AI (OpenAI)
+  const [aiKeyInput,    setAiKeyInput]    = useState(currentUser?.openaiApiKey ?? "");
+  const [showAiKey,     setShowAiKey]     = useState(false);
+  const [aiModel,       setAiModel]       = useState(currentUser?.openaiModel ?? DEFAULT_OPENAI_MODEL);
+  const [aiPrompt,      setAiPrompt]      = useState(currentUser?.openaiPrompt ?? DEFAULT_AI_PROMPT);
+  const [aiSaved,       setAiSaved]       = useState(false);
+
+  function handleSaveAiSettings() {
+    if (!currentUser) return;
+    updateUser({ ...currentUser, openaiApiKey: aiKeyInput.trim(), openaiModel: aiModel, openaiPrompt: aiPrompt.trim() });
+    setAiSaved(true);
+    setTimeout(() => setAiSaved(false), 3000);
   }
 
   function refreshUsers() { setUsers(authLib.getUsers()); }
@@ -247,6 +261,70 @@ export function AdminPanel() {
               </button>
             </div>
             {tldvKeySaved && <p className="text-green-500 text-xs mt-2">✓ {t("admin_api_success")}</p>}
+          </div>
+
+          {/* AI (OpenAI) */}
+          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6 flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">{t("admin_ai_title")}</h3>
+              <p className="text-slate-400 dark:text-slate-500 text-xs">{t("admin_ai_desc")}</p>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">{t("admin_ai_key_label")}</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showAiKey ? "text" : "password"}
+                    value={aiKeyInput}
+                    onChange={(e) => setAiKeyInput(e.target.value)}
+                    placeholder="sk-..."
+                    className={inputCls + " pr-9"}
+                  />
+                  <button type="button" onClick={() => setShowAiKey((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    {showAiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Model selector */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">{t("admin_ai_model_label")}</label>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className={inputCls}
+              >
+                {OPENAI_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* System prompt */}
+            <div>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">{t("admin_ai_prompt_label")}</label>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={10}
+                className={inputCls + " resize-y font-mono text-xs leading-relaxed"}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSaveAiSettings}
+                disabled={!aiKeyInput.trim()}
+                className="bg-brand-blue hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-md text-sm transition-colors"
+              >
+                {t("admin_save")}
+              </button>
+              {aiSaved && <p className="text-green-500 text-xs">✓ {t("admin_ai_saved")}</p>}
+            </div>
           </div>
 
         </div>
