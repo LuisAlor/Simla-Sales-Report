@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   X,
+  GripVertical,
 } from "lucide-react";
 import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +27,7 @@ import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
 import { callOpenAI, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
 import { MultiSelect } from "@/components/MultiSelect";
+import { DateRangePicker } from "@/components/DateRangePicker";
 
 interface Props {
   managerSdMap: Record<string, string>;
@@ -197,6 +199,7 @@ export function TLDV({ managerSdMap }: Props) {
   const [filterLayout, setFilterLayout] = useState<TldvFilterLayoutItem[]>(() => loadTldvFilterLayout());
   const [filterConfigOpen, setFilterConfigOpen] = useState(false);
   const gearRef = useRef<HTMLDivElement>(null);
+  const dragFromIdx = useRef<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -363,10 +366,10 @@ export function TLDV({ managerSdMap }: Props) {
     <div className="flex flex-col h-[calc(100vh-0px)] overflow-hidden bg-gray-950">
 
       {/* ── Top filter bar ── */}
-      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-2.5 flex items-center gap-3 relative">
+      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-2 flex items-end gap-3 relative">
 
         {/* Icon + title */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 pb-1">
           <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
             style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
             <Video size={12} className="text-white" />
@@ -375,101 +378,78 @@ export function TLDV({ managerSdMap }: Props) {
         </div>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-gray-700 shrink-0" />
+        <div className="h-5 w-px bg-gray-700 shrink-0 mb-1" />
 
-        {/* Date range */}
-        {filterLayout.find((f) => f.id === "date")?.visible && (
-          <div className="flex flex-col gap-0.5 shrink-0">
-            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_creation_date")}</p>
-            <div className="flex gap-1.5">
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className={DARK_INPUT}
-              />
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className={DARK_INPUT}
+        {/* Render filters in layout order */}
+        {filterLayout.map((item) => {
+          if (!item.visible) return null;
+          if (item.id === "date") return (
+            <div key="date" className="flex flex-col gap-0.5 shrink-0">
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+                <Calendar size={9} className="shrink-0" />{t("filter_creation_date")}
+              </p>
+              <DateRangePicker
+                compact
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onChange={(from, to) => { setDateFrom(from); setDateTo(to); }}
               />
             </div>
-          </div>
-        )}
-
-        {/* Manager MultiSelect */}
-        {filterLayout.find((f) => f.id === "manager")?.visible && knownManagers.length > 0 && (
-          <div className="flex flex-col gap-0.5 shrink-0">
-            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_manager")}</p>
-            <div style={{ width: 160 }}>
-              <MultiSelect
-                variant="dark"
-                options={knownManagers}
-                selected={managerFilter}
-                onChange={setManagerFilter}
-                placeholder={t("filter_all")}
-              />
+          );
+          if (item.id === "manager" && knownManagers.length > 0) return (
+            <div key="manager" className="flex flex-col gap-0.5 shrink-0">
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+                <User size={9} className="shrink-0" />{t("filter_manager")}
+              </p>
+              <div style={{ width: 160 }}>
+                <MultiSelect variant="dark" options={knownManagers} selected={managerFilter} onChange={setManagerFilter} placeholder={t("filter_all")} />
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Project search */}
-        {filterLayout.find((f) => f.id === "project")?.visible && (
-          <div className="flex flex-col gap-0.5 shrink-0">
-            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("tldv_filter_project")}</p>
-            <div className="relative" style={{ width: 140 }}>
-              <input
-                type="text"
-                value={projectSearch}
-                onChange={(e) => setProjectSearch(e.target.value)}
-                placeholder="…"
-                className={DARK_INPUT + " w-full pr-6"}
-              />
-              {projectSearch && (
-                <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
-                  <X size={11} />
-                </button>
-              )}
+          );
+          if (item.id === "project") return (
+            <div key="project" className="flex flex-col gap-0.5 shrink-0">
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+                <Building2 size={9} className="shrink-0" />{t("tldv_filter_project")}
+              </p>
+              <div className="relative" style={{ width: 140 }}>
+                <input type="text" value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)}
+                  className={DARK_INPUT + " w-full pr-6"} />
+                {projectSearch && (
+                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"><X size={11} /></button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Order number search */}
-        {filterLayout.find((f) => f.id === "order-num")?.visible && (
-          <div className="flex flex-col gap-0.5 shrink-0">
-            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("tldv_filter_order_num")}</p>
-            <div className="relative" style={{ width: 120 }}>
-              <input
-                type="text"
-                value={orderSearch}
-                onChange={(e) => setOrderSearch(e.target.value)}
-                placeholder="…"
-                className={DARK_INPUT + " w-full pr-6"}
-              />
-              {orderSearch && (
-                <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
-                  <X size={11} />
-                </button>
-              )}
+          );
+          if (item.id === "order-num") return (
+            <div key="order-num" className="flex flex-col gap-0.5 shrink-0">
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+                <Hash size={9} className="shrink-0" />{t("tldv_filter_order_num")}
+              </p>
+              <div className="relative" style={{ width: 120 }}>
+                <input type="text" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
+                  className={DARK_INPUT + " w-full pr-6"} />
+                {orderSearch && (
+                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"><X size={11} /></button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+          return null;
+        })}
 
         {/* Spacer */}
         <div className="flex-1" />
 
         {/* Errors / warnings */}
-        {loadError && <p className="text-red-400 text-xs shrink-0">{loadError}</p>}
+        {loadError && <p className="text-red-400 text-xs shrink-0 mb-1">{loadError}</p>}
         {!simlaApiKey && (
-          <p className="text-[10px] text-orange-400/80 max-w-[160px] leading-tight shrink-0">
+          <p className="text-[10px] text-orange-400/80 max-w-[160px] leading-tight shrink-0 mb-1">
             {simlaIsDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
           </p>
         )}
 
-        {/* Count badge */}
-        {demoOrders.length > 0 && (
-          <span className="text-xs text-gray-600 shrink-0">
-            {filteredDemos.length}{demoOrders.length !== filteredDemos.length ? ` / ${demoOrders.length}` : ""} demos
-          </span>
-        )}
-
         {/* Gear button + dropdown */}
-        <div className="relative shrink-0" ref={gearRef}>
+        <div className="relative shrink-0 mb-0.5" ref={gearRef}>
           <button
             onClick={() => setFilterConfigOpen((v) => !v)}
             className={`p-1.5 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
@@ -478,17 +458,38 @@ export function TLDV({ managerSdMap }: Props) {
             <Settings2 size={13} />
           </button>
           {filterConfigOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 bg-gray-800 border border-gray-700 rounded-lg p-3 w-52">
+            <div className="absolute top-full right-0 mt-1 z-50 bg-gray-800 border border-gray-700 rounded-lg p-3 w-56 shadow-xl">
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider mb-2">{t("filter_config_title")}</p>
               {filterLayout.map((item, i) => {
                 const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
                 const visibleCount = filterLayout.filter((f) => f.visible).length;
                 const canHide = visibleCount > 1 || !item.visible;
                 return (
-                  <div key={item.id} className="flex items-center justify-between gap-2 py-0.5">
-                    <span className={`text-xs ${item.visible ? "text-gray-300" : "text-gray-600"}`}>{t(def.labelKey as Parameters<typeof t>[0])}</span>
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={() => { dragFromIdx.current = i; }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      const from = dragFromIdx.current;
+                      if (from === null || from === i) return;
+                      const next = [...filterLayout];
+                      const [removed] = next.splice(from, 1);
+                      next.splice(i, 0, removed);
+                      setFilterLayout(next);
+                      saveTldvFilterLayout(next);
+                      dragFromIdx.current = null;
+                    }}
+                    className="flex items-center gap-2 py-1 cursor-grab active:cursor-grabbing select-none"
+                  >
+                    <GripVertical size={12} className="text-gray-600 shrink-0" />
+                    <span className={`text-xs flex-1 ${item.visible ? "text-gray-300" : "text-gray-600"}`}>
+                      {t(def.labelKey as Parameters<typeof t>[0])}
+                    </span>
                     <button
                       disabled={!canHide}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const next = filterLayout.map((f, j) => j === i ? { ...f, visible: !f.visible } : f);
                         setFilterLayout(next);
                         saveTldvFilterLayout(next);
@@ -506,7 +507,7 @@ export function TLDV({ managerSdMap }: Props) {
                   setFilterLayout(next);
                   saveTldvFilterLayout(next);
                 }}
-                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-1.5 w-full transition-colors"
+                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-2 w-full transition-colors border-t border-gray-700 pt-2"
               >
                 {t("filter_config_reset")}
               </button>
@@ -518,7 +519,7 @@ export function TLDV({ managerSdMap }: Props) {
         <button
           onClick={handleLoadOrders}
           disabled={loading || !simlaApiKey}
-          className="h-[30px] px-3 text-xs flex items-center gap-1.5 text-white font-semibold rounded-lg transition-all disabled:opacity-40 active:scale-[0.98] shrink-0"
+          className="h-[30px] px-3 text-xs flex items-center gap-1.5 text-white font-semibold rounded-lg transition-all disabled:opacity-40 active:scale-[0.98] shrink-0 mb-0.5"
           style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
         >
           {loading ? (
@@ -533,17 +534,17 @@ export function TLDV({ managerSdMap }: Props) {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Left panel (meetings list only) ── */}
-        <div className="w-[280px] shrink-0 flex flex-col border-r border-gray-800 bg-gray-900">
+        <div className="w-[320px] shrink-0 flex flex-col border-r border-gray-800 bg-gray-900">
 
           {/* Order list */}
           <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2 flex flex-col gap-1.5">
-            {filteredDemos.length === 0 && !loading && (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700 select-none">
-                <Video size={28} className="opacity-30" />
-                <p className="text-xs">{t("tldv_no_meetings")}</p>
-              </div>
-            )}
-            {filteredDemos.map((demo) => {
+            {filteredDemos.length === 0 && !loading && demoOrders.length > 0 && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700 select-none">
+              <Video size={28} className="opacity-30" />
+              <p className="text-xs">{t("tldv_no_meetings")}</p>
+            </div>
+          )}
+          {filteredDemos.map((demo) => {
               const isSelected = demo.meetingId === selectedId;
               const managerName = demo.managerSd
                 ? (managerSdMap[demo.managerSd] ?? demo.managerSd)
@@ -566,18 +567,18 @@ export function TLDV({ managerSdMap }: Props) {
                         <Building2 size={11} className="text-gray-600 shrink-0" />
                         <p className="text-sm font-semibold text-gray-100 truncate">{demo.projectName}</p>
                       </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-2.5 flex-nowrap overflow-hidden">
+                        <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
                           <Calendar size={10} className="text-gray-600" />
                           {formatDemoDate(demo.demoDate)}
                         </span>
                         {managerName && (
-                          <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
+                          <span className="flex items-center gap-1 text-xs text-gray-500 truncate min-w-0">
                             <User size={10} className="text-gray-600 shrink-0" />
                             {managerName}
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                        <span className="flex items-center gap-1 text-xs text-gray-600 shrink-0 ml-auto">
                           <Hash size={10} className="text-gray-700" />
                           {demo.orderNumber}
                         </span>
@@ -598,6 +599,19 @@ export function TLDV({ managerSdMap }: Props) {
               );
             })}
           </div>
+
+          {/* Sticky count footer */}
+          {demoOrders.length > 0 && (
+            <div className="shrink-0 px-4 py-2 border-t border-gray-800/60 bg-gray-900/80">
+              <span className="text-[10px] text-gray-600">
+                Total demos encontradas:{" "}
+                <span className="text-gray-400 font-semibold">{filteredDemos.length}</span>
+                {demoOrders.length !== filteredDemos.length && (
+                  <span className="text-gray-700"> / {demoOrders.length}</span>
+                )}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ── Right panel ── */}
@@ -629,17 +643,19 @@ export function TLDV({ managerSdMap }: Props) {
                       {selectedOrder.customerName && (
                         <span className="flex items-center gap-1.5 text-xs text-gray-400">
                           <UserCircle size={12} className="text-gray-500 shrink-0" />
-                          {selectedOrder.customerName}
+                          <span className="text-gray-600">Cliente:</span> {selectedOrder.customerName}
                         </span>
                       )}
-                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
                         <Calendar size={11} className="text-gray-600 shrink-0" />
-                        {formatDemoDate(selectedOrder.demoDate)}
+                        <span className="text-gray-600">Fecha de demo:</span> {formatDemoDate(selectedOrder.demoDate)}
                       </span>
-                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Tag size={11} className="text-gray-600 shrink-0" />
-                        {formatMql(selectedOrder.mqlOrder)}
-                      </span>
+                      {selectedOrder.mqlOrder && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <Tag size={11} className="text-gray-600 shrink-0" />
+                          <span className="text-gray-600">MQL:</span> {formatMql(selectedOrder.mqlOrder).replace("MQL = ", "")}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
