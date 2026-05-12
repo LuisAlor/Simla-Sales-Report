@@ -334,6 +334,7 @@ function AppInner() {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPanel /></ProtectedRoute>} />
         <Route path="*" element={<ProtectedRoute><ApiSetup /></ProtectedRoute>} />
       </Routes>
     );

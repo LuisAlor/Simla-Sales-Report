@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Video, Bot, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { useBlocker } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { Avatar } from "@/components/Avatar";
@@ -151,22 +150,13 @@ export function AdminPanel() {
     aiEnabled !== (currentUser?.openaiEnabled !== false) ||
     aiModel !== (currentUser?.openaiModel ?? DEFAULT_OPENAI_MODEL);
 
-  // ── Route-change blocker ────────────────────────────────────────────────────
-  const blocker = useBlocker(
-    useCallback(({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string } }) =>
-      isDirty && activeTab === "integraciones" && currentLocation.pathname !== nextLocation.pathname,
-      [isDirty, activeTab]
-    )
-  );
-
+  // ── Browser-level navigation guard (refresh / close tab) ───────────────────
   useEffect(() => {
-    if (blocker.state === "blocked") {
-      setUnsavedDialog({
-        show: true,
-        onDiscard: () => { blocker.proceed(); setUnsavedDialog({ show: false, onDiscard: () => {} }); },
-      });
-    }
-  }, [blocker.state]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!isDirty || activeTab !== "integraciones") return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty, activeTab]);
 
   function requestTabSwitch(newTab: Tab) {
     if (isDirty && activeTab === "integraciones") {
@@ -267,7 +257,7 @@ export function AdminPanel() {
         state={unsavedDialog}
         onKeep={() => {
           setUnsavedDialog({ show: false, onDiscard: () => {} });
-          if (blocker.state === "blocked") blocker.reset();
+          // blocker removed (useBlocker requires data router)
         }}
         t={t}
       />
