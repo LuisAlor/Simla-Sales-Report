@@ -4,7 +4,6 @@ import {
   ExternalLink,
   RefreshCw,
   AlertTriangle,
-  Sparkles,
   Calendar,
   User,
   Hash,
@@ -16,8 +15,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
-import { fetchTldvTranscript, fetchTldvHighlights, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
-import type { TldvTranscriptSegment, TldvHighlight } from "@/lib/tldvApi";
+import { fetchTldvTranscript, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
+import type { TldvTranscriptSegment } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
 import { callOpenAI, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
@@ -49,19 +48,7 @@ function isValidTldvMeetingUrl(url: string): boolean {
   } catch { return false; }
 }
 
-const HIGHLIGHTS_CACHE_PREFIX = "simla_tldv_highlights_v2_";
-const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
-
-function loadCachedHighlights(meetingId: string): TldvHighlight[] | null {
-  try {
-    const raw = localStorage.getItem(`${HIGHLIGHTS_CACHE_PREFIX}${meetingId}`);
-    return raw ? (JSON.parse(raw) as TldvHighlight[]) : null;
-  } catch { return null; }
-}
-
-function saveCachedHighlights(meetingId: string, items: TldvHighlight[]) {
-  try { localStorage.setItem(`${HIGHLIGHTS_CACHE_PREFIX}${meetingId}`, JSON.stringify(items)); } catch { /* ignore */ }
-}
+const AI_REPORT_CACHE_PREFIX = "simla_ai_report_v1_";
 
 function loadCachedAiReport(meetingId: string): string | null {
   try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`); } catch { return null; }
@@ -69,12 +56,6 @@ function loadCachedAiReport(meetingId: string): string | null {
 
 function saveCachedAiReport(meetingId: string, report: string) {
   try { localStorage.setItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`, report); } catch { /* ignore */ }
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function formatDemoDate(raw: string): string {
@@ -143,25 +124,21 @@ export function TLDV({ managerSdMap }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"transcript" | "analysis" | "ai_report">("transcript");
+  const [activeTab, setActiveTab] = useState<"transcript" | "ai_report">("transcript");
 
   const [transcript, setTranscript] = useState<TldvTranscriptSegment[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
-  const [highlights, setHighlights] = useState<TldvHighlight[] | null>(null);
-  const [highlightsLoading, setHighlightsLoading] = useState(false);
-  const [highlightsError, setHighlightsError] = useState<string | null>(null);
-
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
 
-  const tldvApiKey = user?.tldvApiKey ?? "";
-  const simlaApiKey = user?.apiKey ?? "";
-  const openaiApiKey = user?.openaiApiKey ?? "";
+  const tldvApiKey = (user?.tldvEnabled !== false && user?.tldvApiKey) ? user.tldvApiKey : "";
+  const simlaApiKey = (user?.apiKeyEnabled !== false && user?.apiKey) ? user.apiKey : "";
+  const openaiApiKey = (user?.openaiEnabled !== false && user?.openaiApiKey) ? user.openaiApiKey : "";
   const openaiModel = user?.openaiModel ?? DEFAULT_OPENAI_MODEL;
-  const openaiPrompt = user?.openaiPrompt ?? DEFAULT_AI_PROMPT;
+  const openaiPrompt = user?.tldvPrompt ?? user?.openaiPrompt ?? DEFAULT_AI_PROMPT;
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -200,33 +177,10 @@ export function TLDV({ managerSdMap }: Props) {
   }, [selectedId, tldvApiKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selectedId) { setHighlights(null); return; }
-    const cached = loadCachedHighlights(selectedId);
-    setHighlights(cached);
-    setHighlightsError(null);
-  }, [selectedId]);
-
-  useEffect(() => {
     if (!selectedId) { setAiReport(null); return; }
     setAiReport(loadCachedAiReport(selectedId));
     setAiReportError(null);
   }, [selectedId]);
-
-  async function handleLoadHighlights() {
-    const selected = demoOrders.find((d) => d.meetingId === selectedId);
-    if (!selected || !tldvApiKey) return;
-    setHighlightsLoading(true);
-    setHighlightsError(null);
-    try {
-      const items = await fetchTldvHighlights(tldvApiKey, selected.meetingId);
-      setHighlights(items);
-      saveCachedHighlights(selected.meetingId, items);
-    } catch (err) {
-      setHighlightsError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setHighlightsLoading(false);
-    }
-  }
 
   async function handleGenerateAiReport(forceRegenerate = false) {
     if (!selectedId || !openaiApiKey) return;
@@ -446,7 +400,7 @@ export function TLDV({ managerSdMap }: Props) {
               {/* Underline tabs */}
               {!selectedOrder.invalidUrl && (
                 <div className="flex">
-                  {(["transcript", "analysis", "ai_report"] as const).map((tab) => (
+                  {(["transcript", "ai_report"] as const).map((tab) => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
                       className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                         activeTab === tab
@@ -455,7 +409,7 @@ export function TLDV({ managerSdMap }: Props) {
                       }`}
                     >
                       {tab === "ai_report" && <Bot size={13} />}
-                      {tab === "transcript" ? t("tldv_tab_transcript") : tab === "analysis" ? t("tldv_tab_analysis") : t("tldv_ai_report_tab")}
+                      {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_ai_report_tab")}
                     </button>
                   ))}
                 </div>
@@ -509,79 +463,7 @@ export function TLDV({ managerSdMap }: Props) {
                 </div>
               )}
 
-              {/* Analysis / Highlights */}
-              {!selectedOrder.invalidUrl && activeTab === "analysis" && (
-                <div className="p-6 flex flex-col gap-3">
-                  {highlights === null && !highlightsLoading && (
-                    <div className="flex flex-col items-center justify-center gap-5 py-16">
-                      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
-                        <Sparkles size={26} className="text-cyan-500/50" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-gray-300 font-semibold mb-1">{t("tldv_tab_analysis")}</p>
-                        <p className="text-gray-600 text-sm mb-5 max-w-xs">{t("tldv_analysis_hint")}</p>
-                        <button onClick={handleLoadHighlights}
-                          className="flex items-center gap-2 text-white font-semibold px-5 py-2.5 rounded-xl text-sm mx-auto hover:opacity-90 transition-opacity active:scale-[0.98]"
-                          style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}
-                        >
-                          <Sparkles size={14} /> {t("tldv_run_analysis")}
-                        </button>
-                      </div>
-                      {highlightsError && <p className="text-red-400 text-sm">{highlightsError}</p>}
-                    </div>
-                  )}
-
-                  {highlightsLoading && <AnalysisSkeleton />}
-
-                  {highlights !== null && !highlightsLoading && (
-                    <>
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => {
-                            try { localStorage.removeItem(`${HIGHLIGHTS_CACHE_PREFIX}${selectedId}`); } catch { /* ignore */ }
-                            handleLoadHighlights();
-                          }}
-                          className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-cyan-400 transition-colors"
-                        >
-                          <RefreshCw size={11} /> {t("tldv_run_analysis")}
-                        </button>
-                      </div>
-                      {highlights.length === 0 && (
-                        <p className="text-gray-700 text-sm text-center py-10">{t("tldv_no_highlights")}</p>
-                      )}
-                      {highlights.length > 0 && (
-                        <div className="bg-gray-800/30 border border-gray-700/40 rounded-2xl px-6 py-5 flex flex-col gap-5">
-                          {highlights.map((h, i) => {
-                            const title = h.title ?? h.text ?? h.type;
-                            const body = h.description ?? h.content;
-                            const ts = h.startTime ?? h.timestamp;
-                            if (!title && !body) return null;
-                            return (
-                              <div key={h.id ?? i} className="flex flex-col gap-1.5">
-                                {title && (
-                                  <div className="flex items-baseline gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0 mt-1.5" />
-                                    <p className="text-sm font-semibold text-gray-200 leading-snug">{title}</p>
-                                    {ts != null && (
-                                      <span className="text-[10px] text-gray-600 font-mono shrink-0">{formatTime(ts)}</span>
-                                    )}
-                                  </div>
-                                )}
-                                {body && (
-                                  <p className="text-sm text-gray-400 leading-relaxed pl-3.5">{body}</p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {highlightsError && <p className="text-red-400 text-sm">{highlightsError}</p>}
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* AI Report */}
+              {/* AI Analysis */}
               {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
                 <div className="p-6 flex flex-col gap-4">
                   {/* No API key configured */}
@@ -925,27 +807,3 @@ function TranscriptSkeleton() {
   );
 }
 
-// ── Analysis skeleton ───────────────────────────────────────────────────────
-function AnalysisSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 animate-pulse py-2">
-      {(
-        [
-          { w: "w-40", lines: ["w-full", "w-5/6", "w-4/5", "w-full", "w-3/4"] },
-          { w: "w-28", lines: ["w-full", "w-4/5", "w-5/6"] },
-          { w: "w-36", lines: ["w-full", "w-3/4", "w-5/6", "w-4/5"] },
-        ] as { w: string; lines: string[] }[]
-      ).map(({ w, lines }, i) => (
-        <div key={i} className="bg-gray-800/40 border border-gray-700/40 rounded-xl p-5">
-          <div className={`h-2.5 ${w} bg-gray-700/60 rounded mb-4`} />
-          <div className="flex flex-col gap-2">
-            {lines.map((lw, j) => (
-              <div key={j} className={`h-2 ${lw} bg-gray-700/40 rounded`} />
-            ))}
-          </div>
-        </div>
-      ))}
-      <p className="text-center text-xs text-gray-700 pt-1">Cargando highlights…</p>
-    </div>
-  );
-}
