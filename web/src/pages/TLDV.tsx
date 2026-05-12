@@ -551,7 +551,7 @@ export function TLDV({ managerSdMap }: Props) {
                       <div className="text-center">
                         <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
                         <p className="text-gray-600 text-sm mb-5 max-w-xs">
-                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${transcript.length} segmentos · ${t("tldv_model_used")} ${openaiModel}`}
+                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${t("tldv_model_used")} ${openaiModel}`}
                         </p>
                         <button
                           onClick={() => handleGenerateAiReport(false)}
