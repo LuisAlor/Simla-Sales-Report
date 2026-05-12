@@ -48,7 +48,8 @@ function AppInner() {
   const { user, updateUser } = useAuth();
   const t = useT();
   const hasStoredApiKey = !!user?.apiKey;
-  const apiKey = (user?.apiKeyEnabled !== false && user?.apiKey) ? user.apiKey : "";
+  const apiKeyIsDisabled = !!user?.apiKey && user?.apiKeyEnabled === false;
+  const apiKey = !apiKeyIsDisabled ? (user?.apiKey ?? "") : "";
 
   const [filters, setFilters] = useState<Filters>(() =>
     getDefaultFilters(user?.savedFilters)
@@ -353,7 +354,7 @@ function AppInner() {
         <Route
           index
           element={
-            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
+            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0} keyDisabled={apiKeyIsDisabled}>
               <Analytics records={records} items={items} freq={filters.freq} statusLabels={statusLabels} />
             </PageShell>
           }
@@ -361,7 +362,7 @@ function AppInner() {
         <Route
           path="/funnel"
           element={
-            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0}>
+            <PageShell loading={isFetching} progress={progress} error={error} hasData={records.length > 0} loaded={loadKey > 0} keyDisabled={apiKeyIsDisabled}>
               <Funnel records={records} freq={filters.freq} statusLabels={statusLabels} />
             </PageShell>
           }
@@ -401,10 +402,12 @@ interface ShellProps {
   error: Error | null;
   hasData: boolean;
   loaded: boolean;
+  keyDisabled?: boolean;
   children: React.ReactNode;
 }
 
-function PageShell({ loading, progress, error, hasData, loaded, children }: ShellProps) {
+function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, children }: ShellProps) {
+  const t = useT();
   if (loading) return <LoadingScreen progress={progress} />;
 
   if (error) {
@@ -416,6 +419,13 @@ function PageShell({ loading, progress, error, hasData, loaded, children }: Shel
   }
 
   if (!loaded) {
+    if (keyDisabled) {
+      return (
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-lg p-4 text-sm">
+          {t("tldv_simla_disabled")}
+        </div>
+      );
+    }
     return (
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg p-4 text-sm">
         Selecciona los filtros en el panel lateral y pulsa <strong>Cargar datos</strong>.
