@@ -442,7 +442,7 @@ function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, chi
             onClick={() => requestNavigate("/admin?tab=integraciones")}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors border border-orange-200 dark:border-orange-700/50"
           >
-            <Settings2 size={14} /> {t("tldv_configure_settings")}
+            <Settings2 size={14} /> {t("go_to_settings")}
           </button>
         </div>
       </div>

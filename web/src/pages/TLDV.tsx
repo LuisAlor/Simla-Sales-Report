@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Video,
   ExternalLink,
@@ -174,6 +174,8 @@ const SPEAKER_PALETTES = [
   { bubble: "bg-rose-950/40",    name: "text-rose-400",   align: "items-start" },
 ];
 
+const DARK_INPUT = "border border-gray-700/60 rounded-md px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 transition-all";
+
 export function TLDV({ managerSdMap }: Props) {
   const { user } = useAuth();
   const t = useT();
@@ -194,6 +196,7 @@ export function TLDV({ managerSdMap }: Props) {
   const [orderSearch, setOrderSearch] = useState("");
   const [filterLayout, setFilterLayout] = useState<TldvFilterLayoutItem[]>(() => loadTldvFilterLayout());
   const [filterConfigOpen, setFilterConfigOpen] = useState(false);
+  const gearRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -238,6 +241,18 @@ export function TLDV({ managerSdMap }: Props) {
       applyDemos(cached.demos);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close gear dropdown on outside click
+  useEffect(() => {
+    if (!filterConfigOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (gearRef.current && !gearRef.current.contains(e.target as Node)) {
+        setFilterConfigOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [filterConfigOpen]);
 
   function applyDemos(demos: DemoOrder[]) {
     setDemoOrders(demos);
@@ -344,69 +359,132 @@ export function TLDV({ managerSdMap }: Props) {
     if (speakerIndex[seg.speaker] === undefined) speakerIndex[seg.speaker] = sidx++;
   }
 
-  if (!tldvApiKey) {
-    return (
-      <div className="p-6">
-        <div className={`rounded-xl p-4 flex items-start gap-3 border ${
-          tldvIsDisabled
-            ? "bg-orange-950/30 border-orange-800/50"
-            : "bg-yellow-950/30 border-yellow-800/50"
-        }`}>
-          <AlertTriangle size={18} className={`shrink-0 mt-0.5 ${tldvIsDisabled ? "text-orange-400" : "text-yellow-500"}`} />
-          <div>
-            <p className={`text-sm font-semibold mb-0.5 ${tldvIsDisabled ? "text-orange-300" : "text-yellow-300"}`}>
-              {tldvIsDisabled ? "TLDV" : "TLDV"}
-            </p>
-            <p className={`text-sm ${tldvIsDisabled ? "text-orange-400/80" : "text-yellow-400"}`}>
-              {tldvIsDisabled ? t("tldv_tldv_disabled") : t("tldv_not_configured")}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-[calc(100vh-0px)] overflow-hidden bg-gray-950">
+    <div className="flex flex-col h-[calc(100vh-0px)] overflow-hidden bg-gray-950">
 
-      {/* ── Left panel ── */}
-      <div className="w-[380px] shrink-0 flex flex-col border-r border-gray-800 bg-gray-900">
+      {/* ── Top filter bar ── */}
+      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-2.5 flex items-center gap-3 relative">
 
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
-              <Video size={14} className="text-white" />
-            </div>
-            <h2 className="text-sm font-bold text-white tracking-wide">{t("tldv_title")}</h2>
+        {/* Icon + title */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+            <Video size={12} className="text-white" />
           </div>
-          <p className="text-gray-600 text-xs mt-0.5 pl-9">{t("tldv_subtitle")}</p>
+          <span className="text-sm font-bold text-white tracking-wide whitespace-nowrap">{t("tldv_title")}</span>
         </div>
 
-        {/* Filters */}
-        <div className="px-4 pb-4 flex flex-col gap-2.5">
-          {/* Filter config header */}
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_config_title")}</p>
-            <button
-              onClick={() => setFilterConfigOpen((v) => !v)}
-              className={`p-1 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
-              title={t("filter_config_title")}
-            >
-              <Settings2 size={13} />
-            </button>
-          </div>
+        {/* Divider */}
+        <div className="h-5 w-px bg-gray-700 shrink-0" />
 
-          {/* Configurator panel */}
+        {/* Date range */}
+        {filterLayout.find((f) => f.id === "date")?.visible && (
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_creation_date")}</p>
+            <div className="flex gap-1.5">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className={DARK_INPUT}
+              />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className={DARK_INPUT}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Manager MultiSelect */}
+        {filterLayout.find((f) => f.id === "manager")?.visible && knownManagers.length > 0 && (
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_manager")}</p>
+            <div style={{ width: 160 }}>
+              <MultiSelect
+                variant="dark"
+                options={knownManagers}
+                selected={managerFilter}
+                onChange={setManagerFilter}
+                placeholder={t("filter_all")}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Project search */}
+        {filterLayout.find((f) => f.id === "project")?.visible && (
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("tldv_filter_project")}</p>
+            <div className="relative" style={{ width: 140 }}>
+              <input
+                type="text"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                placeholder="…"
+                className={DARK_INPUT + " w-full pr-6"}
+              />
+              {projectSearch && (
+                <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Order number search */}
+        {filterLayout.find((f) => f.id === "order-num")?.visible && (
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">{t("tldv_filter_order_num")}</p>
+            <div className="relative" style={{ width: 120 }}>
+              <input
+                type="text"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                placeholder="…"
+                className={DARK_INPUT + " w-full pr-6"}
+              />
+              {orderSearch && (
+                <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Errors / warnings */}
+        {loadError && <p className="text-red-400 text-xs shrink-0">{loadError}</p>}
+        {!simlaApiKey && (
+          <p className="text-[10px] text-orange-400/80 max-w-[160px] leading-tight shrink-0">
+            {simlaIsDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
+          </p>
+        )}
+
+        {/* Count badge */}
+        {demoOrders.length > 0 && (
+          <span className="text-xs text-gray-600 shrink-0">
+            {filteredDemos.length}{demoOrders.length !== filteredDemos.length ? ` / ${demoOrders.length}` : ""} demos
+          </span>
+        )}
+
+        {/* Gear button + dropdown */}
+        <div className="relative shrink-0" ref={gearRef}>
+          <button
+            onClick={() => setFilterConfigOpen((v) => !v)}
+            className={`p-1.5 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
+            title={t("filter_config_title")}
+          >
+            <Settings2 size={13} />
+          </button>
           {filterConfigOpen && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex flex-col gap-2">
+            <div className="absolute top-full right-0 mt-1 z-50 bg-gray-800 border border-gray-700 rounded-lg p-3 w-52">
               {filterLayout.map((item, i) => {
                 const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
                 const visibleCount = filterLayout.filter((f) => f.visible).length;
                 const canHide = visibleCount > 1 || !item.visible;
                 return (
-                  <div key={item.id} className="flex items-center justify-between gap-2">
+                  <div key={item.id} className="flex items-center justify-between gap-2 py-0.5">
                     <span className={`text-xs ${item.visible ? "text-gray-300" : "text-gray-600"}`}>{t(def.labelKey as Parameters<typeof t>[0])}</span>
                     <button
                       disabled={!canHide}
@@ -428,394 +506,316 @@ export function TLDV({ managerSdMap }: Props) {
                   setFilterLayout(next);
                   saveTldvFilterLayout(next);
                 }}
-                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-0.5 transition-colors"
+                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-1.5 w-full transition-colors"
               >
                 {t("filter_config_reset")}
               </button>
             </div>
           )}
-
-          {/* Date range */}
-          {filterLayout.find((f) => f.id === "date")?.visible && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_creation_date")}</p>
-              <div className="flex gap-2">
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-                />
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Manager multi-select */}
-          {filterLayout.find((f) => f.id === "manager")?.visible && knownManagers.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_manager")}</p>
-              <MultiSelect
-                variant="dark"
-                options={knownManagers}
-                selected={managerFilter}
-                onChange={setManagerFilter}
-                placeholder={t("filter_all")}
-              />
-            </div>
-          )}
-
-          {/* Project name search */}
-          {filterLayout.find((f) => f.id === "project")?.visible && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_project")}</p>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={projectSearch}
-                  onChange={(e) => setProjectSearch(e.target.value)}
-                  placeholder="…"
-                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
-                />
-                {projectSearch && (
-                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
-                    <X size={11} />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Order number search */}
-          {filterLayout.find((f) => f.id === "order-num")?.visible && (
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_order_num")}</p>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={orderSearch}
-                  onChange={(e) => setOrderSearch(e.target.value)}
-                  placeholder="…"
-                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
-                />
-                {orderSearch && (
-                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
-                    <X size={11} />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Load button */}
-          <button
-            onClick={handleLoadOrders}
-            disabled={loading || !simlaApiKey}
-            className="w-full flex items-center justify-center gap-2 text-white font-semibold text-sm py-2 rounded-lg transition-all disabled:opacity-40 active:scale-[0.98]"
-            style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
-          >
-            {loading ? (
-              <><RefreshCw size={13} className="animate-spin" /> {t("tldv_loading_meetings")}</>
-            ) : (
-              <><Play size={12} fill="white" /> {t("tldv_load_meetings")}</>
-            )}
-          </button>
-          {loadError && <p className="text-red-400 text-xs">{loadError}</p>}
-          {!simlaApiKey && (
-            <p className={`text-xs ${simlaIsDisabled ? "text-orange-400/80" : "text-yellow-500/80"}`}>
-              {simlaIsDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
-            </p>
-          )}
         </div>
 
-        <div className="h-px bg-gray-800 mx-5" />
-
-        {/* Count */}
-        {demoOrders.length > 0 && (
-          <div className="px-5 py-2.5">
-            <span className="text-xs text-gray-600">
-              {filteredDemos.length}{demoOrders.length !== filteredDemos.length ? ` / ${demoOrders.length}` : ""} demo{filteredDemos.length !== 1 ? "s" : ""} encontrado{filteredDemos.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
-
-        {/* Order list */}
-        <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2 flex flex-col gap-1.5">
-          {filteredDemos.length === 0 && !loading && (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700 select-none">
-              <Video size={28} className="opacity-30" />
-              <p className="text-xs">{t("tldv_no_meetings")}</p>
-            </div>
+        {/* Load button */}
+        <button
+          onClick={handleLoadOrders}
+          disabled={loading || !simlaApiKey}
+          className="h-[30px] px-3 text-xs flex items-center gap-1.5 text-white font-semibold rounded-lg transition-all disabled:opacity-40 active:scale-[0.98] shrink-0"
+          style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
+        >
+          {loading ? (
+            <><RefreshCw size={11} className="animate-spin" /> {t("tldv_loading_meetings")}</>
+          ) : (
+            <><Play size={11} fill="white" /> {t("tldv_load_meetings")}</>
           )}
-          {filteredDemos.map((demo) => {
-            const isSelected = demo.meetingId === selectedId;
-            const managerName = demo.managerSd
-              ? (managerSdMap[demo.managerSd] ?? demo.managerSd)
-              : null;
-            return (
-              <button
-                key={demo.meetingId}
-                onClick={() => { setSelectedId(demo.meetingId); setActiveTab("transcript"); }}
-                className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all ${
-                  isSelected
-                    ? demo.invalidUrl
-                      ? "bg-yellow-950/40 border-yellow-700/60 shadow-[0_0_14px_rgba(234,179,8,0.07)]"
-                      : "bg-blue-950/60 border-cyan-700/50 shadow-[0_0_18px_rgba(6,182,212,0.09)]"
-                    : "bg-gray-800/50 border-gray-700/40 hover:border-gray-600/70 hover:bg-gray-800/80"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <Building2 size={11} className="text-gray-600 shrink-0" />
-                      <p className="text-sm font-semibold text-gray-100 truncate">{demo.projectName}</p>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Calendar size={10} className="text-gray-600" />
-                        {formatDemoDate(demo.demoDate)}
-                      </span>
-                      {managerName && (
-                        <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
-                          <User size={10} className="text-gray-600 shrink-0" />
-                          {managerName}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1 text-xs text-gray-600">
-                        <Hash size={10} className="text-gray-700" />
-                        {demo.orderNumber}
-                      </span>
-                    </div>
-                    {demo.invalidUrl && (
-                      <div className="flex items-center gap-1 bg-yellow-900/25 border border-yellow-700/35 rounded-md px-2 py-0.5 w-fit mt-0.5">
-                        <AlertTriangle size={9} className="text-yellow-500 shrink-0" />
-                        <span className="text-xs text-yellow-400 font-medium">Enlace inválido</span>
-                      </div>
-                    )}
-                  </div>
-                  {demo.invalidUrl
-                    ? <AlertTriangle size={13} className="text-yellow-500/70 shrink-0 mt-0.5" />
-                    : <Video size={12} className={`shrink-0 mt-0.5 transition-colors ${isSelected ? "text-cyan-400" : "text-gray-700"}`} />
-                  }
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        </button>
       </div>
 
-      {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#0c0e14" }}>
-        {loading ? (
-          <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
-        ) : !selectedOrder ? (
-          (!simlaApiKey && demoOrders.length === 0)
-            ? <SimlaDisabledState isDisabled={simlaIsDisabled} />
-            : <EmptyState />
-        ) : (
-          <>
-            {/* Header */}
-            <div className="px-6 pt-5 pb-0 bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
-              <div className="flex items-start justify-between gap-4 pb-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base font-bold text-white truncate">{selectedOrder.projectName}</h3>
-                    {selectedOrder.invalidUrl && (
-                      <span className="flex items-center gap-1 bg-yellow-900/35 border border-yellow-700/45 text-yellow-400 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
-                        <AlertTriangle size={10} />
-                        Requiere supervisión
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5">
-                    {selectedOrder.customerName && (
-                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                        <UserCircle size={12} className="text-gray-500 shrink-0" />
-                        {selectedOrder.customerName}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <Calendar size={11} className="text-gray-600 shrink-0" />
-                      {formatDemoDate(selectedOrder.demoDate)}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <Tag size={11} className="text-gray-600 shrink-0" />
-                      {formatMql(selectedOrder.mqlOrder)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <a href={`https://base.simla.com/orders/${selectedOrder.orderId}/edit`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
-                  >
-                    <ExternalLink size={12} /> Ir al Pedido
-                  </a>
-                  {!selectedOrder.invalidUrl && (
-                    <a href={tldvMeetingUrl(selectedOrder.meetingId)} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
-                    >
-                      <Video size={12} /> TLDV
-                    </a>
-                  )}
-                </div>
+      {/* ── Body ── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* ── Left panel (meetings list only) ── */}
+        <div className="w-[280px] shrink-0 flex flex-col border-r border-gray-800 bg-gray-900">
+
+          {/* Order list */}
+          <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2 flex flex-col gap-1.5">
+            {filteredDemos.length === 0 && !loading && (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700 select-none">
+                <Video size={28} className="opacity-30" />
+                <p className="text-xs">{t("tldv_no_meetings")}</p>
               </div>
-
-              {/* Underline tabs */}
-              {!selectedOrder.invalidUrl && (
-                <div className="flex">
-                  {(["transcript", "ai_report"] as const).map((tab) => (
-                    <button key={tab} onClick={() => setActiveTab(tab)}
-                      className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-                        activeTab === tab
-                          ? "border-cyan-500 text-cyan-400"
-                          : "border-transparent text-gray-600 hover:text-gray-400"
-                      }`}
-                    >
-                      {tab === "ai_report" && <Bot size={13} />}
-                      {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_ai_report_tab")}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-
-              {/* Invalid URL warning panel */}
-              {selectedOrder.invalidUrl && (
-                <div className="p-6">
-                  <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
-                      <p className="text-yellow-300 font-semibold text-sm">Enlace de grabación inválido</p>
-                    </div>
-                    <p className="text-yellow-400/70 text-sm leading-relaxed">
-                      El vendedor registró un enlace que no corresponde a una reunión de TLDV.
-                      Revisa el pedido y corrige el campo{" "}
-                      <span className="font-mono text-yellow-300 bg-yellow-950/50 px-1 py-0.5 rounded">record_of_meeting_demo</span>.
-                    </p>
-                    <div className="bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2.5">
-                      <p className="text-xs text-yellow-700 font-mono break-all">{selectedOrder.tldvUrl}</p>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      Formato válido:{" "}
-                      <span className="font-mono text-gray-500">https://tldv.io/app/meetings/&lt;id&gt;</span>
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Transcript */}
-              {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                <div className="px-5 py-5 flex flex-col gap-3">
-                  {transcriptLoading && <TranscriptSkeleton />}
-                  {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
-                  {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-                    <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
-                  )}
-                  {transcript.map((seg, i) => {
-                    const idx = speakerIndex[seg.speaker] ?? 0;
-                    const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
-                    const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
-                    const prevSeg = i > 0 ? transcript[i - 1] : null;
-                    const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
-                    const isRight = idx === 0;
-                    return (
-                      <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
-                        {showSpeaker && (
-                          <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
+            )}
+            {filteredDemos.map((demo) => {
+              const isSelected = demo.meetingId === selectedId;
+              const managerName = demo.managerSd
+                ? (managerSdMap[demo.managerSd] ?? demo.managerSd)
+                : null;
+              return (
+                <button
+                  key={demo.meetingId}
+                  onClick={() => { setSelectedId(demo.meetingId); setActiveTab("transcript"); }}
+                  className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all ${
+                    isSelected
+                      ? demo.invalidUrl
+                        ? "bg-yellow-950/40 border-yellow-700/60 shadow-[0_0_14px_rgba(234,179,8,0.07)]"
+                        : "bg-blue-950/60 border-cyan-700/50 shadow-[0_0_18px_rgba(6,182,212,0.09)]"
+                      : "bg-gray-800/50 border-gray-700/40 hover:border-gray-600/70 hover:bg-gray-800/80"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0 flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 size={11} className="text-gray-600 shrink-0" />
+                        <p className="text-sm font-semibold text-gray-100 truncate">{demo.projectName}</p>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                          <Calendar size={10} className="text-gray-600" />
+                          {formatDemoDate(demo.demoDate)}
+                        </span>
+                        {managerName && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500 truncate max-w-[120px]">
+                            <User size={10} className="text-gray-600 shrink-0" />
+                            {managerName}
+                          </span>
                         )}
-                        <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"}`}>
-                          <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
-                          {ts && <p className="text-[10px] text-gray-600 mt-1.5 tabular-nums font-mono">{ts}</p>}
+                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                          <Hash size={10} className="text-gray-700" />
+                          {demo.orderNumber}
+                        </span>
+                      </div>
+                      {demo.invalidUrl && (
+                        <div className="flex items-center gap-1 bg-yellow-900/25 border border-yellow-700/35 rounded-md px-2 py-0.5 w-fit mt-0.5">
+                          <AlertTriangle size={9} className="text-yellow-500 shrink-0" />
+                          <span className="text-xs text-yellow-400 font-medium">Enlace inválido</span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* AI Analysis */}
-              {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
-                <div className="p-6 flex flex-col gap-4">
-                  {/* No API key / disabled */}
-                  {!openaiApiKey && (
-                    <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-                      <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center ${
-                        openaiIsDisabled
-                          ? "bg-orange-950/30 border-orange-800/40"
-                          : "bg-gray-800/50 border-gray-700/50"
-                      }`}>
-                        <Bot size={26} className={openaiIsDisabled ? "text-orange-400/70" : "text-violet-400/60"} />
-                      </div>
-                      <p className={`text-sm max-w-xs ${openaiIsDisabled ? "text-orange-400/80" : "text-gray-400"}`}>
-                        {openaiIsDisabled ? t("tldv_ai_disabled") : t("tldv_ai_no_key")}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Has API key */}
-                  {openaiApiKey && !aiReportLoading && aiReport === null && (
-                    <div className="flex flex-col items-center justify-center gap-5 py-16">
-                      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
-                        <Bot size={26} className="text-violet-400/60" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
-                        <p className="text-gray-600 text-sm mb-5 max-w-xs">
-                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${t("tldv_model_used")} ${openaiModel}`}
-                        </p>
-                        <button
-                          onClick={() => handleGenerateAiReport(false)}
-                          disabled={transcript.length === 0}
-                          className="flex items-center gap-2 text-white font-semibold px-5 py-2.5 rounded-xl text-sm mx-auto hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40"
-                          style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)" }}
-                        >
-                          <Bot size={14} /> {t("tldv_ai_generate")}
-                        </button>
-                      </div>
-                      {aiReportError && aiReportError !== "no_transcript" && (
-                        <p className="text-red-400 text-sm">{aiReportError}</p>
                       )}
                     </div>
-                  )}
+                    {demo.invalidUrl
+                      ? <AlertTriangle size={13} className="text-yellow-500/70 shrink-0 mt-0.5" />
+                      : <Video size={12} className={`shrink-0 mt-0.5 transition-colors ${isSelected ? "text-cyan-400" : "text-gray-700"}`} />
+                    }
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                  {/* Loading */}
-                  {aiReportLoading && <AiLoadingAnimation model={openaiModel} />}
+        {/* ── Right panel ── */}
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#0c0e14" }}>
+          {loading ? (
+            <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
+          ) : !selectedOrder ? (
+            !tldvApiKey
+              ? <IntegrationDisabledState type="tldv" isDisabled={tldvIsDisabled} />
+              : !simlaApiKey
+                ? <IntegrationDisabledState type="crm" isDisabled={simlaIsDisabled} />
+                : <EmptyState />
+          ) : (
+            <>
+              {/* Header */}
+              <div className="px-6 pt-5 pb-0 bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
+                <div className="flex items-start justify-between gap-4 pb-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-bold text-white truncate">{selectedOrder.projectName}</h3>
+                      {selectedOrder.invalidUrl && (
+                        <span className="flex items-center gap-1 bg-yellow-900/35 border border-yellow-700/45 text-yellow-400 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
+                          <AlertTriangle size={10} />
+                          Requiere supervisión
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                      {selectedOrder.customerName && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <UserCircle size={12} className="text-gray-500 shrink-0" />
+                          {selectedOrder.customerName}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Calendar size={11} className="text-gray-600 shrink-0" />
+                        {formatDemoDate(selectedOrder.demoDate)}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Tag size={11} className="text-gray-600 shrink-0" />
+                        {formatMql(selectedOrder.mqlOrder)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <a href={`https://base.simla.com/orders/${selectedOrder.orderId}/edit`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
+                    >
+                      <ExternalLink size={12} /> Ir al Pedido
+                    </a>
+                    {!selectedOrder.invalidUrl && (
+                      <a href={tldvMeetingUrl(selectedOrder.meetingId)} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
+                      >
+                        <Video size={12} /> TLDV
+                      </a>
+                    )}
+                  </div>
+                </div>
 
-                  {/* Report rendered */}
-                  {!aiReportLoading && aiReport !== null && openaiApiKey && (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Bot size={14} className="text-violet-400" />
-                          <span className="text-xs text-gray-500">
-                            <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
-                          </span>
+                {/* Underline tabs */}
+                {!selectedOrder.invalidUrl && (
+                  <div className="flex">
+                    {(["transcript", "ai_report"] as const).map((tab) => (
+                      <button key={tab} onClick={() => setActiveTab(tab)}
+                        className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                          activeTab === tab
+                            ? "border-cyan-500 text-cyan-400"
+                            : "border-transparent text-gray-600 hover:text-gray-400"
+                        }`}
+                      >
+                        {tab === "ai_report" && <Bot size={13} />}
+                        {tab === "transcript" ? t("tldv_tab_transcript") : t("tldv_ai_report_tab")}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+
+                {/* Invalid URL warning panel */}
+                {selectedOrder.invalidUrl && (
+                  <div className="p-6">
+                    <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
+                        <p className="text-yellow-300 font-semibold text-sm">Enlace de grabación inválido</p>
+                      </div>
+                      <p className="text-yellow-400/70 text-sm leading-relaxed">
+                        El vendedor registró un enlace que no corresponde a una reunión de TLDV.
+                        Revisa el pedido y corrige el campo{" "}
+                        <span className="font-mono text-yellow-300 bg-yellow-950/50 px-1 py-0.5 rounded">record_of_meeting_demo</span>.
+                      </p>
+                      <div className="bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2.5">
+                        <p className="text-xs text-yellow-700 font-mono break-all">{selectedOrder.tldvUrl}</p>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Formato válido:{" "}
+                        <span className="font-mono text-gray-500">https://tldv.io/app/meetings/&lt;id&gt;</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transcript */}
+                {!selectedOrder.invalidUrl && activeTab === "transcript" && (
+                  <div className="px-5 py-5 flex flex-col gap-3">
+                    {transcriptLoading && <TranscriptSkeleton />}
+                    {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
+                    {!transcriptLoading && !transcriptError && transcript.length === 0 && (
+                      <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
+                    )}
+                    {transcript.map((seg, i) => {
+                      const idx = speakerIndex[seg.speaker] ?? 0;
+                      const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
+                      const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
+                      const prevSeg = i > 0 ? transcript[i - 1] : null;
+                      const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
+                      const isRight = idx === 0;
+                      return (
+                        <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
+                          {showSpeaker && (
+                            <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
+                          )}
+                          <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"}`}>
+                            <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
+                            {ts && <p className="text-[10px] text-gray-600 mt-1.5 tabular-nums font-mono">{ts}</p>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* AI Analysis */}
+                {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
+                  <div className="p-6 flex flex-col gap-4">
+                    {/* No API key / disabled */}
+                    {!openaiApiKey && (
+                      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                        <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center ${
+                          openaiIsDisabled
+                            ? "bg-orange-950/30 border-orange-800/40"
+                            : "bg-gray-800/50 border-gray-700/50"
+                        }`}>
+                          <Bot size={26} className={openaiIsDisabled ? "text-orange-400/70" : "text-violet-400/60"} />
+                        </div>
+                        <p className={`text-sm max-w-xs ${openaiIsDisabled ? "text-orange-400/80" : "text-gray-400"}`}>
+                          {openaiIsDisabled ? t("tldv_ai_disabled") : t("tldv_ai_no_key")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Has API key */}
+                    {openaiApiKey && !aiReportLoading && aiReport === null && (
+                      <div className="flex flex-col items-center justify-center gap-5 py-16">
+                        <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
+                          <Bot size={26} className="text-violet-400/60" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
+                          <p className="text-gray-600 text-sm mb-5 max-w-xs">
+                            {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${t("tldv_model_used")} ${openaiModel}`}
+                          </p>
                           <button
-                            onClick={() => requestNavigate("/admin?tab=integraciones")}
-                            title={t("tldv_configure_settings")}
-                            className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
+                            onClick={() => handleGenerateAiReport(false)}
+                            disabled={transcript.length === 0}
+                            className="flex items-center gap-2 text-white font-semibold px-5 py-2.5 rounded-xl text-sm mx-auto hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-40"
+                            style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)" }}
                           >
-                            <Settings2 size={11} />
+                            <Bot size={14} /> {t("tldv_ai_generate")}
                           </button>
                         </div>
-                        <button
-                          onClick={() => handleGenerateAiReport(true)}
-                          className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
-                        >
-                          <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
-                        </button>
+                        {aiReportError && aiReportError !== "no_transcript" && (
+                          <p className="text-red-400 text-sm">{aiReportError}</p>
+                        )}
                       </div>
-                      <AiReportRenderer text={aiReport} />
-                    </>
-                  )}
-                </div>
-              )}
+                    )}
 
-            </div>
-          </>
-        )}
+                    {/* Loading */}
+                    {aiReportLoading && <AiLoadingAnimation model={openaiModel} />}
+
+                    {/* Report rendered */}
+                    {!aiReportLoading && aiReport !== null && openaiApiKey && (
+                      <>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Bot size={14} className="text-violet-400" />
+                            <span className="text-xs text-gray-500">
+                              <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
+                            </span>
+                            <button
+                              onClick={() => requestNavigate("/admin?tab=integraciones")}
+                              title={t("tldv_configure_settings")}
+                              className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
+                            >
+                              <Settings2 size={11} />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleGenerateAiReport(true)}
+                            className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
+                          >
+                            <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
+                          </button>
+                        </div>
+                        <AiReportRenderer text={aiReport} />
+                      </>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -951,10 +951,18 @@ function formatInline(text: string): React.ReactNode {
   );
 }
 
-// ── Simla disabled / missing state ──────────────────────────────────────────
-function SimlaDisabledState({ isDisabled }: { isDisabled: boolean }) {
+// ── Integration disabled / missing state ─────────────────────────────────────
+function IntegrationDisabledState({ type, isDisabled }: { type: "tldv" | "crm"; isDisabled: boolean }) {
   const t = useT();
   const { requestNavigate } = useNavigationGuard();
+
+  let message: string;
+  if (type === "tldv") {
+    message = isDisabled ? t("tldv_tldv_disabled") : t("tldv_not_configured");
+  } else {
+    message = isDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing");
+  }
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
       <style>{`
@@ -975,14 +983,14 @@ function SimlaDisabledState({ isDisabled }: { isDisabled: boolean }) {
       <div className="text-center">
         <p className="text-orange-200 font-semibold text-base mb-2">{t("integration_disabled_title")}</p>
         <p className="text-orange-400/75 text-sm max-w-xs leading-relaxed">
-          {isDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
+          {message}
         </p>
       </div>
       <button
         onClick={() => requestNavigate("/admin?tab=integraciones")}
         className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-700/50 bg-orange-950/40 text-orange-300 text-sm font-medium hover:bg-orange-950/60 transition-colors"
       >
-        <Settings2 size={14} /> {t("tldv_configure_settings")}
+        <Settings2 size={14} /> {t("go_to_settings")}
       </button>
     </div>
   );
@@ -1212,4 +1220,3 @@ function TranscriptSkeleton() {
     </div>
   );
 }
-
