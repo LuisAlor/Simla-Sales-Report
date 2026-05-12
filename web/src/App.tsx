@@ -23,6 +23,7 @@ import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
+import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext";
 import { getUsers } from "@/lib/auth";
 
 function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
@@ -388,7 +389,9 @@ export default function App() {
       <I18nProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AppInner />
+            <NavigationGuardProvider>
+              <AppInner />
+            </NavigationGuardProvider>
           </AuthProvider>
         </ThemeProvider>
       </I18nProvider>

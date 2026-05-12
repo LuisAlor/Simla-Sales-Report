@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Eye, EyeOff, Video, Bot, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
+import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { Avatar } from "@/components/Avatar";
 import { fetchUsers } from "@/lib/api";
 import * as authLib from "@/lib/auth";
@@ -149,6 +150,11 @@ export function AdminPanel() {
     aiKeyInput.trim() !== (currentUser?.openaiApiKey ?? "") ||
     aiEnabled !== (currentUser?.openaiEnabled !== false) ||
     aiModel !== (currentUser?.openaiModel ?? DEFAULT_OPENAI_MODEL);
+
+  // ── Sync dirty state to global navigation guard ────────────────────────────
+  const { setIsDirty: setGuardDirty } = useNavigationGuard();
+  useEffect(() => { setGuardDirty(isDirty); }, [isDirty, setGuardDirty]);
+  useEffect(() => () => setGuardDirty(false), [setGuardDirty]);
 
   // ── Browser-level navigation guard (refresh / close tab) ───────────────────
   useEffect(() => {

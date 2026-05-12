@@ -58,10 +58,10 @@ export function LoadingScreen({ progress }: Props) {
 
   useEffect(() => () => { if (lineAnimRef.current) clearInterval(lineAnimRef.current); }, []);
 
-  const pct = progress ? Math.round((progress.done / progress.total) * 100) : 0;
+  const fillRatio = progress && progress.total > 0 ? progress.done / progress.total : 0;
+  const pct = Math.round(fillRatio * 100);
   const r = 32;
   const circumference = 2 * Math.PI * r;
-  const fillRatio = progress ? progress.done / progress.total : 0;
   const dashOffset = circumference * (1 - fillRatio);
   const lineDash = LINE_LEN * (1 - lineProgress);
 
@@ -158,13 +158,13 @@ export function LoadingScreen({ progress }: Props) {
             </defs>
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-slate-700 dark:text-slate-200 font-bold text-sm">{progress ? `${pct}%` : "···"}</span>
+            <span className="text-slate-700 dark:text-slate-200 font-bold text-sm">{progress && progress.total > 0 ? `${pct}%` : "···"}</span>
           </div>
         </div>
 
         <div>
           <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">
-            {progress ? `${t("loading_page")} ${progress.done} ${t("loading_of")} ${progress.total}` : t("loading_connecting")}
+            {progress && progress.total > 0 ? `${t("loading_page")} ${progress.done} ${t("loading_of")} ${progress.total}` : t("loading_connecting")}
           </p>
           {progress && (
             <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5">{pct}{t("loading_pct_completed")}</p>
