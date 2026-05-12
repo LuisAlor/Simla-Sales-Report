@@ -74,6 +74,14 @@ function saveCachedDemoList(userId: string, dateFrom: string, dateTo: string, de
   try { localStorage.setItem(`${DEMO_LIST_CACHE_PREFIX}${userId}`, JSON.stringify({ dateFrom, dateTo, demos })); } catch { /* ignore */ }
 }
 
+function fmtTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function formatDemoDate(raw: string): string {
   if (!raw) return "—";
   try {
@@ -555,9 +563,13 @@ export function TLDV({ managerSdMap }: Props) {
                   )}
                   {transcript.map((seg, i) => {
                     const palette = SPEAKER_PALETTES[(speakerIndex[seg.speaker] ?? 0) % SPEAKER_PALETTES.length];
+                    const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
                     return (
                       <div key={i} className={`rounded-xl border px-4 py-3 ${palette.card}`}>
-                        <p className={`text-xs font-semibold mb-1.5 ${palette.name}`}>{seg.speaker}</p>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className={`text-xs font-semibold ${palette.name}`}>{seg.speaker}</p>
+                          {ts && <span className="text-[10px] text-gray-600 font-mono tabular-nums">{ts}</span>}
+                        </div>
                         <p className="text-sm text-gray-300 leading-relaxed">{seg.text}</p>
                       </div>
                     );
