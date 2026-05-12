@@ -280,6 +280,12 @@ const es = {
   tldv_tldv_disabled: "La integración TLDV está desactivada. Actívala en Ajustes → Integraciones para continuar.",
   tldv_simla_disabled: "La integración Simla CRM está desactivada. Actívala en Ajustes → Integraciones para continuar.",
   tldv_ai_disabled: "La integración OpenAI está desactivada. Actívala en Ajustes → Integraciones para utilizar el análisis IA.",
+  unsaved_title: "Cambios sin guardar",
+  unsaved_body: "Tienes cambios sin guardar en Integraciones. Si continúas, se perderán.",
+  unsaved_discard: "Descartar",
+  unsaved_keep: "Seguir editando",
+  unsaved_save_bar: "Cambios sin guardar",
+  admin_save_all: "Guardar cambios",
 } as const;
 
 export type TranslationKey = keyof typeof es;
@@ -547,6 +553,12 @@ const en: Record<TranslationKey, string> = {
   tldv_tldv_disabled: "The TLDV integration is disabled. Enable it in Settings → Integrations to continue.",
   tldv_simla_disabled: "The Simla CRM integration is disabled. Enable it in Settings → Integrations to continue.",
   tldv_ai_disabled: "The OpenAI integration is disabled. Enable it in Settings → Integrations to use AI analysis.",
+  unsaved_title: "Unsaved changes",
+  unsaved_body: "You have unsaved changes in Integrations. If you continue, they will be lost.",
+  unsaved_discard: "Discard",
+  unsaved_keep: "Keep editing",
+  unsaved_save_bar: "Unsaved changes",
+  admin_save_all: "Save changes",
 };
 
 const ru: Record<TranslationKey, string> = {
@@ -812,6 +824,12 @@ const ru: Record<TranslationKey, string> = {
   tldv_tldv_disabled: "Интеграция TLDV отключена. Включите её в Настройках → Интеграции для продолжения.",
   tldv_simla_disabled: "Интеграция Simla CRM отключена. Включите её в Настройках → Интеграции для продолжения.",
   tldv_ai_disabled: "Интеграция OpenAI отключена. Включите её в Настройках → Интеграции для использования ИИ-анализа.",
+  unsaved_title: "Несохранённые изменения",
+  unsaved_body: "У вас есть несохранённые изменения в Интеграциях. Если продолжить, они будут потеряны.",
+  unsaved_discard: "Отменить",
+  unsaved_keep: "Продолжить редактирование",
+  unsaved_save_bar: "Несохранённые изменения",
+  admin_save_all: "Сохранить изменения",
 };
 
 export const translations: Record<Lang, Record<TranslationKey, string>> = { es, en, ru };

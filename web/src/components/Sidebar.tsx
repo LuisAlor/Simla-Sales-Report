@@ -209,7 +209,7 @@ export function Sidebar() {
               <BarChart3 size={16} />
             </button>
           </div>
-          {user?.tldvApiKey && (
+          {user?.tldvApiKey && user?.tldvEnabled !== false && (
             <div onMouseEnter={(e) => openFlyout(e, "tldv")} onMouseLeave={closeFlyoutDelayed}>
               <button className={iconBtn(location.pathname.startsWith("/tldv"))}>
                 <Video size={16} />
