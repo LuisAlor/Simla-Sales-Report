@@ -47,7 +47,8 @@ interface LoadedData {
 function AppInner() {
   const { user, updateUser } = useAuth();
   const t = useT();
-  const apiKey = user?.apiKey ?? "";
+  const hasStoredApiKey = !!user?.apiKey;
+  const apiKey = (user?.apiKeyEnabled !== false && user?.apiKey) ? user.apiKey : "";
 
   const [filters, setFilters] = useState<Filters>(() =>
     getDefaultFilters(user?.savedFilters)
@@ -329,7 +330,7 @@ function AppInner() {
     hasApiKey: apiKey.length > 0,
   };
 
-  if (!apiKey) {
+  if (!hasStoredApiKey) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
