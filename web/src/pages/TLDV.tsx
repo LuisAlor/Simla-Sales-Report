@@ -698,7 +698,7 @@ function AiLoadingAnimation({ model }: { model: string }) {
         <p key={step} className="text-gray-300 text-sm font-medium animate-[fadeIn_0.4s_ease]">
           {t(AI_STEPS[step] as Parameters<typeof t>[0])}
         </p>
-        <p className="text-gray-600 text-xs mt-1">{model}</p>
+        <p className="text-gray-600 text-xs mt-1">{t("tldv_model_used")} {model}</p>
       </div>
 
       {/* Three bouncing dots */}
