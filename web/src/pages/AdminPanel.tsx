@@ -39,14 +39,16 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 function SimlaLogo() {
   const [err, setErr] = useState(false);
+  if (err) {
+    return (
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: "linear-gradient(135deg, #0d9488, #06b6d4)" }}>
+        <span className="text-white text-xs font-bold">S</span>
+      </div>
+    );
+  }
   return (
-    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
-      style={{ background: "linear-gradient(135deg, #0d9488, #06b6d4)" }}>
-      {err
-        ? <span className="text-white text-xs font-bold">S</span>
-        : <img src="/logo.png" alt="Simla" className="w-full h-full object-contain" onError={() => setErr(true)} />
-      }
-    </div>
+    <img src="/logo.png" alt="Simla" className="w-8 h-8 object-contain shrink-0" onError={() => setErr(true)} />
   );
 }
 

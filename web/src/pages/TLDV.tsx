@@ -48,7 +48,8 @@ function isValidTldvMeetingUrl(url: string): boolean {
   } catch { return false; }
 }
 
-const AI_REPORT_CACHE_PREFIX = "simla_ai_report_v1_";
+const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
+const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v1_";
 
 function loadCachedAiReport(meetingId: string): string | null {
   try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`); } catch { return null; }
@@ -56,6 +57,19 @@ function loadCachedAiReport(meetingId: string): string | null {
 
 function saveCachedAiReport(meetingId: string, report: string) {
   try { localStorage.setItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`, report); } catch { /* ignore */ }
+}
+
+interface DemoListCache { dateFrom: string; dateTo: string; demos: DemoOrder[] }
+
+function loadCachedDemoList(userId: string): DemoListCache | null {
+  try {
+    const raw = localStorage.getItem(`${DEMO_LIST_CACHE_PREFIX}${userId}`);
+    return raw ? (JSON.parse(raw) as DemoListCache) : null;
+  } catch { return null; }
+}
+
+function saveCachedDemoList(userId: string, dateFrom: string, dateTo: string, demos: DemoOrder[]) {
+  try { localStorage.setItem(`${DEMO_LIST_CACHE_PREFIX}${userId}`, JSON.stringify({ dateFrom, dateTo, demos })); } catch { /* ignore */ }
 }
 
 function formatDemoDate(raw: string): string {
@@ -134,11 +148,35 @@ export function TLDV({ managerSdMap }: Props) {
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
 
-  const tldvApiKey = (user?.tldvEnabled !== false && user?.tldvApiKey) ? user.tldvApiKey : "";
-  const simlaApiKey = (user?.apiKeyEnabled !== false && user?.apiKey) ? user.apiKey : "";
-  const openaiApiKey = (user?.openaiEnabled !== false && user?.openaiApiKey) ? user.openaiApiKey : "";
-  const openaiModel = user?.openaiModel ?? DEFAULT_OPENAI_MODEL;
+  // Resolve keys + detect disabled state
+  const tldvKeyRaw    = user?.tldvApiKey ?? "";
+  const tldvIsEnabled = user?.tldvEnabled !== false;
+  const tldvApiKey    = tldvIsEnabled ? tldvKeyRaw : "";
+  const tldvIsDisabled = !!tldvKeyRaw && !tldvIsEnabled;
+
+  const simlaKeyRaw    = user?.apiKey ?? "";
+  const simlaIsEnabled = user?.apiKeyEnabled !== false;
+  const simlaApiKey    = simlaIsEnabled ? simlaKeyRaw : "";
+  const simlaIsDisabled = !!simlaKeyRaw && !simlaIsEnabled;
+
+  const openaiKeyRaw    = user?.openaiApiKey ?? "";
+  const openaiIsEnabled = user?.openaiEnabled !== false;
+  const openaiApiKey    = openaiIsEnabled ? openaiKeyRaw : "";
+  const openaiIsDisabled = !!openaiKeyRaw && !openaiIsEnabled;
+
+  const openaiModel  = user?.openaiModel ?? DEFAULT_OPENAI_MODEL;
   const openaiPrompt = user?.tldvPrompt ?? user?.openaiPrompt ?? DEFAULT_AI_PROMPT;
+
+  // Restore cached demo list on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    const cached = loadCachedDemoList(user.id);
+    if (cached && cached.demos.length > 0) {
+      setDateFrom(cached.dateFrom);
+      setDateTo(cached.dateTo);
+      setDemoOrders(cached.demos);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -156,6 +194,7 @@ export function TLDV({ managerSdMap }: Props) {
       );
       const demos = raw.map(orderToDemoOrder).filter(Boolean) as DemoOrder[];
       setDemoOrders(demos);
+      if (user?.id) saveCachedDemoList(user.id, dateFrom, dateTo, demos);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -217,9 +256,20 @@ export function TLDV({ managerSdMap }: Props) {
   if (!tldvApiKey) {
     return (
       <div className="p-6">
-        <div className="bg-yellow-950/30 border border-yellow-800/50 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle size={18} className="text-yellow-500 shrink-0 mt-0.5" />
-          <p className="text-yellow-400 text-sm">{t("tldv_not_configured")}</p>
+        <div className={`rounded-xl p-4 flex items-start gap-3 border ${
+          tldvIsDisabled
+            ? "bg-orange-950/30 border-orange-800/50"
+            : "bg-yellow-950/30 border-yellow-800/50"
+        }`}>
+          <AlertTriangle size={18} className={`shrink-0 mt-0.5 ${tldvIsDisabled ? "text-orange-400" : "text-yellow-500"}`} />
+          <div>
+            <p className={`text-sm font-semibold mb-0.5 ${tldvIsDisabled ? "text-orange-300" : "text-yellow-300"}`}>
+              {tldvIsDisabled ? "TLDV" : "TLDV"}
+            </p>
+            <p className={`text-sm ${tldvIsDisabled ? "text-orange-400/80" : "text-yellow-400"}`}>
+              {tldvIsDisabled ? t("tldv_tldv_disabled") : t("tldv_not_configured")}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -266,7 +316,11 @@ export function TLDV({ managerSdMap }: Props) {
             )}
           </button>
           {loadError && <p className="text-red-400 text-xs">{loadError}</p>}
-          {!simlaApiKey && <p className="text-yellow-500/80 text-xs">{t("tldv_simla_missing")}</p>}
+          {!simlaApiKey && (
+            <p className={`text-xs ${simlaIsDisabled ? "text-orange-400/80" : "text-yellow-500/80"}`}>
+              {simlaIsDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
+            </p>
+          )}
         </div>
 
         <div className="h-px bg-gray-800 mx-5" />
@@ -466,13 +520,19 @@ export function TLDV({ managerSdMap }: Props) {
               {/* AI Analysis */}
               {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
                 <div className="p-6 flex flex-col gap-4">
-                  {/* No API key configured */}
+                  {/* No API key / disabled */}
                   {!openaiApiKey && (
                     <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-                      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
-                        <Bot size={26} className="text-violet-400/60" />
+                      <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center ${
+                        openaiIsDisabled
+                          ? "bg-orange-950/30 border-orange-800/40"
+                          : "bg-gray-800/50 border-gray-700/50"
+                      }`}>
+                        <Bot size={26} className={openaiIsDisabled ? "text-orange-400/70" : "text-violet-400/60"} />
                       </div>
-                      <p className="text-gray-400 text-sm max-w-xs">{t("tldv_ai_no_key")}</p>
+                      <p className={`text-sm max-w-xs ${openaiIsDisabled ? "text-orange-400/80" : "text-gray-400"}`}>
+                        {openaiIsDisabled ? t("tldv_ai_disabled") : t("tldv_ai_no_key")}
+                      </p>
                     </div>
                   )}
 
