@@ -12,9 +12,11 @@ import {
   UserCircle,
   Tag,
   Bot,
+  Settings2,
 } from "lucide-react";
+import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useT } from "@/contexts/I18nContext";
+import { useT, useI18n } from "@/contexts/I18nContext";
 import { fetchTldvTranscript, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
 import type { TldvTranscriptSegment } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
@@ -75,7 +77,7 @@ function saveCachedDemoList(userId: string, dateFrom: string, dateTo: string, de
 function formatDemoDate(raw: string): string {
   if (!raw) return "—";
   try {
-    return new Date(raw).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" });
+    return new Date(raw).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
   } catch { return raw; }
 }
 
@@ -125,6 +127,8 @@ const SPEAKER_PALETTES = [
 export function TLDV({ managerSdMap }: Props) {
   const { user } = useAuth();
   const t = useT();
+  const { lang } = useI18n();
+  const { requestNavigate } = useNavigationGuard();
 
   const today = new Date().toISOString().split("T")[0];
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -234,7 +238,9 @@ export function TLDV({ managerSdMap }: Props) {
       const transcriptText = transcript
         .map((seg) => `[${seg.speaker}]: ${seg.text}`)
         .join("\n");
-      const report = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt, transcriptText);
+      const langNames: Record<string, string> = { es: "Spanish", en: "English", ru: "Russian" };
+      const langInstruction = `\n\nIMPORTANT: Write your entire response in ${langNames[lang] ?? "Spanish"}.`;
+      const report = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt + langInstruction, transcriptText);
       setAiReport(report);
       saveCachedAiReport(selectedId, report);
     } catch (err) {
@@ -545,7 +551,7 @@ export function TLDV({ managerSdMap }: Props) {
                       <div className="text-center">
                         <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
                         <p className="text-gray-600 text-sm mb-5 max-w-xs">
-                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${transcript.length} segmentos · ${openaiModel}`}
+                          {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${transcript.length} segmentos · ${t("tldv_model_used")} ${openaiModel}`}
                         </p>
                         <button
                           onClick={() => handleGenerateAiReport(false)}
@@ -567,17 +573,26 @@ export function TLDV({ managerSdMap }: Props) {
                     <div className="flex flex-col items-center justify-center gap-3 py-16">
                       <Bot size={28} className="text-violet-400 animate-pulse" />
                       <p className="text-gray-400 text-sm">{t("tldv_ai_generating")}</p>
-                      <p className="text-gray-600 text-xs">{openaiModel}</p>
+                      <p className="text-gray-600 text-xs">{t("tldv_model_used")} {openaiModel}</p>
                     </div>
                   )}
 
                   {/* Report rendered */}
                   {!aiReportLoading && aiReport !== null && openaiApiKey && (
                     <>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Bot size={14} className="text-violet-400" />
-                          <span className="text-xs text-gray-500">{openaiModel}</span>
+                          <span className="text-xs text-gray-500">
+                            <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
+                          </span>
+                          <button
+                            onClick={() => requestNavigate("/admin")}
+                            title={t("tldv_configure_settings")}
+                            className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
+                          >
+                            <Settings2 size={11} />
+                          </button>
                         </div>
                         <button
                           onClick={() => handleGenerateAiReport(true)}
