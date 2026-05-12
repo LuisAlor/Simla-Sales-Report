@@ -13,6 +13,9 @@ import {
   Tag,
   Bot,
   Settings2,
+  Eye,
+  EyeOff,
+  X,
 } from "lucide-react";
 import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +25,7 @@ import type { TldvTranscriptSegment } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
 import { callOpenAI, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
+import { MultiSelect } from "@/components/MultiSelect";
 
 interface Props {
   managerSdMap: Record<string, string>;
@@ -52,6 +56,34 @@ function isValidTldvMeetingUrl(url: string): boolean {
 
 const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
 const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v1_";
+const TLDV_FILTER_LAYOUT_KEY  = "simla_tldv_filter_layout";
+
+const TLDV_FILTER_DEFS = [
+  { id: "date",      labelKey: "filter_creation_date" },
+  { id: "manager",   labelKey: "filter_manager" },
+  { id: "project",   labelKey: "tldv_filter_project" },
+  { id: "order-num", labelKey: "tldv_filter_order_num" },
+] as const;
+
+type TldvFilterId = (typeof TLDV_FILTER_DEFS)[number]["id"];
+type TldvFilterLayoutItem = { id: TldvFilterId; visible: boolean };
+
+function loadTldvFilterLayout(): TldvFilterLayoutItem[] {
+  try {
+    const saved = localStorage.getItem(TLDV_FILTER_LAYOUT_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as TldvFilterLayoutItem[];
+      const ids = new Set(parsed.map((p) => p.id));
+      const missing = TLDV_FILTER_DEFS.filter((f) => !ids.has(f.id)).map((f) => ({ id: f.id, visible: true }));
+      return [...parsed, ...missing];
+    }
+  } catch { /* ignore */ }
+  return TLDV_FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+}
+
+function saveTldvFilterLayout(layout: TldvFilterLayoutItem[]) {
+  try { localStorage.setItem(TLDV_FILTER_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
+}
 
 function loadCachedAiReport(meetingId: string, lang: string): string | null {
   try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${lang}_${meetingId}`); } catch { return null; }
@@ -136,10 +168,10 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
 }
 
 const SPEAKER_PALETTES = [
-  { card: "bg-blue-950/40 border-blue-800/40", name: "text-blue-400" },
-  { card: "bg-purple-950/40 border-purple-800/40", name: "text-purple-400" },
-  { card: "bg-teal-950/40 border-teal-800/40", name: "text-teal-400" },
-  { card: "bg-rose-950/40 border-rose-800/40", name: "text-rose-400" },
+  { bubble: "bg-cyan-900/40",    name: "text-cyan-400",   align: "items-end"   },
+  { bubble: "bg-gray-800",       name: "text-violet-400", align: "items-start" },
+  { bubble: "bg-teal-900/40",    name: "text-teal-400",   align: "items-start" },
+  { bubble: "bg-rose-950/40",    name: "text-rose-400",   align: "items-start" },
 ];
 
 export function TLDV({ managerSdMap }: Props) {
@@ -155,7 +187,13 @@ export function TLDV({ managerSdMap }: Props) {
   const [dateTo, setDateTo] = useState(today);
 
   const [demoOrders, setDemoOrders] = useState<DemoOrder[]>([]);
-  const [managerFilter, setManagerFilter] = useState<string>("all");
+  const [managerFilter, setManagerFilter] = useState<string[]>([]);
+  // knownManagers persists across re-loads so the filter doesn't disappear while searching
+  const [knownManagers, setKnownManagers] = useState<{ value: string; label: string }[]>([]);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [filterLayout, setFilterLayout] = useState<TldvFilterLayoutItem[]>(() => loadTldvFilterLayout());
+  const [filterConfigOpen, setFilterConfigOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -197,9 +235,24 @@ export function TLDV({ managerSdMap }: Props) {
     if (cached && cached.demos.length > 0) {
       setDateFrom(cached.dateFrom);
       setDateTo(cached.dateTo);
-      setDemoOrders(cached.demos);
+      applyDemos(cached.demos);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyDemos(demos: DemoOrder[]) {
+    setDemoOrders(demos);
+    setKnownManagers((prev) => {
+      const map = new Map(prev.map((m) => [m.value, m.label]));
+      for (const d of demos) {
+        if (d.managerSd && !map.has(d.managerSd)) {
+          map.set(d.managerSd, managerSdMap[d.managerSd] ?? d.managerSd);
+        }
+      }
+      return Array.from(map.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    });
+  }
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -216,7 +269,7 @@ export function TLDV({ managerSdMap }: Props) {
         (page, total) => setLoadProgress({ page, total }),
       );
       const demos = raw.map(orderToDemoOrder).filter(Boolean) as DemoOrder[];
-      setDemoOrders(demos);
+      applyDemos(demos);
       if (user?.id) saveCachedDemoList(user.id, dateFrom, dateTo, demos);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
@@ -271,22 +324,18 @@ export function TLDV({ managerSdMap }: Props) {
 
   const selectedOrder = demoOrders.find((d) => d.meetingId === selectedId) ?? null;
 
-  // Unique managers from loaded demos (code → display name)
-  const availableManagers = useMemo(() => {
-    const seen = new Set<string>();
-    const list: { code: string; name: string }[] = [];
-    for (const d of demoOrders) {
-      if (d.managerSd && !seen.has(d.managerSd)) {
-        seen.add(d.managerSd);
-        list.push({ code: d.managerSd, name: managerSdMap[d.managerSd] ?? d.managerSd });
-      }
+  const filteredDemos = useMemo(() => {
+    let list = managerFilter.length === 0 ? demoOrders : demoOrders.filter((d) => managerFilter.includes(d.managerSd));
+    if (projectSearch.trim()) {
+      const q = projectSearch.trim().toLowerCase();
+      list = list.filter((d) => d.projectName.toLowerCase().includes(q));
     }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [demoOrders, managerSdMap]);
-
-  const filteredDemos = useMemo(() =>
-    managerFilter === "all" ? demoOrders : demoOrders.filter((d) => d.managerSd === managerFilter),
-  [demoOrders, managerFilter]);
+    if (orderSearch.trim()) {
+      const q = orderSearch.trim().toLowerCase();
+      list = list.filter((d) => d.orderNumber.toLowerCase().includes(q));
+    }
+    return list;
+  }, [demoOrders, managerFilter, projectSearch, orderSearch]);
 
   // Build speaker index map for consistent palette assignment
   const speakerIndex: Record<string, number> = {};
@@ -336,27 +385,128 @@ export function TLDV({ managerSdMap }: Props) {
         </div>
 
         {/* Filters */}
-        <div className="px-5 pb-4 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-              className="flex-1 border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-            />
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-              className="flex-1 border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-            />
-          </div>
-          {availableManagers.length > 0 && (
-            <select
-              value={managerFilter}
-              onChange={(e) => setManagerFilter(e.target.value)}
-              className="w-full border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+        <div className="px-4 pb-4 flex flex-col gap-2.5">
+          {/* Filter config header */}
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_config_title")}</p>
+            <button
+              onClick={() => setFilterConfigOpen((v) => !v)}
+              className={`p-1 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
+              title={t("filter_config_title")}
             >
-              <option value="all">{t("filter_all")}</option>
-              {availableManagers.map((m) => (
-                <option key={m.code} value={m.code}>{m.name}</option>
-              ))}
-            </select>
+              <Settings2 size={13} />
+            </button>
+          </div>
+
+          {/* Configurator panel */}
+          {filterConfigOpen && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex flex-col gap-2">
+              {filterLayout.map((item, i) => {
+                const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
+                const visibleCount = filterLayout.filter((f) => f.visible).length;
+                const canHide = visibleCount > 1 || !item.visible;
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <span className={`text-xs ${item.visible ? "text-gray-300" : "text-gray-600"}`}>{t(def.labelKey as Parameters<typeof t>[0])}</span>
+                    <button
+                      disabled={!canHide}
+                      onClick={() => {
+                        const next = filterLayout.map((f, j) => j === i ? { ...f, visible: !f.visible } : f);
+                        setFilterLayout(next);
+                        saveTldvFilterLayout(next);
+                      }}
+                      className="p-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {item.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </button>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => {
+                  const next = TLDV_FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+                  setFilterLayout(next);
+                  saveTldvFilterLayout(next);
+                }}
+                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-0.5 transition-colors"
+              >
+                {t("filter_config_reset")}
+              </button>
+            </div>
           )}
+
+          {/* Date range */}
+          {filterLayout.find((f) => f.id === "date")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_creation_date")}</p>
+              <div className="flex gap-2">
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+                />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Manager multi-select */}
+          {filterLayout.find((f) => f.id === "manager")?.visible && knownManagers.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_manager")}</p>
+              <MultiSelect
+                variant="dark"
+                options={knownManagers}
+                selected={managerFilter}
+                onChange={setManagerFilter}
+                placeholder={t("filter_all")}
+              />
+            </div>
+          )}
+
+          {/* Project name search */}
+          {filterLayout.find((f) => f.id === "project")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_project")}</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  placeholder="…"
+                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
+                />
+                {projectSearch && (
+                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Order number search */}
+          {filterLayout.find((f) => f.id === "order-num")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_order_num")}</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  placeholder="…"
+                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
+                />
+                {orderSearch && (
+                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Load button */}
           <button
             onClick={handleLoadOrders}
             disabled={loading || !simlaApiKey}
@@ -364,7 +514,7 @@ export function TLDV({ managerSdMap }: Props) {
             style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
           >
             {loading ? (
-              <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
+              <><RefreshCw size={13} className="animate-spin" /> {t("tldv_loading_meetings")}</>
             ) : (
               <><Play size={12} fill="white" /> {t("tldv_load_meetings")}</>
             )}
@@ -458,7 +608,9 @@ export function TLDV({ managerSdMap }: Props) {
         {loading ? (
           <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
         ) : !selectedOrder ? (
-          <EmptyState />
+          (!simlaApiKey && demoOrders.length === 0)
+            ? <SimlaDisabledState isDisabled={simlaIsDisabled} />
+            : <EmptyState />
         ) : (
           <>
             {/* Header */}
@@ -555,22 +707,28 @@ export function TLDV({ managerSdMap }: Props) {
 
               {/* Transcript */}
               {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                <div className="p-6 flex flex-col gap-2">
+                <div className="px-5 py-5 flex flex-col gap-3">
                   {transcriptLoading && <TranscriptSkeleton />}
                   {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
                   {!transcriptLoading && !transcriptError && transcript.length === 0 && (
                     <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
                   )}
                   {transcript.map((seg, i) => {
-                    const palette = SPEAKER_PALETTES[(speakerIndex[seg.speaker] ?? 0) % SPEAKER_PALETTES.length];
+                    const idx = speakerIndex[seg.speaker] ?? 0;
+                    const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
                     const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
+                    const prevSeg = i > 0 ? transcript[i - 1] : null;
+                    const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
+                    const isRight = idx === 0;
                     return (
-                      <div key={i} className={`rounded-xl border px-4 py-3 ${palette.card}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className={`text-xs font-semibold ${palette.name}`}>{seg.speaker}</p>
-                          {ts && <span className="text-[10px] text-gray-600 font-mono tabular-nums">{ts}</span>}
+                      <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
+                        {showSpeaker && (
+                          <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
+                        )}
+                        <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"}`}>
+                          <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
+                          {ts && <p className="text-[10px] text-gray-600 mt-1.5 tabular-nums font-mono">{ts}</p>}
                         </div>
-                        <p className="text-sm text-gray-300 leading-relaxed">{seg.text}</p>
                       </div>
                     );
                   })}
@@ -790,6 +948,43 @@ function formatInline(text: string): React.ReactNode {
     part.startsWith("**") && part.endsWith("**")
       ? <strong key={i} className="text-gray-100 font-semibold">{part.slice(2, -2)}</strong>
       : part
+  );
+}
+
+// ── Simla disabled / missing state ──────────────────────────────────────────
+function SimlaDisabledState({ isDisabled }: { isDisabled: boolean }) {
+  const t = useT();
+  const { requestNavigate } = useNavigationGuard();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
+      <style>{`
+        @keyframes oPulse { 0% { transform:scale(1); opacity:.18; } 100% { transform:scale(2.4); opacity:0; } }
+        @keyframes oFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+      `}</style>
+      <div className="relative flex items-center justify-center w-32 h-32">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="absolute rounded-full border border-orange-500/25"
+            style={{ width: 56, height: 56, animation: `oPulse 2.4s ease-out ${i * 0.8}s infinite` }} />
+        ))}
+        <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center z-10"
+          style={{ background: "linear-gradient(135deg,#7c2d12 0%,#c2410c 100%)",
+            boxShadow: "0 0 28px rgba(234,88,12,0.3)", animation: "oFloat 3s ease-in-out infinite" }}>
+          <AlertTriangle size={24} className="text-orange-200" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-orange-200 font-semibold text-base mb-2">{t("integration_disabled_title")}</p>
+        <p className="text-orange-400/75 text-sm max-w-xs leading-relaxed">
+          {isDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
+        </p>
+      </div>
+      <button
+        onClick={() => requestNavigate("/admin?tab=integraciones")}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-700/50 bg-orange-950/40 text-orange-300 text-sm font-medium hover:bg-orange-950/60 transition-colors"
+      >
+        <Settings2 size={14} /> {t("tldv_configure_settings")}
+      </button>
+    </div>
   );
 }
 
