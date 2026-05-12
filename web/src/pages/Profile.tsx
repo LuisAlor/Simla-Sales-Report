@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT, useI18n } from "@/contexts/I18nContext";
+import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/auth";
@@ -65,6 +66,7 @@ export function Profile() {
   const t = useT();
   const { lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
+  const { setIsDirty: setGuardDirty } = useNavigationGuard();
 
   const [tab, setTab] = useState<"profile" | "prefs">("profile");
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -76,6 +78,15 @@ export function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const profileDirty =
+    firstName.trim() !== (user?.firstName ?? "") ||
+    lastName.trim() !== (user?.lastName ?? "") ||
+    email.trim() !== (user?.email ?? "") ||
+    currentPassword !== "" || newPassword !== "" || confirmPassword !== "";
+
+  useEffect(() => { setGuardDirty(profileDirty); }, [profileDirty, setGuardDirty]);
+  useEffect(() => () => setGuardDirty(false), [setGuardDirty]);
 
   if (!user) return null;
 
@@ -106,6 +117,7 @@ export function Profile() {
     }
     updateUser({ ...safeUser, firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), ...(newPassword ? { password: newPassword } : {}) });
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    setGuardDirty(false);
     setSuccess(true);
   }
 

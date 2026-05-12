@@ -413,6 +413,14 @@ function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, chi
   const t = useT();
   if (loading) return <LoadingScreen progress={progress} />;
 
+  if (keyDisabled) {
+    return (
+      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-lg p-4 text-sm">
+        {t("tldv_simla_disabled")}
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg p-4 text-sm">
@@ -422,13 +430,6 @@ function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, chi
   }
 
   if (!loaded) {
-    if (keyDisabled) {
-      return (
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-lg p-4 text-sm">
-          {t("tldv_simla_disabled")}
-        </div>
-      );
-    }
     return (
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg p-4 text-sm">
         Selecciona los filtros en el panel lateral y pulsa <strong>Cargar datos</strong>.

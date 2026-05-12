@@ -53,12 +53,12 @@ function isValidTldvMeetingUrl(url: string): boolean {
 const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
 const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v1_";
 
-function loadCachedAiReport(meetingId: string): string | null {
-  try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`); } catch { return null; }
+function loadCachedAiReport(meetingId: string, lang: string): string | null {
+  try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${lang}_${meetingId}`); } catch { return null; }
 }
 
-function saveCachedAiReport(meetingId: string, report: string) {
-  try { localStorage.setItem(`${AI_REPORT_CACHE_PREFIX}${meetingId}`, report); } catch { /* ignore */ }
+function saveCachedAiReport(meetingId: string, lang: string, report: string) {
+  try { localStorage.setItem(`${AI_REPORT_CACHE_PREFIX}${lang}_${meetingId}`, report); } catch { /* ignore */ }
 }
 
 interface DemoListCache { dateFrom: string; dateTo: string; demos: DemoOrder[] }
@@ -221,14 +221,14 @@ export function TLDV({ managerSdMap }: Props) {
 
   useEffect(() => {
     if (!selectedId) { setAiReport(null); return; }
-    setAiReport(loadCachedAiReport(selectedId));
+    setAiReport(loadCachedAiReport(selectedId, lang));
     setAiReportError(null);
-  }, [selectedId]);
+  }, [selectedId, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleGenerateAiReport(forceRegenerate = false) {
     if (!selectedId || !openaiApiKey) return;
     if (!forceRegenerate) {
-      const cached = loadCachedAiReport(selectedId);
+      const cached = loadCachedAiReport(selectedId, lang);
       if (cached) { setAiReport(cached); return; }
     }
     if (transcript.length === 0) { setAiReportError("no_transcript"); return; }
@@ -242,7 +242,7 @@ export function TLDV({ managerSdMap }: Props) {
       const langInstruction = `\n\nIMPORTANT: Write your entire response in ${langNames[lang] ?? "Spanish"}.`;
       const report = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt + langInstruction, transcriptText);
       setAiReport(report);
-      saveCachedAiReport(selectedId, report);
+      saveCachedAiReport(selectedId, lang, report);
     } catch (err) {
       setAiReportError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -587,7 +587,7 @@ export function TLDV({ managerSdMap }: Props) {
                             <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
                           </span>
                           <button
-                            onClick={() => requestNavigate("/admin")}
+                            onClick={() => requestNavigate("/admin?tab=integraciones")}
                             title={t("tldv_configure_settings")}
                             className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
                           >
