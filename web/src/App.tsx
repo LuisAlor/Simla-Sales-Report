@@ -418,10 +418,6 @@ function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, chi
   if (keyDisabled) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <style>{`
-          @keyframes oPulse { 0% { transform:scale(1); opacity:.2; } 100% { transform:scale(2.4); opacity:0; } }
-          @keyframes oFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-        `}</style>
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="relative flex items-center justify-center w-28 h-28">
             {[0, 1, 2].map((i) => (

@@ -184,11 +184,8 @@ export function TLDV({ managerSdMap }: Props) {
   const { lang } = useI18n();
   const { requestNavigate } = useNavigationGuard();
 
-  const today = new Date().toISOString().split("T")[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
-  const [dateFrom, setDateFrom] = useState(thirtyDaysAgo);
-  const [dateTo, setDateTo] = useState(today);
+  const [dateFrom, setDateFrom] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
 
   const [demoOrders, setDemoOrders] = useState<DemoOrder[]>([]);
   const [managerFilter, setManagerFilter] = useState<string[]>([]);
@@ -215,7 +212,6 @@ export function TLDV({ managerSdMap }: Props) {
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
 
-  // Resolve keys + detect disabled state
   const tldvKeyRaw    = user?.tldvApiKey ?? "";
   const tldvIsEnabled = user?.tldvEnabled !== false;
   const tldvApiKey    = tldvIsEnabled ? tldvKeyRaw : "";
@@ -340,7 +336,10 @@ export function TLDV({ managerSdMap }: Props) {
     }
   }
 
-  const selectedOrder = demoOrders.find((d) => d.meetingId === selectedId) ?? null;
+  const selectedOrder = useMemo(
+    () => demoOrders.find((d) => d.meetingId === selectedId) ?? null,
+    [demoOrders, selectedId],
+  );
 
   const filteredDemos = useMemo(() => {
     let list = managerFilter.length === 0 ? demoOrders : demoOrders.filter((d) => managerFilter.includes(d.managerSd));
@@ -355,12 +354,19 @@ export function TLDV({ managerSdMap }: Props) {
     return list;
   }, [demoOrders, managerFilter, projectSearch, orderSearch]);
 
-  // Build speaker index map for consistent palette assignment
-  const speakerIndex: Record<string, number> = {};
-  let sidx = 0;
-  for (const seg of transcript) {
-    if (speakerIndex[seg.speaker] === undefined) speakerIndex[seg.speaker] = sidx++;
-  }
+  const filterLayoutVisibleCount = useMemo(
+    () => filterLayout.filter((f) => f.visible).length,
+    [filterLayout],
+  );
+
+  const speakerIndex = useMemo(() => {
+    const idx: Record<string, number> = {};
+    let sidx = 0;
+    for (const seg of transcript) {
+      if (idx[seg.speaker] === undefined) idx[seg.speaker] = sidx++;
+    }
+    return idx;
+  }, [transcript]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-0px)] overflow-hidden bg-gray-950">
@@ -462,8 +468,7 @@ export function TLDV({ managerSdMap }: Props) {
               <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider mb-2">{t("filter_config_title")}</p>
               {filterLayout.map((item, i) => {
                 const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
-                const visibleCount = filterLayout.filter((f) => f.visible).length;
-                const canHide = visibleCount > 1 || !item.visible;
+                const canHide = filterLayoutVisibleCount > 1 || !item.visible;
                 return (
                   <div
                     key={item.id}
@@ -586,7 +591,7 @@ export function TLDV({ managerSdMap }: Props) {
                       {demo.invalidUrl && (
                         <div className="flex items-center gap-1 bg-yellow-900/25 border border-yellow-700/35 rounded-md px-2 py-0.5 w-fit mt-0.5">
                           <AlertTriangle size={9} className="text-yellow-500 shrink-0" />
-                          <span className="text-xs text-yellow-400 font-medium">Enlace inválido</span>
+                          <span className="text-xs text-yellow-400 font-medium">{t("tldv_invalid_url")}</span>
                         </div>
                       )}
                     </div>
@@ -635,7 +640,7 @@ export function TLDV({ managerSdMap }: Props) {
                       {selectedOrder.invalidUrl && (
                         <span className="flex items-center gap-1 bg-yellow-900/35 border border-yellow-700/45 text-yellow-400 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
                           <AlertTriangle size={10} />
-                          Requiere supervisión
+                          {t("tldv_requires_review")}
                         </span>
                       )}
                     </div>
@@ -662,7 +667,7 @@ export function TLDV({ managerSdMap }: Props) {
                     <a href={`https://base.simla.com/orders/${selectedOrder.orderId}/edit`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
                     >
-                      <ExternalLink size={12} /> Ir al Pedido
+                      <ExternalLink size={12} /> {t("tldv_open_crm")}
                     </a>
                     {!selectedOrder.invalidUrl && (
                       <a href={tldvMeetingUrl(selectedOrder.meetingId)} target="_blank" rel="noopener noreferrer"
@@ -981,10 +986,6 @@ function IntegrationDisabledState({ type, isDisabled }: { type: "tldv" | "crm"; 
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
-      <style>{`
-        @keyframes oPulse { 0% { transform:scale(1); opacity:.18; } 100% { transform:scale(2.4); opacity:0; } }
-        @keyframes oFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
-      `}</style>
       <div className="relative flex items-center justify-center w-32 h-32">
         {[0, 1, 2].map((i) => (
           <div key={i} className="absolute rounded-full border border-orange-500/25"
