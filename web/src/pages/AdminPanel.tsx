@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Video, Bot, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
@@ -103,7 +104,11 @@ function UnsavedDialog({ state, onKeep, t }: {
 export function AdminPanel() {
   const { user: currentUser, updateUser } = useAuth();
   const t = useT();
-  const [activeTab, setActiveTab] = useState<Tab>("usuarios");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const p = searchParams.get("tab");
+    return p === "integraciones" ? "integraciones" : "usuarios";
+  });
   const [users, setUsers] = useState<User[]>(() => authLib.getUsers());
   const [unsavedDialog, setUnsavedDialog] = useState<UnsavedDialogState>({ show: false, onDiscard: () => {} });
 
@@ -140,8 +145,14 @@ export function AdminPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Clear ?tab= param from URL after consuming it
+  useEffect(() => {
+    if (searchParams.has("tab")) setSearchParams({}, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Dirty detection ─────────────────────────────────────────────────────────
-  const isDirty =
+  const integrationsDirty =
     apiKeyInput.trim() !== (currentUser?.apiKey ?? "") ||
     apiKeyEnabled !== (currentUser?.apiKeyEnabled !== false) ||
     tldvKeyInput.trim() !== (currentUser?.tldvApiKey ?? "") ||
@@ -151,6 +162,13 @@ export function AdminPanel() {
     aiEnabled !== (currentUser?.openaiEnabled !== false) ||
     aiModel !== (currentUser?.openaiModel ?? DEFAULT_OPENAI_MODEL);
 
+  const userFormDirty = showAddForm && (
+    newFirstName.trim() !== "" || newLastName.trim() !== "" ||
+    newEmail.trim() !== "" || newPassword !== ""
+  );
+
+  const isDirty = integrationsDirty || userFormDirty;
+
   // ── Sync dirty state to global navigation guard ────────────────────────────
   const { setIsDirty: setGuardDirty } = useNavigationGuard();
   useEffect(() => { setGuardDirty(isDirty); }, [isDirty, setGuardDirty]);
@@ -158,14 +176,14 @@ export function AdminPanel() {
 
   // ── Browser-level navigation guard (refresh / close tab) ───────────────────
   useEffect(() => {
-    if (!isDirty || activeTab !== "integraciones") return;
+    if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty, activeTab]);
+  }, [isDirty]);
 
   function requestTabSwitch(newTab: Tab) {
-    if (isDirty && activeTab === "integraciones") {
+    if (isDirty) {
       setUnsavedDialog({
         show: true,
         onDiscard: () => {
@@ -541,49 +559,27 @@ export function AdminPanel() {
               </div>
             </div>
 
-          </div>
-        )}
-      </div>
-
-      {/* ── Sticky save bar (visible when dirty on integrations tab) ── */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 ${
-          isDirty && activeTab === "integraciones"
-            ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0 pointer-events-none"
-        }`}
-      >
-        <div className="mx-auto max-w-3xl px-4 pb-4">
-          <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl shadow-xl px-5 py-3.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t("unsaved_save_bar")}</span>
-            </div>
-            <div className="flex items-center gap-2">
+          {/* ── Save row ── */}
+          {integrationsDirty && (
+            <div className="flex items-center justify-end gap-2 pt-2">
               {saveSuccess && (
                 <span className="flex items-center gap-1.5 text-emerald-500 text-xs font-medium mr-2">
                   <CheckCircle2 size={13} /> {t("admin_ai_saved")}
                 </span>
               )}
-              <button
-                type="button"
-                onClick={discardChanges}
-                className="px-4 py-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
+              <button type="button" onClick={discardChanges}
+                className="px-4 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 {t("unsaved_discard")}
               </button>
-              <button
-                type="button"
-                onClick={handleSaveAll}
-                disabled={isSaving}
-                className="px-4 py-1.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2"
-              >
+              <button type="button" onClick={handleSaveAll} disabled={isSaving}
+                className="px-4 py-1.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2">
                 {isSaving && <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
                 {t("admin_save_all")}
               </button>
             </div>
+          )}
           </div>
-        </div>
+        )}
       </div>
 
       <style>{`
