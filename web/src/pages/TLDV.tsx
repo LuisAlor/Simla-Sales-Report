@@ -22,6 +22,7 @@ import type { TldvTranscriptSegment } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
 import type { RawOrder } from "@/lib/api";
 import { callOpenAI, DEFAULT_OPENAI_MODEL, DEFAULT_AI_PROMPT } from "@/lib/openai";
+import { MultiSelect } from "@/components/MultiSelect";
 
 interface Props {
   managerSdMap: Record<string, string>;
@@ -155,7 +156,9 @@ export function TLDV({ managerSdMap }: Props) {
   const [dateTo, setDateTo] = useState(today);
 
   const [demoOrders, setDemoOrders] = useState<DemoOrder[]>([]);
-  const [managerFilter, setManagerFilter] = useState<string>("all");
+  const [managerFilter, setManagerFilter] = useState<string[]>([]);
+  // knownManagers persists across re-loads so the filter doesn't disappear while searching
+  const [knownManagers, setKnownManagers] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -197,9 +200,24 @@ export function TLDV({ managerSdMap }: Props) {
     if (cached && cached.demos.length > 0) {
       setDateFrom(cached.dateFrom);
       setDateTo(cached.dateTo);
-      setDemoOrders(cached.demos);
+      applyDemos(cached.demos);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyDemos(demos: DemoOrder[]) {
+    setDemoOrders(demos);
+    setKnownManagers((prev) => {
+      const map = new Map(prev.map((m) => [m.value, m.label]));
+      for (const d of demos) {
+        if (d.managerSd && !map.has(d.managerSd)) {
+          map.set(d.managerSd, managerSdMap[d.managerSd] ?? d.managerSd);
+        }
+      }
+      return Array.from(map.entries())
+        .map(([value, label]) => ({ value, label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    });
+  }
 
   async function handleLoadOrders() {
     if (!simlaApiKey) return;
@@ -216,7 +234,7 @@ export function TLDV({ managerSdMap }: Props) {
         (page, total) => setLoadProgress({ page, total }),
       );
       const demos = raw.map(orderToDemoOrder).filter(Boolean) as DemoOrder[];
-      setDemoOrders(demos);
+      applyDemos(demos);
       if (user?.id) saveCachedDemoList(user.id, dateFrom, dateTo, demos);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
@@ -271,21 +289,8 @@ export function TLDV({ managerSdMap }: Props) {
 
   const selectedOrder = demoOrders.find((d) => d.meetingId === selectedId) ?? null;
 
-  // Unique managers from loaded demos (code → display name)
-  const availableManagers = useMemo(() => {
-    const seen = new Set<string>();
-    const list: { code: string; name: string }[] = [];
-    for (const d of demoOrders) {
-      if (d.managerSd && !seen.has(d.managerSd)) {
-        seen.add(d.managerSd);
-        list.push({ code: d.managerSd, name: managerSdMap[d.managerSd] ?? d.managerSd });
-      }
-    }
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [demoOrders, managerSdMap]);
-
   const filteredDemos = useMemo(() =>
-    managerFilter === "all" ? demoOrders : demoOrders.filter((d) => d.managerSd === managerFilter),
+    managerFilter.length === 0 ? demoOrders : demoOrders.filter((d) => managerFilter.includes(d.managerSd)),
   [demoOrders, managerFilter]);
 
   // Build speaker index map for consistent palette assignment
@@ -336,27 +341,35 @@ export function TLDV({ managerSdMap }: Props) {
         </div>
 
         {/* Filters */}
-        <div className="px-5 pb-4 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-              className="flex-1 border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-            />
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-              className="flex-1 border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-            />
+        <div className="px-4 pb-4 flex flex-col gap-2.5">
+          {/* Date range */}
+          <div className="flex flex-col gap-1">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_creation_date")}</p>
+            <div className="flex gap-2">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+              />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+              />
+            </div>
           </div>
-          {availableManagers.length > 0 && (
-            <select
-              value={managerFilter}
-              onChange={(e) => setManagerFilter(e.target.value)}
-              className="w-full border border-gray-700/80 rounded-lg px-3 py-1.5 text-xs bg-gray-800/80 text-gray-300 focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-            >
-              <option value="all">{t("filter_all")}</option>
-              {availableManagers.map((m) => (
-                <option key={m.code} value={m.code}>{m.name}</option>
-              ))}
-            </select>
+
+          {/* Manager multi-select — always shown once managers are known */}
+          {knownManagers.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_manager")}</p>
+              <MultiSelect
+                variant="dark"
+                options={knownManagers}
+                selected={managerFilter}
+                onChange={setManagerFilter}
+                placeholder={t("filter_all")}
+              />
+            </div>
           )}
+
+          {/* Load button */}
           <button
             onClick={handleLoadOrders}
             disabled={loading || !simlaApiKey}
@@ -364,7 +377,7 @@ export function TLDV({ managerSdMap }: Props) {
             style={{ background: loading ? "#1d4ed8" : "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)" }}
           >
             {loading ? (
-              <><RefreshCw size={13} className="animate-spin" /> Buscando…</>
+              <><RefreshCw size={13} className="animate-spin" /> {t("tldv_loading_meetings")}</>
             ) : (
               <><Play size={12} fill="white" /> {t("tldv_load_meetings")}</>
             )}
