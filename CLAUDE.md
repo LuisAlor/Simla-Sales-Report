@@ -2,160 +2,127 @@
 
 ## Project Purpose
 
-Build an analytics dashboard that queries Simla CRM data (orders, revenue, managers, customers)
-and visualises KPIs. This is NOT a ticket/support tool — focus is purely on sales analytics.
+Sales analytics dashboard that queries Simla CRM data (orders, revenue, managers, customers) and visualises KPIs. Includes a TLDV demo-call analysis module with AI-powered transcript analysis.
 
 ---
 
-## Simla API Overview
-
-| API        | Base URL pattern                              | Auth                              |
-|------------|-----------------------------------------------|-----------------------------------|
-| REST v5    | `https://<store>.simla.com/api/v5/...`        | `?apiKey=<token>` query param     |
-| GraphQL    | `https://<store>.simla.com/app/api`           | `Authorization: Bearer <token>`   |
-| MG Bot v1  | `https://mg-s1.retailcrm.pro/api/bot/v1/...`  | `X-Bot-Token: <token>` header     |
-
-> For this dashboard only REST v5 and GraphQL are needed. MG Bot is messaging-only.
-
----
-
-## REST v5 — Orders Endpoint (Core)
-
-**Endpoint:** `GET /api/v5/orders`
-
-### Filter parameters
-
-| Param            | Type     | Description                                 |
-|------------------|----------|---------------------------------------------|
-| `createdAtFrom`  | datetime | Start of date range (ISO 8601)              |
-| `createdAtTo`    | datetime | End of date range (ISO 8601)                |
-| `orderType`      | string   | Order type slug                             |
-| `status`         | string   | Order status code                           |
-| `managerId`      | int      | Filter by responsible manager               |
-| `page`           | int      | Page number (1-based)                       |
-| `limit`          | int      | Results per page (max 100)                  |
-
-### Pagination
-
-Response includes a `pagination` block:
-
-```json
-{
-  "pagination": {
-    "limit": 20,
-    "totalCount": 450,
-    "currentPage": 1,
-    "totalPageCount": 23
-  }
-}
-```
-
-Iterate pages from `1` to `pagination.totalPageCount` to collect all records.
-
-### Order object — key fields for analytics
+## Repository Layout
 
 ```
-order.id                         — unique order ID
-order.number                     — human-readable order number
-order.createdAt                  — creation timestamp
-order.status                     — status code (string)
-order.orderType                  — order type slug
-
-# Revenue
-order.summ                       — order total (goods)
-order.totalSumm                  — total including shipping/discounts
-order.prepaySum                  — amount pre-paid
-order.purchaseSumm               — cost of goods (for margin calc)
-
-# Manager / ownership
-order.managerId                  — assigned manager ID
-order.manager.id
-order.manager.firstName
-order.manager.lastName
-
-# Customer
-order.customer.id
-order.customer.firstName
-order.customer.lastName
-order.customer.email
-order.customer.phone
-
-# Line items
-order.items[]
-  .id
-  .productName
-  .quantity
-  .initialPrice          — unit price before discounts
-  .discountPercent
-  .purchasePrice         — cost price
-
-# Custom fields
-order.customFields{}     — dict of site-defined custom field values
+web/                        React SPA (the main app)
+  src/
+    pages/
+      Analytics.tsx         Main analytics dashboard (orders/revenue/KPIs)
+      Funnel.tsx            Sales funnel analysis
+      TLDV.tsx              Demo-call analysis (TLDV + OpenAI)
+      AdminPanel.tsx        Settings: users, integrations, API keys
+      Profile.tsx           User profile + preferences
+      Login.tsx / ApiSetup.tsx
+    components/
+      TopFilters.tsx        Horizontal filter bar used by Analytics/Funnel
+      DateRangePicker.tsx   Unified date picker (calendar + relative presets)
+      MultiSelect.tsx       Dark-variant multi-select (used in TLDV filters)
+      Sidebar.tsx           Navigation sidebar
+      LoadingScreen.tsx     Animated full-page loading state
+    contexts/
+      AuthContext.tsx       User auth + profile persistence (localStorage)
+      NavigationGuardContext.tsx  Unsaved-changes guard (intercepts nav, shows dialog)
+      I18nContext.tsx       Language selection (ES/EN/RU)
+      ThemeContext.tsx      Light/dark/auto theme
+    lib/
+      api.ts                Simla REST v5 fetchers (orders, statuses, dict options)
+      tldvApi.ts            TLDV transcript fetcher
+      openai.ts             OpenAI chat completions wrapper
+      i18n.ts               All translation strings (ES/EN/RU)
+      auth.ts               User model + localStorage persistence
+      filters.ts            Filter state types
+      transforms.ts         Data aggregation (revenue, funnel, top products)
+      flatten.ts            Order → flat record mapper
+      ordersCache.ts        localStorage cache for fetched order data
 ```
-
----
-
-## REST v5 — Other Useful Endpoints
-
-| Endpoint                  | Purpose                                      |
-|---------------------------|----------------------------------------------|
-| `GET /api/v5/statuses`    | List all order status codes + labels         |
-| `GET /api/v5/order-types` | List all order type slugs + labels           |
-| `GET /api/v5/users`       | List managers (id, firstName, lastName)      |
-| `GET /api/v5/customers`   | Customer list with segments                  |
-
----
-
-## GraphQL API
-
-Base URL: `https://<store>.simla.com/app/api`  
-Auth header: `Authorization: Bearer <token>`  
-Content-Type: `application/json`
-
-Used for complex aggregations or relationship queries not easily expressed in REST v5.
-Prefer REST v5 for order data — GraphQL for metadata/reference lookups when needed.
-
----
-
-## Authentication Setup
-
-Store credentials in `.env` (never commit):
-
-```
-SIMLA_STORE=mystore          # subdomain only, e.g. "mystore" → mystore.simla.com
-SIMLA_API_KEY=xxxx           # REST v5 apiKey
-SIMLA_GRAPHQL_TOKEN=xxxx     # Bearer token for GraphQL (optional)
-```
-
----
-
-## Analytics KPIs to Track
-
-- **Revenue over time** — daily / weekly / monthly `totalSumm`
-- **Orders by status** — breakdown of order counts per status
-- **Orders by manager** — revenue and count per manager
-- **Average order value** — `totalSumm` / order count
-- **Margin** — `totalSumm - purchaseSumm` aggregated
-- **Top products** — line item aggregation by `productName`
-- **Repeat customers** — customers with > 1 order
 
 ---
 
 ## Tech Stack
 
-| Layer       | Choice         | Reason                                      |
-|-------------|----------------|---------------------------------------------|
-| Dashboard   | Streamlit      | Fast analytics UI, Python-native            |
-| HTTP client | httpx          | Async-capable, cleaner than requests        |
-| Data        | pandas         | Aggregation, groupby, resampling            |
-| Charts      | plotly         | Interactive charts in Streamlit             |
-| Config      | python-dotenv  | .env loading                                |
+| Layer       | Choice                  |
+|-------------|-------------------------|
+| UI          | React 18 + TypeScript   |
+| Build       | Vite                    |
+| Styling     | Tailwind CSS            |
+| Routing     | React Router v6 (BrowserRouter — NOT data router) |
+| Data        | TanStack Query v5       |
+| Charts      | Recharts                |
+| Date util   | dayjs                   |
+| Icons       | lucide-react            |
+
+---
+
+## Simla REST v5 API
+
+**Base URL:** `https://<store>.simla.com/api/v5/`  
+**Auth:** `?apiKey=<token>` query param
+
+### Key endpoints used
+
+| Endpoint                  | Purpose                               |
+|---------------------------|---------------------------------------|
+| `GET /api/v5/orders`      | Order list with full fields           |
+| `GET /api/v5/statuses`    | Order status codes + labels           |
+| `GET /api/v5/order-types` | Order type slugs + labels             |
+| `GET /api/v5/users`       | Manager list                          |
+| `GET /api/v5/custom-fields` | Custom field dictionary options     |
+
+### Pagination
+
+```json
+{ "pagination": { "limit": 100, "totalCount": 450, "currentPage": 1, "totalPageCount": 5 } }
+```
+
+Iterate `page` 1 → `totalPageCount`.
+
+### Custom fields used in TLDV module
+
+| Field key       | Content                                  |
+|-----------------|------------------------------------------|
+| `demo_date`     | Date of the demo call (ISO string)       |
+| `manager_sd`    | Manager code (object `{code, name}`)     |
+| `name_komp_z`   | Project/company name                     |
+| `mql_order`     | MQL flag (`yes`/`no`/`1`/`0`)            |
+| `tldv_video`    | TLDV meeting URL                         |
+
+Use `cfCode(customFields, key)` in TLDV.tsx to safely extract `code ?? name` from object-typed custom fields.
+
+---
+
+## TLDV Module
+
+- Fetches orders that have a demo date → groups by TLDV URL → renders transcripts via `tldvApi.ts`
+- AI analysis via OpenAI (`callOpenAI` in `lib/openai.ts`), cached in localStorage keyed by `lang_meetingId`
+- Language of AI report is enforced by appending `IMPORTANT: Write your entire response in <lang>.` to the system prompt
+- Manager filter uses persistent `knownManagers` state that grows across reloads (never cleared)
+
+---
+
+## Navigation Guard
+
+`NavigationGuardContext` intercepts all in-app navigation via `requestNavigate(to)`. Any page with unsaved changes calls `setIsDirty(true)` and cleans up on unmount. Shows a discard/keep dialog before navigating away. Works with `BrowserRouter` (not data router — `useBlocker` was removed).
+
+---
+
+## i18n
+
+All user-visible strings go through `t(key)` from `useT()`. Keys defined in `web/src/lib/i18n.ts` for ES (default), EN, RU. When adding a feature, add all three language entries.
 
 ---
 
 ## Code Conventions
 
-- All API calls go through `src/api/client.py` — never call `httpx` directly from UI code.
-- Pagination is handled inside the fetcher, callers receive a flat list.
-- Monetary values are floats in the API; keep them as `float`, format only at display time.
-- Dates from the API are ISO 8601 strings — parse with `pd.to_datetime`.
+- API calls only in `lib/api.ts`, `lib/tldvApi.ts`, `lib/openai.ts` — never fetch directly from pages.
+- Pagination handled inside fetchers; callers receive flat arrays.
+- Monetary values stay as `number`; format only at display time.
+- Dates from API are ISO 8601 strings; use `dayjs` for display formatting.
+- Hard-coded user-visible strings are a bug — always use `t(key)`.
+- Shared CSS keyframes live in `src/index.css`; do not duplicate in `<style>` tags.
+- `useMemo` for any `.find()`, `.filter()`, or derived computation used in render.
+- Git workflow: feature branch → PR → squash merge to `main`.
