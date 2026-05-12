@@ -13,6 +13,9 @@ import {
   Tag,
   Bot,
   Settings2,
+  Eye,
+  EyeOff,
+  X,
 } from "lucide-react";
 import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +56,34 @@ function isValidTldvMeetingUrl(url: string): boolean {
 
 const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
 const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v1_";
+const TLDV_FILTER_LAYOUT_KEY  = "simla_tldv_filter_layout";
+
+const TLDV_FILTER_DEFS = [
+  { id: "date",      labelKey: "filter_creation_date" },
+  { id: "manager",   labelKey: "filter_manager" },
+  { id: "project",   labelKey: "tldv_filter_project" },
+  { id: "order-num", labelKey: "tldv_filter_order_num" },
+] as const;
+
+type TldvFilterId = (typeof TLDV_FILTER_DEFS)[number]["id"];
+type TldvFilterLayoutItem = { id: TldvFilterId; visible: boolean };
+
+function loadTldvFilterLayout(): TldvFilterLayoutItem[] {
+  try {
+    const saved = localStorage.getItem(TLDV_FILTER_LAYOUT_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as TldvFilterLayoutItem[];
+      const ids = new Set(parsed.map((p) => p.id));
+      const missing = TLDV_FILTER_DEFS.filter((f) => !ids.has(f.id)).map((f) => ({ id: f.id, visible: true }));
+      return [...parsed, ...missing];
+    }
+  } catch { /* ignore */ }
+  return TLDV_FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+}
+
+function saveTldvFilterLayout(layout: TldvFilterLayoutItem[]) {
+  try { localStorage.setItem(TLDV_FILTER_LAYOUT_KEY, JSON.stringify(layout)); } catch { /* ignore */ }
+}
 
 function loadCachedAiReport(meetingId: string, lang: string): string | null {
   try { return localStorage.getItem(`${AI_REPORT_CACHE_PREFIX}${lang}_${meetingId}`); } catch { return null; }
@@ -137,10 +168,10 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
 }
 
 const SPEAKER_PALETTES = [
-  { card: "bg-blue-950/40 border-blue-800/40", name: "text-blue-400" },
-  { card: "bg-purple-950/40 border-purple-800/40", name: "text-purple-400" },
-  { card: "bg-teal-950/40 border-teal-800/40", name: "text-teal-400" },
-  { card: "bg-rose-950/40 border-rose-800/40", name: "text-rose-400" },
+  { bubble: "bg-cyan-900/40",    name: "text-cyan-400",   align: "items-end"   },
+  { bubble: "bg-gray-800",       name: "text-violet-400", align: "items-start" },
+  { bubble: "bg-teal-900/40",    name: "text-teal-400",   align: "items-start" },
+  { bubble: "bg-rose-950/40",    name: "text-rose-400",   align: "items-start" },
 ];
 
 export function TLDV({ managerSdMap }: Props) {
@@ -159,6 +190,10 @@ export function TLDV({ managerSdMap }: Props) {
   const [managerFilter, setManagerFilter] = useState<string[]>([]);
   // knownManagers persists across re-loads so the filter doesn't disappear while searching
   const [knownManagers, setKnownManagers] = useState<{ value: string; label: string }[]>([]);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [filterLayout, setFilterLayout] = useState<TldvFilterLayoutItem[]>(() => loadTldvFilterLayout());
+  const [filterConfigOpen, setFilterConfigOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ page: number; total: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -289,9 +324,18 @@ export function TLDV({ managerSdMap }: Props) {
 
   const selectedOrder = demoOrders.find((d) => d.meetingId === selectedId) ?? null;
 
-  const filteredDemos = useMemo(() =>
-    managerFilter.length === 0 ? demoOrders : demoOrders.filter((d) => managerFilter.includes(d.managerSd)),
-  [demoOrders, managerFilter]);
+  const filteredDemos = useMemo(() => {
+    let list = managerFilter.length === 0 ? demoOrders : demoOrders.filter((d) => managerFilter.includes(d.managerSd));
+    if (projectSearch.trim()) {
+      const q = projectSearch.trim().toLowerCase();
+      list = list.filter((d) => d.projectName.toLowerCase().includes(q));
+    }
+    if (orderSearch.trim()) {
+      const q = orderSearch.trim().toLowerCase();
+      list = list.filter((d) => d.orderNumber.toLowerCase().includes(q));
+    }
+    return list;
+  }, [demoOrders, managerFilter, projectSearch, orderSearch]);
 
   // Build speaker index map for consistent palette assignment
   const speakerIndex: Record<string, number> = {};
@@ -342,21 +386,72 @@ export function TLDV({ managerSdMap }: Props) {
 
         {/* Filters */}
         <div className="px-4 pb-4 flex flex-col gap-2.5">
-          {/* Date range */}
-          <div className="flex flex-col gap-1">
-            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_creation_date")}</p>
-            <div className="flex gap-2">
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-              />
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
-              />
-            </div>
+          {/* Filter config header */}
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">{t("filter_config_title")}</p>
+            <button
+              onClick={() => setFilterConfigOpen((v) => !v)}
+              className={`p-1 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
+              title={t("filter_config_title")}
+            >
+              <Settings2 size={13} />
+            </button>
           </div>
 
-          {/* Manager multi-select — always shown once managers are known */}
-          {knownManagers.length > 0 && (
+          {/* Configurator panel */}
+          {filterConfigOpen && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex flex-col gap-2">
+              {filterLayout.map((item, i) => {
+                const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
+                const visibleCount = filterLayout.filter((f) => f.visible).length;
+                const canHide = visibleCount > 1 || !item.visible;
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <span className={`text-xs ${item.visible ? "text-gray-300" : "text-gray-600"}`}>{t(def.labelKey as Parameters<typeof t>[0])}</span>
+                    <button
+                      disabled={!canHide}
+                      onClick={() => {
+                        const next = filterLayout.map((f, j) => j === i ? { ...f, visible: !f.visible } : f);
+                        setFilterLayout(next);
+                        saveTldvFilterLayout(next);
+                      }}
+                      className="p-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {item.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </button>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => {
+                  const next = TLDV_FILTER_DEFS.map((f) => ({ id: f.id, visible: true }));
+                  setFilterLayout(next);
+                  saveTldvFilterLayout(next);
+                }}
+                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-0.5 transition-colors"
+              >
+                {t("filter_config_reset")}
+              </button>
+            </div>
+          )}
+
+          {/* Date range */}
+          {filterLayout.find((f) => f.id === "date")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_creation_date")}</p>
+              <div className="flex gap-2">
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+                />
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                  className="flex-1 border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Manager multi-select */}
+          {filterLayout.find((f) => f.id === "manager")?.visible && knownManagers.length > 0 && (
             <div className="flex flex-col gap-1">
               <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("filter_manager")}</p>
               <MultiSelect
@@ -366,6 +461,48 @@ export function TLDV({ managerSdMap }: Props) {
                 onChange={setManagerFilter}
                 placeholder={t("filter_all")}
               />
+            </div>
+          )}
+
+          {/* Project name search */}
+          {filterLayout.find((f) => f.id === "project")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_project")}</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  placeholder="…"
+                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
+                />
+                {projectSearch && (
+                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Order number search */}
+          {filterLayout.find((f) => f.id === "order-num")?.visible && (
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-0.5">{t("tldv_filter_order_num")}</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  placeholder="…"
+                  className="w-full border border-gray-700/60 rounded-lg px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 focus:ring-1 focus:ring-cyan-600/20 transition-all pr-7"
+                />
+                {orderSearch && (
+                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -568,22 +705,28 @@ export function TLDV({ managerSdMap }: Props) {
 
               {/* Transcript */}
               {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                <div className="p-6 flex flex-col gap-2">
+                <div className="px-5 py-5 flex flex-col gap-3">
                   {transcriptLoading && <TranscriptSkeleton />}
                   {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
                   {!transcriptLoading && !transcriptError && transcript.length === 0 && (
                     <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
                   )}
                   {transcript.map((seg, i) => {
-                    const palette = SPEAKER_PALETTES[(speakerIndex[seg.speaker] ?? 0) % SPEAKER_PALETTES.length];
+                    const idx = speakerIndex[seg.speaker] ?? 0;
+                    const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
                     const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
+                    const prevSeg = i > 0 ? transcript[i - 1] : null;
+                    const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
+                    const isRight = idx === 0;
                     return (
-                      <div key={i} className={`rounded-xl border px-4 py-3 ${palette.card}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className={`text-xs font-semibold ${palette.name}`}>{seg.speaker}</p>
-                          {ts && <span className="text-[10px] text-gray-600 font-mono tabular-nums">{ts}</span>}
+                      <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
+                        {showSpeaker && (
+                          <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
+                        )}
+                        <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"}`}>
+                          <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
+                          {ts && <p className="text-[10px] text-gray-600 mt-1.5 tabular-nums font-mono">{ts}</p>}
                         </div>
-                        <p className="text-sm text-gray-300 leading-relaxed">{seg.text}</p>
                       </div>
                     );
                   })}
