@@ -277,6 +277,9 @@ const es = {
   tldv_prompt_desc: "Instrucciones enviadas a la IA para analizar las transcripciones de demos.",
   integration_enabled: "Activo",
   integration_disabled: "Inactivo",
+  tldv_tldv_disabled: "La integración TLDV está desactivada. Actívala en Ajustes → Integraciones para continuar.",
+  tldv_simla_disabled: "La integración Simla CRM está desactivada. Actívala en Ajustes → Integraciones para continuar.",
+  tldv_ai_disabled: "La integración OpenAI está desactivada. Actívala en Ajustes → Integraciones para utilizar el análisis IA.",
 } as const;
 
 export type TranslationKey = keyof typeof es;
@@ -541,6 +544,9 @@ const en: Record<TranslationKey, string> = {
   tldv_prompt_desc: "Instructions sent to the AI to analyze demo transcripts.",
   integration_enabled: "Active",
   integration_disabled: "Inactive",
+  tldv_tldv_disabled: "The TLDV integration is disabled. Enable it in Settings → Integrations to continue.",
+  tldv_simla_disabled: "The Simla CRM integration is disabled. Enable it in Settings → Integrations to continue.",
+  tldv_ai_disabled: "The OpenAI integration is disabled. Enable it in Settings → Integrations to use AI analysis.",
 };
 
 const ru: Record<TranslationKey, string> = {
@@ -803,6 +809,9 @@ const ru: Record<TranslationKey, string> = {
   tldv_prompt_desc: "Инструкции для ИИ при анализе транскрипций демо.",
   integration_enabled: "Активен",
   integration_disabled: "Неактивен",
+  tldv_tldv_disabled: "Интеграция TLDV отключена. Включите её в Настройках → Интеграции для продолжения.",
+  tldv_simla_disabled: "Интеграция Simla CRM отключена. Включите её в Настройках → Интеграции для продолжения.",
+  tldv_ai_disabled: "Интеграция OpenAI отключена. Включите её в Настройках → Интеграции для использования ИИ-анализа.",
 };
 
 export const translations: Record<Lang, Record<TranslationKey, string>> = { es, en, ru };
