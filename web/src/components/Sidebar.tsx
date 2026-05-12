@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import {
   BarChart3, TrendingDown, LineChart,
   Cog, GripVertical, RotateCcw, Video,
@@ -43,8 +44,8 @@ function saveNavOrder(userId: string, order: PageTo[]) {
 // ── Component ─────────────────────────────────────────────────────────────────
 export function Sidebar() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
+  const { requestNavigate } = useNavigationGuard();
   const t = useT();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [logoError, setLogoError] = useState(false);
@@ -190,7 +191,7 @@ export function Sidebar() {
         {/* ── Logo ── */}
         <div className="flex justify-center items-center py-3 border-b border-navy-border">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => requestNavigate("/")}
             title="Simla.com"
             className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden hover:opacity-80 transition-opacity ${logoError ? "bg-teal" : ""}`}
           >
@@ -223,7 +224,7 @@ export function Sidebar() {
           <div className="flex justify-center py-2 px-1 border-t border-navy-border">
             <div onMouseEnter={(e) => openFlyout(e, "admin")} onMouseLeave={closeFlyoutDelayed}>
               <button
-                onClick={() => navigate("/admin")}
+                onClick={() => requestNavigate("/admin")}
                 className={iconBtn(location.pathname === "/admin")}
               >
                 <Cog size={16} />
@@ -236,7 +237,7 @@ export function Sidebar() {
         <div className="flex justify-center py-3 border-t border-navy-border">
           {user && (
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => requestNavigate("/profile")}
               title={`${user.firstName} ${user.lastName}`}
               className="hover:opacity-80 transition-opacity"
             >
@@ -313,12 +314,10 @@ export function Sidebar() {
                   ? location.pathname === page.to
                   : location.pathname.startsWith(page.to);
                 return (
-                  <NavLink
+                  <button
                     key={page.to}
-                    to={page.to}
-                    end={page.end}
-                    onClick={() => setFlyout(null)}
-                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                    onClick={() => { requestNavigate(page.to); setFlyout(null); }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                       isActive
                         ? "text-brand-blue font-semibold bg-brand-blue/10"
                         : "text-slate-300 hover:text-white hover:bg-navy-border"
@@ -326,7 +325,7 @@ export function Sidebar() {
                   >
                     <PageIcon size={14} className="shrink-0" />
                     {label}
-                  </NavLink>
+                  </button>
                 );
               })}
             </div>
@@ -338,7 +337,7 @@ export function Sidebar() {
                 {t("sidebar_admin")}
               </p>
               <button
-                onClick={() => { navigate("/admin"); setFlyout(null); }}
+                onClick={() => { requestNavigate("/admin"); setFlyout(null); }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                   location.pathname === "/admin"
                     ? "text-brand-blue font-semibold bg-brand-blue/10"
@@ -356,14 +355,13 @@ export function Sidebar() {
               <p className="px-4 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest border-b border-navy-border">
                 {t("nav_tldv_module")}
               </p>
-              <NavLink
-                to="/tldv"
-                onClick={() => setFlyout(null)}
-                className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${isActive ? "text-brand-blue font-semibold bg-brand-blue/10" : "text-slate-300 hover:text-white hover:bg-navy-border"}`}
+              <button
+                onClick={() => { requestNavigate("/tldv"); setFlyout(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${location.pathname.startsWith("/tldv") ? "text-brand-blue font-semibold bg-brand-blue/10" : "text-slate-300 hover:text-white hover:bg-navy-border"}`}
               >
                 <Video size={14} className="shrink-0" />
                 {t("nav_tldv_demos")}
-              </NavLink>
+              </button>
             </div>
           )}
         </div>,
