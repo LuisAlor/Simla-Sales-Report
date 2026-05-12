@@ -608,7 +608,9 @@ export function TLDV({ managerSdMap }: Props) {
         {loading ? (
           <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
         ) : !selectedOrder ? (
-          <EmptyState />
+          (!simlaApiKey && demoOrders.length === 0)
+            ? <SimlaDisabledState isDisabled={simlaIsDisabled} />
+            : <EmptyState />
         ) : (
           <>
             {/* Header */}
@@ -946,6 +948,43 @@ function formatInline(text: string): React.ReactNode {
     part.startsWith("**") && part.endsWith("**")
       ? <strong key={i} className="text-gray-100 font-semibold">{part.slice(2, -2)}</strong>
       : part
+  );
+}
+
+// ── Simla disabled / missing state ──────────────────────────────────────────
+function SimlaDisabledState({ isDisabled }: { isDisabled: boolean }) {
+  const t = useT();
+  const { requestNavigate } = useNavigationGuard();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
+      <style>{`
+        @keyframes oPulse { 0% { transform:scale(1); opacity:.18; } 100% { transform:scale(2.4); opacity:0; } }
+        @keyframes oFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-8px); } }
+      `}</style>
+      <div className="relative flex items-center justify-center w-32 h-32">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="absolute rounded-full border border-orange-500/25"
+            style={{ width: 56, height: 56, animation: `oPulse 2.4s ease-out ${i * 0.8}s infinite` }} />
+        ))}
+        <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center z-10"
+          style={{ background: "linear-gradient(135deg,#7c2d12 0%,#c2410c 100%)",
+            boxShadow: "0 0 28px rgba(234,88,12,0.3)", animation: "oFloat 3s ease-in-out infinite" }}>
+          <AlertTriangle size={24} className="text-orange-200" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-orange-200 font-semibold text-base mb-2">{t("integration_disabled_title")}</p>
+        <p className="text-orange-400/75 text-sm max-w-xs leading-relaxed">
+          {isDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
+        </p>
+      </div>
+      <button
+        onClick={() => requestNavigate("/admin?tab=integraciones")}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-700/50 bg-orange-950/40 text-orange-300 text-sm font-medium hover:bg-orange-950/60 transition-colors"
+      >
+        <Settings2 size={14} /> {t("tldv_configure_settings")}
+      </button>
+    </div>
   );
 }
 

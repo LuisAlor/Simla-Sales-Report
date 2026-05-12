@@ -23,8 +23,9 @@ import { useT } from "@/contexts/I18nContext";
 import type { Filters } from "@/lib/filters";
 import type { OrderRecord, ItemRecord } from "@/lib/flatten";
 import type { FilterTemplate } from "@/lib/auth";
-import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext";
+import { NavigationGuardProvider, useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { getUsers } from "@/lib/auth";
+import { AlertTriangle, Settings2 } from "lucide-react";
 
 function getDefaultFilters(savedFilters?: Record<string, unknown>): Filters {
   return {
@@ -411,12 +412,39 @@ interface ShellProps {
 
 function PageShell({ loading, progress, error, hasData, loaded, keyDisabled, children }: ShellProps) {
   const t = useT();
+  const { requestNavigate } = useNavigationGuard();
   if (loading) return <LoadingScreen progress={progress} />;
 
   if (keyDisabled) {
     return (
-      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-lg p-4 text-sm">
-        {t("tldv_simla_disabled")}
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <style>{`
+          @keyframes oPulse { 0% { transform:scale(1); opacity:.2; } 100% { transform:scale(2.4); opacity:0; } }
+          @keyframes oFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
+        `}</style>
+        <div className="flex flex-col items-center gap-5 text-center">
+          <div className="relative flex items-center justify-center w-28 h-28">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="absolute rounded-full border border-orange-500/30"
+                style={{ width: 54, height: 54, animation: `oPulse 2.4s ease-out ${i * 0.8}s infinite` }} />
+            ))}
+            <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center z-10"
+              style={{ background: "linear-gradient(135deg,#7c2d12 0%,#c2410c 100%)",
+                boxShadow: "0 0 28px rgba(234,88,12,0.28)", animation: "oFloat 3s ease-in-out infinite" }}>
+              <AlertTriangle size={24} className="text-orange-200" />
+            </div>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800 dark:text-slate-100 text-base mb-2">{t("integration_disabled_title")}</p>
+            <p className="text-orange-600 dark:text-orange-400 text-sm max-w-xs leading-relaxed">{t("tldv_simla_disabled")}</p>
+          </div>
+          <button
+            onClick={() => requestNavigate("/admin?tab=integraciones")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-sm font-medium hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors border border-orange-200 dark:border-orange-700/50"
+          >
+            <Settings2 size={14} /> {t("tldv_configure_settings")}
+          </button>
+        </div>
       </div>
     );
   }
