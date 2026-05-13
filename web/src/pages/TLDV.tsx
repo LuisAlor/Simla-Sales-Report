@@ -191,6 +191,43 @@ const SPEAKER_PALETTES = [
 
 const DARK_INPUT = "border border-gray-700/60 rounded-md px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 transition-all";
 
+// ── Structured AI data ────────────────────────────────────────────────────────
+interface AiStructuredData {
+  closingProbability: number;
+  advisorChecklist: Array<{ criterion: string; passed: boolean; notes?: string }>;
+  errorMoments: Array<{ speaker: string; startTime: number | null; description: string; severity: "low" | "medium" | "high" }>;
+}
+
+function parseAiResponse(raw: string): { text: string; data: AiStructuredData | null } {
+  const match = raw.match(/<STRUCTURED_DATA>([\s\S]*?)<\/STRUCTURED_DATA>/);
+  if (!match) return { text: raw.trim(), data: null };
+  const text = raw.replace(/<STRUCTURED_DATA>[\s\S]*?<\/STRUCTURED_DATA>/, "").trim();
+  try {
+    return { text, data: JSON.parse(match[1].trim()) as AiStructuredData };
+  } catch {
+    return { text, data: null };
+  }
+}
+
+const STRUCTURED_SUFFIX = `
+
+IMPORTANT: After your analysis, append this JSON block EXACTLY as shown (keep the XML tags unchanged):
+
+<STRUCTURED_DATA>
+{
+  "closingProbability": <integer 0-100 estimating deal closing probability>,
+  "advisorChecklist": [
+    {"criterion": "<specific criterion>", "passed": <true|false>, "notes": "<brief explanation>"}
+  ],
+  "errorMoments": [
+    {"speaker": "<speaker name exactly as in transcript>", "startTime": <number|null>, "description": "<what went wrong and why>", "severity": "<low|medium|high>"}
+  ]
+}
+</STRUCTURED_DATA>
+
+For advisorChecklist include 10-15 criteria: opening/introduction, needs discovery, active listening, product demo quality, objection handling, urgency creation, rapport building, closing technique, next steps agreed, professional language, solution fit, follow-up commitment.
+For errorMoments list every advisor error or missed opportunity. Use the exact startTime from the transcript where available.`;
+
 export function TLDV({ managerSdMap }: Props) {
   const { user } = useAuth();
   const t = useT();
@@ -220,6 +257,7 @@ export function TLDV({ managerSdMap }: Props) {
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
   const [aiReport, setAiReport] = useState<string | null>(null);
+  const [aiStructuredData, setAiStructuredData] = useState<AiStructuredData | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
 
@@ -306,8 +344,16 @@ export function TLDV({ managerSdMap }: Props) {
   }, [selectedId, tldvApiKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selectedId) { setAiReport(null); return; }
-    setAiReport(loadCachedAiReport(selectedId, lang));
+    if (!selectedId) { setAiReport(null); setAiStructuredData(null); return; }
+    const raw = loadCachedAiReport(selectedId, lang);
+    if (raw) {
+      const { text, data } = parseAiResponse(raw);
+      setAiReport(text);
+      setAiStructuredData(data);
+    } else {
+      setAiReport(null);
+      setAiStructuredData(null);
+    }
     setAiReportError(null);
   }, [selectedId, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -315,7 +361,12 @@ export function TLDV({ managerSdMap }: Props) {
     if (!selectedId || !openaiApiKey) return;
     if (!forceRegenerate) {
       const cached = loadCachedAiReport(selectedId, lang);
-      if (cached) { setAiReport(cached); return; }
+      if (cached) {
+        const { text, data } = parseAiResponse(cached);
+        setAiReport(text);
+        setAiStructuredData(data);
+        return;
+      }
     }
     if (transcript.length === 0) { setAiReportError("no_transcript"); return; }
     setAiReportLoading(true);
@@ -326,9 +377,11 @@ export function TLDV({ managerSdMap }: Props) {
         .join("\n");
       const langNames: Record<string, string> = { es: "Spanish", en: "English", ru: "Russian" };
       const langInstruction = `\n\nIMPORTANT: Write your entire response in ${langNames[lang] ?? "Spanish"}.`;
-      const report = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt + langInstruction, transcriptText);
-      setAiReport(report);
-      saveCachedAiReport(selectedId, lang, report);
+      const raw = await callOpenAI(openaiApiKey, openaiModel, openaiPrompt + langInstruction + STRUCTURED_SUFFIX, transcriptText);
+      const { text, data } = parseAiResponse(raw);
+      setAiReport(text);
+      setAiStructuredData(data);
+      saveCachedAiReport(selectedId, lang, raw);
     } catch (err) {
       setAiReportError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -371,6 +424,22 @@ export function TLDV({ managerSdMap }: Props) {
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [demoOrders, managerSdMap]);
+
+  // Map transcript segment indices that correspond to an AI error moment (fuzzy ±15s match)
+  const errorSegmentSet = useMemo(() => {
+    const set = new Map<number, string>(); // index → description
+    if (!aiStructuredData?.errorMoments) return set;
+    for (let i = 0; i < transcript.length; i++) {
+      const seg = transcript[i];
+      for (const e of aiStructuredData.errorMoments) {
+        if (e.startTime != null && seg.startTime != null && Math.abs(seg.startTime - e.startTime) <= 15) {
+          set.set(i, e.description);
+          break;
+        }
+      }
+    }
+    return set;
+  }, [transcript, aiStructuredData]);
 
   const speakerIndex = useMemo(() => {
     const idx: Record<string, number> = {};
@@ -739,6 +808,8 @@ export function TLDV({ managerSdMap }: Props) {
                     {!transcriptLoading && !transcriptError && transcript.length === 0 && (
                       <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
                     )}
+                    {/* Call metrics (local stats, no AI needed) */}
+                    {!transcriptLoading && transcript.length > 0 && <CallMetricsPanel segments={transcript} />}
                     {transcript.map((seg, i) => {
                       const idx = speakerIndex[seg.speaker] ?? 0;
                       const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
@@ -746,14 +817,23 @@ export function TLDV({ managerSdMap }: Props) {
                       const prevSeg = i > 0 ? transcript[i - 1] : null;
                       const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
                       const isRight = idx === 0;
+                      const errorDesc = errorSegmentSet.get(i);
                       return (
                         <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
                           {showSpeaker && (
                             <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
                           )}
-                          <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"}`}>
+                          <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${errorDesc ? "ring-1 ring-red-500/60" : ""}`}>
                             <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
-                            {ts && <p className="text-[10px] text-gray-600 mt-1.5 tabular-nums font-mono">{ts}</p>}
+                            <div className="flex items-end justify-between gap-2 mt-1.5">
+                              {ts && <p className="text-[10px] text-gray-600 tabular-nums font-mono">{ts}</p>}
+                              {errorDesc && (
+                                <div className="flex items-center gap-1 text-[10px] text-red-400 font-medium">
+                                  <AlertTriangle size={9} />
+                                  <span className="italic leading-snug max-w-[280px]">{errorDesc}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -764,8 +844,31 @@ export function TLDV({ managerSdMap }: Props) {
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
                   <div className="p-6 flex flex-col gap-4">
-                    {/* Call metrics (always shown when transcript is available) */}
-                    {transcript.length > 0 && <CallMetricsPanel segments={transcript} />}
+
+                    {/* Model label — always at top */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Bot size={14} className="text-violet-400" />
+                        <span className="text-xs text-gray-500">
+                          <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
+                        </span>
+                        <button
+                          onClick={() => requestNavigate("/admin?tab=integraciones")}
+                          title={t("tldv_configure_settings")}
+                          className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
+                        >
+                          <Settings2 size={11} />
+                        </button>
+                      </div>
+                      {aiReport !== null && !aiReportLoading && openaiApiKey && (
+                        <button
+                          onClick={() => handleGenerateAiReport(true)}
+                          className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
+                        >
+                          <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
+                        </button>
+                      )}
+                    </div>
 
                     {/* No API key / disabled */}
                     {!openaiApiKey && (
@@ -783,7 +886,7 @@ export function TLDV({ managerSdMap }: Props) {
                       </div>
                     )}
 
-                    {/* Has API key */}
+                    {/* Has API key but no report yet */}
                     {openaiApiKey && !aiReportLoading && aiReport === null && (
                       <div className="flex flex-col items-center justify-center gap-5 py-16">
                         <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
@@ -792,7 +895,7 @@ export function TLDV({ managerSdMap }: Props) {
                         <div className="text-center">
                           <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
                           <p className="text-gray-600 text-sm mb-5 max-w-xs">
-                            {transcript.length === 0 ? t("tldv_ai_no_transcript") : `${t("tldv_model_used")} ${openaiModel}`}
+                            {transcript.length === 0 ? t("tldv_ai_no_transcript") : t("tldv_ai_ready")}
                           </p>
                           <button
                             onClick={() => handleGenerateAiReport(false)}
@@ -815,27 +918,17 @@ export function TLDV({ managerSdMap }: Props) {
                     {/* Report rendered */}
                     {!aiReportLoading && aiReport !== null && openaiApiKey && (
                       <>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Bot size={14} className="text-violet-400" />
-                            <span className="text-xs text-gray-500">
-                              <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
-                            </span>
-                            <button
-                              onClick={() => requestNavigate("/admin?tab=integraciones")}
-                              title={t("tldv_configure_settings")}
-                              className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
-                            >
-                              <Settings2 size={11} />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleGenerateAiReport(true)}
-                            className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
-                          >
-                            <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
-                          </button>
-                        </div>
+                        {aiStructuredData && (
+                          <>
+                            <ProbabilityCard probability={aiStructuredData.closingProbability} />
+                            {aiStructuredData.advisorChecklist.length > 0 && (
+                              <AdvisorChecklist items={aiStructuredData.advisorChecklist} />
+                            )}
+                            {aiStructuredData.errorMoments.length > 0 && (
+                              <ErrorMomentsList moments={aiStructuredData.errorMoments} />
+                            )}
+                          </>
+                        )}
                         <AiReportRenderer text={aiReport} />
                       </>
                     )}
@@ -876,15 +969,15 @@ function computeSpeakerStats(segments: TldvTranscriptSegment[]): SpeakerStats[] 
 }
 
 function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
+  const t = useT();
   const stats = useMemo(() => computeSpeakerStats(segments), [segments]);
   const totalWords = stats.reduce((s, sp) => s + sp.words, 0);
   const totalTurns = stats.reduce((s, sp) => s + sp.turns, 0);
   const totalQuestions = stats.reduce((s, sp) => s + sp.questions, 0);
 
-  // Engagement: words spoken by non-first speaker (client side)
   const clientWords = stats.slice(1).reduce((s, sp) => s + sp.words, 0);
   const engagement = totalWords > 0 ? Math.round((clientWords / totalWords) * 100) : 0;
-  const engagementLabel = engagement >= 50 ? "Alta" : engagement >= 30 ? "Media" : "Baja";
+  const engagementLabel = engagement >= 50 ? t("tldv_metrics_engagement_high") : engagement >= 30 ? t("tldv_metrics_engagement_med") : t("tldv_metrics_engagement_low");
   const engagementColor = engagement >= 50 ? "#10b981" : engagement >= 30 ? "#f59e0b" : "#ef4444";
 
   const duration = segments[segments.length - 1]?.startTime;
@@ -900,7 +993,7 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
       formatter: (params: { name: string; value: number }[]) => {
         const p = params[0];
         const pct = totalWords > 0 ? Math.round((p.value / totalWords) * 100) : 0;
-        return `${p.name}<br/>${p.value.toLocaleString()} palabras (${pct}%)`;
+        return `${p.name}<br/>${p.value.toLocaleString()} ${t("tldv_metrics_words_abbr")} (${pct}%)`;
       },
     },
     grid: { left: 0, right: 20, top: 6, bottom: 0, containLabel: true },
@@ -920,10 +1013,7 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
       type: "bar",
       data: stats.map((s, i) => ({
         value: s.words,
-        itemStyle: {
-          color: CHART_COLORS[i % CHART_COLORS.length],
-          borderRadius: [0, 4, 4, 0],
-        },
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderRadius: [0, 4, 4, 0] },
       })),
       barMaxWidth: 22,
     }],
@@ -933,37 +1023,31 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
     <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
       <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
         <span className="w-1 h-4 rounded-full bg-cyan-500 shrink-0" />
-        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">Métricas de la llamada</p>
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_metrics_demo")}</p>
       </div>
-
       <div className="px-4 pt-3 pb-4 flex flex-col gap-4">
-        {/* Summary chips */}
         <div className="grid grid-cols-4 gap-2">
-          {[
-            { icon: <MessageSquare size={12} />, label: "Participantes", value: stats.length, color: "text-cyan-400" },
-            { icon: <Clock size={12} />, label: "Duración", value: duration != null ? fmtTime(duration) : "—", color: "text-violet-400" },
-            { icon: <RefreshCw size={12} />, label: "Turnos", value: totalTurns, color: "text-teal-400" },
-            { icon: <HelpCircle size={12} />, label: "Preguntas", value: totalQuestions, color: "text-amber-400" },
-          ].map(({ icon, label, value, color }) => (
+          {([
+            { icon: <MessageSquare size={12} />, label: t("tldv_metrics_participants"), value: stats.length, color: "text-cyan-400" },
+            { icon: <Clock size={12} />, label: t("tldv_metrics_duration"), value: duration != null ? fmtTime(duration) : "—", color: "text-violet-400" },
+            { icon: <RefreshCw size={12} />, label: t("tldv_metrics_turns"), value: totalTurns, color: "text-teal-400" },
+            { icon: <HelpCircle size={12} />, label: t("tldv_metrics_questions"), value: totalQuestions, color: "text-amber-400" },
+          ] as const).map(({ icon, label, value, color }) => (
             <div key={label} className="flex flex-col gap-1 bg-gray-900/50 rounded-lg px-3 py-2.5 border border-gray-700/30">
               <div className={`flex items-center gap-1 ${color}`}>{icon}<span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span></div>
               <p className="text-base font-bold text-gray-100">{String(value)}</p>
             </div>
           ))}
         </div>
-
-        {/* Speaking distribution */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Distribución de palabras</p>
-            <span className="text-[10px] text-gray-600">{totalWords.toLocaleString()} palabras totales</span>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t("tldv_metrics_words")}</p>
+            <span className="text-[10px] text-gray-600">{totalWords.toLocaleString()} {t("tldv_metrics_total_words")}</span>
           </div>
           <ReactECharts option={chartOption} style={{ height: Math.max(60, stats.length * 32) }} notMerge />
         </div>
-
-        {/* Per-speaker detail */}
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Detalle por participante</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t("tldv_metrics_detail")}</p>
           {stats.map((sp, i) => {
             const pct = totalWords > 0 ? Math.round((sp.words / totalWords) * 100) : 0;
             return (
@@ -974,18 +1058,16 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
                   <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                 </div>
                 <span className="text-gray-500 w-8 text-right">{pct}%</span>
-                <span className="text-gray-700 w-16 text-right">{sp.words.toLocaleString()} pal.</span>
-                <span className="text-gray-700 w-16 text-right">{sp.turns} turnos</span>
+                <span className="text-gray-700 w-16 text-right">{sp.words.toLocaleString()} {t("tldv_metrics_words_abbr")}</span>
+                <span className="text-gray-700 w-16 text-right">{sp.turns} {t("tldv_metrics_turns_abbr")}</span>
                 {sp.questions > 0 && <span className="text-amber-600 text-[10px]">{sp.questions}?</span>}
               </div>
             );
           })}
         </div>
-
-        {/* Engagement indicator */}
         {stats.length >= 2 && (
           <div className="flex items-center gap-3 border-t border-gray-700/30 pt-3">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Engagement del cliente</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t("tldv_metrics_engagement")}</p>
             <div className="flex items-center gap-2">
               <div className="w-24 h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all" style={{ width: `${engagement}%`, backgroundColor: engagementColor }} />
@@ -994,6 +1076,121 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Probability card ──────────────────────────────────────────────────────────
+function ProbabilityCard({ probability }: { probability: number }) {
+  const t = useT();
+  const label = probability >= 75 ? t("tldv_probability_very_high")
+    : probability >= 55 ? t("tldv_probability_high")
+    : probability >= 35 ? t("tldv_probability_med")
+    : t("tldv_probability_low");
+  const color = probability >= 75 ? "#10b981"
+    : probability >= 55 ? "#3b82f6"
+    : probability >= 35 ? "#f59e0b"
+    : "#ef4444";
+
+  return (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <span className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_probability_title")}</p>
+      </div>
+      <div className="px-4 py-4 flex items-center gap-5">
+        <div className="relative w-16 h-16 shrink-0">
+          <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
+            <circle cx="28" cy="28" r="22" fill="none" stroke="#1f2937" strokeWidth="6" />
+            <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="6"
+              strokeLinecap="round" strokeDasharray={2 * Math.PI * 22}
+              strokeDashoffset={2 * Math.PI * 22 * (1 - probability / 100)}
+              style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white">{probability}%</span>
+        </div>
+        <div>
+          <p className="text-lg font-bold" style={{ color }}>{label}</p>
+          <div className="w-48 h-2 bg-gray-700/40 rounded-full overflow-hidden mt-2">
+            <div className="h-full rounded-full transition-all" style={{ width: `${probability}%`, backgroundColor: color }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Advisor checklist ─────────────────────────────────────────────────────────
+function AdvisorChecklist({ items }: { items: AiStructuredData["advisorChecklist"] }) {
+  const t = useT();
+  const passed = items.filter((i) => i.passed).length;
+  return (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <div className="flex items-center gap-2.5">
+          <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
+          <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_checklist_title")}</p>
+        </div>
+        <span className="text-[10px] text-gray-500">{passed}/{items.length}</span>
+      </div>
+      <div className="px-4 py-3 flex flex-col gap-1.5">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-start gap-2.5">
+            <div className={`shrink-0 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              item.passed ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/40 text-red-400"
+            }`}>
+              {item.passed ? "✓" : "✗"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs ${item.passed ? "text-gray-300" : "text-gray-500"}`}>{item.criterion}</p>
+              {item.notes && <p className="text-[10px] text-gray-600 mt-0.5 italic">{item.notes}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Error moments list ────────────────────────────────────────────────────────
+function ErrorMomentsList({ moments }: { moments: AiStructuredData["errorMoments"] }) {
+  const t = useT();
+  const severityConfig = {
+    high:   { label: t("tldv_errors_severity_high"), color: "#ef4444", bg: "bg-red-950/40 border-red-800/40" },
+    medium: { label: t("tldv_errors_severity_med"),  color: "#f59e0b", bg: "bg-amber-950/40 border-amber-800/40" },
+    low:    { label: t("tldv_errors_severity_low"),  color: "#6b7280", bg: "bg-gray-800/60 border-gray-700/40" },
+  };
+  return (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <span className="w-1 h-4 rounded-full bg-red-500 shrink-0" />
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_errors_title")}</p>
+        <span className="text-[10px] text-gray-500 ml-auto">{moments.length}</span>
+      </div>
+      <div className="px-4 py-3 flex flex-col gap-2">
+        {moments.map((e, i) => {
+          const cfg = severityConfig[e.severity] ?? severityConfig.low;
+          return (
+            <div key={i} className={`flex gap-3 rounded-lg border px-3 py-2.5 ${cfg.bg}`}>
+              <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                <AlertTriangle size={13} style={{ color: cfg.color }} />
+                {e.startTime != null && (
+                  <span className="text-[9px] font-mono text-gray-600">{fmtTime(e.startTime)}</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-semibold text-gray-400 truncate">{e.speaker}</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: cfg.color, backgroundColor: `${cfg.color}18` }}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-300 leading-snug">{e.description}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
