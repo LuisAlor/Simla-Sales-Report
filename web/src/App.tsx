@@ -369,7 +369,7 @@ function AppInner() {
             </PageShell>
           }
         />
-        <Route path="/tldv" element={<TLDV managerSdMap={managerSdMap} />} />
+        <Route path="/tldv" element={<TLDV managerSdMap={managerSdMap} statusLabels={statusLabels} />} />
         <Route
           path="/admin"
           element={
