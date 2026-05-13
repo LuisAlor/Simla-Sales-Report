@@ -281,6 +281,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
   const [transcript, setTranscript] = useState<TldvTranscriptSegment[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
+  const [transcriptRetryKey, setTranscriptRetryKey] = useState(0);
 
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [aiStructuredData, setAiStructuredData] = useState<AiStructuredData | null>(null);
@@ -367,7 +368,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
       .then((segs) => setTranscript(segs))
       .catch((err) => setTranscriptError(err instanceof Error ? err.message : String(err)))
       .finally(() => setTranscriptLoading(false));
-  }, [selectedId, tldvApiKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedId, tldvApiKey, transcriptRetryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedId) { setAiReport(null); setAiStructuredData(null); return; }
@@ -886,7 +887,17 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                       <div className="relative flex-1 min-h-0">
                       <div className="absolute inset-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">
                         {transcriptLoading && <TranscriptSkeleton />}
-                        {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
+                        {transcriptError && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-red-400 text-sm">{transcriptError}</p>
+                            <button
+                              onClick={() => setTranscriptRetryKey((k) => k + 1)}
+                              className="self-start text-xs text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 rounded px-2 py-1 transition-colors"
+                            >
+                              {t("tldv_retry")}
+                            </button>
+                          </div>
+                        )}
                         {!transcriptLoading && !transcriptError && transcript.length === 0 && (
                           <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
                         )}

@@ -34,10 +34,14 @@ export async function fetchTldvMeetings(apiKey: string, dateFrom?: string, dateT
 
 export async function fetchTldvTranscript(apiKey: string, meetingId: string): Promise<TldvTranscriptSegment[]> {
   const res = await fetch(`${TLDV_BASE}/meetings/${meetingId}/transcript`, { headers: { "x-api-key": apiKey } });
-  if (!res.ok) throw new Error(`TLDV transcript ${res.status}`);
-  const data = await res.json();
-const raw = data.transcript ?? data.entries ?? data.segments ?? data.sentences ?? data.data ?? data;
-  return Array.isArray(raw) ? raw : [];
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const detail = body ? `: ${body.slice(0, 200)}` : "";
+    throw new Error(`TLDV ${res.status}${detail}`);
+  }
+  const data = await res.json() as Record<string, unknown>;
+  const raw = (data.transcript ?? data.entries ?? data.segments ?? data.sentences ?? data.data ?? data) as unknown;
+  return Array.isArray(raw) ? (raw as TldvTranscriptSegment[]) : [];
 }
 
 export interface TldvHighlight {
