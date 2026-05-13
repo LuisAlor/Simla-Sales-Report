@@ -828,7 +828,7 @@ export function TLDV({ managerSdMap }: Props) {
 
                 {/* Invalid URL warning panel */}
                 {selectedOrder.invalidUrl && (
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 min-h-0 overflow-y-auto p-6">
                     <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
@@ -871,7 +871,7 @@ export function TLDV({ managerSdMap }: Props) {
                     )}
                     {/* Chat sub-tab */}
                     {(transcriptSubTab === "chat" || transcript.length === 0) && (
-                      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+                      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">
                         {transcriptLoading && <TranscriptSkeleton />}
                         {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
                         {!transcriptLoading && !transcriptError && transcript.length === 0 && (
@@ -909,7 +909,7 @@ export function TLDV({ managerSdMap }: Props) {
                     )}
                     {/* Metrics sub-tab */}
                     {transcriptSubTab === "metrics" && transcript.length > 0 && (
-                      <div className="flex-1 overflow-y-auto px-5 py-4">
+                      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
                         <CallMetricsPanel segments={transcript} />
                       </div>
                     )}
@@ -964,7 +964,7 @@ export function TLDV({ managerSdMap }: Props) {
                     </div>
 
                     {/* Scrollable content */}
-                    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                    <div className="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col gap-4">
                       {/* No API key / disabled */}
                       {!openaiApiKey && (
                         <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
