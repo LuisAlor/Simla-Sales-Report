@@ -194,7 +194,7 @@ const DARK_INPUT = "border border-gray-700/60 rounded-md px-2.5 py-1.5 text-xs b
 // ── Structured AI data ────────────────────────────────────────────────────────
 interface AiStructuredData {
   closingProbability: number;
-  advisorChecklist: Array<{ criterion: string; passed: boolean; notes?: string }>;
+  advisorChecklist: Array<{ criterion: string; passed: boolean; score?: number; notes?: string }>;
   errorMoments: Array<{ speaker: string; startTime: number | null; description: string; severity: "low" | "medium" | "high" }>;
 }
 
@@ -217,7 +217,7 @@ IMPORTANT: After your analysis, append this JSON block EXACTLY as shown (keep th
 {
   "closingProbability": <integer 0-100 estimating deal closing probability>,
   "advisorChecklist": [
-    {"criterion": "<specific criterion>", "passed": <true|false>, "notes": "<brief explanation>"}
+    {"criterion": "<specific criterion>", "passed": <true|false>, "score": <integer 0-100>, "notes": "<brief explanation>"}
   ],
   "errorMoments": [
     {"speaker": "<speaker name exactly as in transcript>", "startTime": <number|null>, "description": "<what went wrong and why>", "severity": "<low|medium|high>"}
@@ -225,8 +225,9 @@ IMPORTANT: After your analysis, append this JSON block EXACTLY as shown (keep th
 }
 </STRUCTURED_DATA>
 
-For advisorChecklist include 10-15 criteria: opening/introduction, needs discovery, active listening, product demo quality, objection handling, urgency creation, rapport building, closing technique, next steps agreed, professional language, solution fit, follow-up commitment.
-For errorMoments list every advisor error or missed opportunity. Use the exact startTime from the transcript where available.`;
+For advisorChecklist include 10-15 criteria: opening/introduction, needs discovery, active listening, product demo quality, objection handling, urgency creation, rapport building, closing technique, next steps agreed, professional language, solution fit, follow-up commitment. Each criterion must have a "score" field (integer 0-100).
+For errorMoments list every advisor error or missed opportunity. Use the exact startTime from the transcript where available.
+CRITICAL: ALL text values inside the JSON (criterion, notes, description) MUST be written in the same language as the rest of your response.`;
 
 export function TLDV({ managerSdMap }: Props) {
   const { user } = useAuth();
@@ -251,6 +252,7 @@ export function TLDV({ managerSdMap }: Props) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"transcript" | "ai_report">("transcript");
+  const [aiSubTab, setAiSubTab] = useState<"summary" | "analysis">("summary");
 
   const [transcript, setTranscript] = useState<TldvTranscriptSegment[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
@@ -417,7 +419,7 @@ export function TLDV({ managerSdMap }: Props) {
     const map = new Map<string, string>();
     for (const d of demoOrders) {
       if (d.managerSd && !map.has(d.managerSd)) {
-        map.set(d.managerSd, d.managerSdLabel || managerSdMap[d.managerSd] || d.managerSd);
+        map.set(d.managerSd, managerSdMap[d.managerSd] || d.managerSdLabel || d.managerSd);
       }
     }
     return Array.from(map.entries())
@@ -628,7 +630,7 @@ export function TLDV({ managerSdMap }: Props) {
           )}
           {filteredDemos.map((demo) => {
               const isSelected = demo.meetingId === selectedId;
-              const managerName = demo.managerSdLabel || (demo.managerSd ? (managerSdMap[demo.managerSd] ?? demo.managerSd) : null);
+              const managerName = (demo.managerSd ? (managerSdMap[demo.managerSd] || demo.managerSdLabel || demo.managerSd) : null);
               return (
                 <button
                   key={demo.meetingId}
@@ -723,12 +725,12 @@ export function TLDV({ managerSdMap }: Props) {
                       {selectedOrder.customerName && (
                         <span className="flex items-center gap-1.5 text-xs text-gray-400">
                           <UserCircle size={12} className="text-gray-500 shrink-0" />
-                          <span className="text-gray-600">Cliente:</span> {selectedOrder.customerName}
+                          <span className="text-gray-600">{t("tldv_customer_label")}</span> {selectedOrder.customerName}
                         </span>
                       )}
                       <span className="flex items-center gap-1.5 text-xs text-gray-400">
                         <Calendar size={11} className="text-gray-600 shrink-0" />
-                        <span className="text-gray-600">Fecha de demo:</span> {formatDemoDate(selectedOrder.demoDate)}
+                        <span className="text-gray-600">{t("tldv_demo_date")}</span> {formatDemoDate(selectedOrder.demoDate)}
                       </span>
                       {selectedOrder.mqlOrder && (
                         <span className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -774,11 +776,11 @@ export function TLDV({ managerSdMap }: Props) {
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 flex flex-col overflow-hidden">
 
                 {/* Invalid URL warning panel */}
                 {selectedOrder.invalidUrl && (
-                  <div className="p-6">
+                  <div className="flex-1 overflow-y-auto p-6">
                     <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
@@ -800,50 +802,59 @@ export function TLDV({ managerSdMap }: Props) {
                   </div>
                 )}
 
-                {/* Transcript */}
+                {/* Transcript tab */}
                 {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                  <div className="px-5 py-5 flex flex-col gap-3">
-                    {transcriptLoading && <TranscriptSkeleton />}
-                    {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
-                    {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-                      <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
+                  <>
+                    {/* Sticky metrics panel */}
+                    {!transcriptLoading && transcript.length > 0 && (
+                      <div className="shrink-0 overflow-y-auto border-b border-gray-800/60" style={{ maxHeight: "40%" }}>
+                        <div className="px-5 pt-4 pb-3">
+                          <CallMetricsPanel segments={transcript} />
+                        </div>
+                      </div>
                     )}
-                    {/* Call metrics (local stats, no AI needed) */}
-                    {!transcriptLoading && transcript.length > 0 && <CallMetricsPanel segments={transcript} />}
-                    {transcript.map((seg, i) => {
-                      const idx = speakerIndex[seg.speaker] ?? 0;
-                      const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
-                      const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
-                      const prevSeg = i > 0 ? transcript[i - 1] : null;
-                      const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
-                      const isRight = idx === 0;
-                      const errorDesc = errorSegmentSet.get(i);
-                      return (
-                        <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
-                          {showSpeaker && (
-                            <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
-                          )}
-                          <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${errorDesc ? "ring-1 ring-red-500/60" : ""}`}>
-                            <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
-                            <div className="flex items-end justify-between gap-2 mt-1.5">
-                              {ts && <p className="text-[10px] text-gray-600 tabular-nums font-mono">{ts}</p>}
-                              {errorDesc && (
-                                <div className="flex items-center gap-1 text-[10px] text-red-400 font-medium">
-                                  <AlertTriangle size={9} />
-                                  <span className="italic leading-snug max-w-[280px]">{errorDesc}</span>
-                                </div>
-                              )}
+                    {/* Scrollable transcript */}
+                    <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+                      {transcriptLoading && <TranscriptSkeleton />}
+                      {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
+                      {!transcriptLoading && !transcriptError && transcript.length === 0 && (
+                        <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
+                      )}
+                      {transcript.map((seg, i) => {
+                        const idx = speakerIndex[seg.speaker] ?? 0;
+                        const palette = SPEAKER_PALETTES[idx % SPEAKER_PALETTES.length];
+                        const ts = seg.startTime != null ? fmtTime(seg.startTime) : null;
+                        const prevSeg = i > 0 ? transcript[i - 1] : null;
+                        const showSpeaker = !prevSeg || prevSeg.speaker !== seg.speaker;
+                        const isRight = idx === 0;
+                        const errorDesc = errorSegmentSet.get(i);
+                        return (
+                          <div key={i} className={`flex flex-col gap-0.5 ${palette.align}`}>
+                            {showSpeaker && (
+                              <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
+                            )}
+                            <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${errorDesc ? "ring-1 ring-red-500/60" : ""}`}>
+                              <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
+                              <div className="flex items-end justify-between gap-2 mt-1.5">
+                                {ts && <p className="text-[10px] text-gray-600 tabular-nums font-mono">{ts}</p>}
+                                {errorDesc && (
+                                  <div className="flex items-center gap-1 text-[10px] text-red-400 font-medium">
+                                    <AlertTriangle size={9} />
+                                    <span className="italic leading-snug max-w-[280px]">{errorDesc}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
 
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
-                  <div className="p-6 flex flex-col gap-4">
+                  <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
 
                     {/* Model label — always at top */}
                     <div className="flex items-center justify-between gap-2">
@@ -855,9 +866,9 @@ export function TLDV({ managerSdMap }: Props) {
                         <button
                           onClick={() => requestNavigate("/admin?tab=integraciones")}
                           title={t("tldv_configure_settings")}
-                          className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-violet-400 transition-colors"
+                          className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-violet-400 transition-colors p-0.5 rounded hover:bg-gray-800"
                         >
-                          <Settings2 size={11} />
+                          <Settings2 size={12} />
                         </button>
                       </div>
                       {aiReport !== null && !aiReportLoading && openaiApiKey && (
@@ -918,7 +929,28 @@ export function TLDV({ managerSdMap }: Props) {
                     {/* Report rendered */}
                     {!aiReportLoading && aiReport !== null && openaiApiKey && (
                       <>
+                        {/* Sub-tabs: Resumen / Análisis */}
                         {aiStructuredData && (
+                          <div className="flex gap-0.5 border-b border-gray-800">
+                            {(["summary", "analysis"] as const).map((sub) => (
+                              <button key={sub} onClick={() => setAiSubTab(sub)}
+                                className={`px-3 pb-2 text-xs font-medium border-b-2 transition-colors ${
+                                  aiSubTab === sub
+                                    ? "border-violet-500 text-violet-400"
+                                    : "border-transparent text-gray-600 hover:text-gray-400"
+                                }`}
+                              >
+                                {sub === "summary" ? t("tldv_ai_tab_summary") : t("tldv_ai_tab_analysis")}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Summary sub-tab (or full view when no structured data) */}
+                        {(!aiStructuredData || aiSubTab === "summary") && (
+                          <AiReportRenderer text={aiReport} />
+                        )}
+                        {/* Analysis sub-tab */}
+                        {aiStructuredData && aiSubTab === "analysis" && (
                           <>
                             <ProbabilityCard probability={aiStructuredData.closingProbability} />
                             {aiStructuredData.advisorChecklist.length > 0 && (
@@ -929,7 +961,6 @@ export function TLDV({ managerSdMap }: Props) {
                             )}
                           </>
                         )}
-                        <AiReportRenderer text={aiReport} />
                       </>
                     )}
                   </div>
@@ -1134,20 +1165,30 @@ function AdvisorChecklist({ items }: { items: AiStructuredData["advisorChecklist
         </div>
         <span className="text-[10px] text-gray-500">{passed}/{items.length}</span>
       </div>
-      <div className="px-4 py-3 flex flex-col gap-1.5">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-start gap-2.5">
-            <div className={`shrink-0 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              item.passed ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/40 text-red-400"
-            }`}>
-              {item.passed ? "✓" : "✗"}
+      <div className="px-4 py-3 flex flex-col gap-2">
+        {items.map((item, i) => {
+          const score = item.score ?? (item.passed ? 80 : 20);
+          const scoreColor = score >= 70 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444";
+          return (
+            <div key={i} className="flex items-start gap-2.5">
+              <div className={`shrink-0 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                item.passed ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/40 text-red-400"
+              }`}>
+                {item.passed ? "✓" : "✗"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <p className={`text-xs ${item.passed ? "text-gray-300" : "text-gray-500"}`}>{item.criterion}</p>
+                  <span className="text-[10px] font-semibold shrink-0" style={{ color: scoreColor }}>{score}%</span>
+                </div>
+                <div className="w-full h-1 bg-gray-700/40 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: scoreColor }} />
+                </div>
+                {item.notes && <p className="text-[10px] text-gray-600 mt-0.5 italic">{item.notes}</p>}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs ${item.passed ? "text-gray-300" : "text-gray-500"}`}>{item.criterion}</p>
-              {item.notes && <p className="text-[10px] text-gray-600 mt-0.5 italic">{item.notes}</p>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
