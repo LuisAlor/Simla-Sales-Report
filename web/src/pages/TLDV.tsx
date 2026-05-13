@@ -26,6 +26,7 @@ import {
 import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT, useI18n } from "@/contexts/I18nContext";
+import { useIsDark } from "@/contexts/ThemeContext";
 import { fetchTldvTranscript, tldvMeetingUrl, extractMeetingId } from "@/lib/tldvApi";
 import type { TldvTranscriptSegment } from "@/lib/tldvApi";
 import { fetchOrdersByDemoDate } from "@/lib/api";
@@ -188,12 +189,12 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
 
 const SPEAKER_PALETTES = [
   { bubble: "bg-cyan-900/40",    name: "text-cyan-400",   align: "items-end"   },
-  { bubble: "bg-gray-800",       name: "text-violet-400", align: "items-start" },
+  { bubble: "bg-slate-100 dark:bg-gray-800",       name: "text-violet-400", align: "items-start" },
   { bubble: "bg-teal-900/40",    name: "text-teal-400",   align: "items-start" },
   { bubble: "bg-rose-950/40",    name: "text-rose-400",   align: "items-start" },
 ];
 
-const DARK_INPUT = "border border-gray-700/60 rounded-md px-2.5 py-1.5 text-xs bg-gray-800/60 text-gray-300 focus:outline-none focus:border-cyan-600/60 transition-all";
+const DARK_INPUT = "border border-gray-200/60 dark:border-gray-700/60 rounded-md px-2.5 py-1.5 text-xs bg-slate-100/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 focus:outline-none focus:border-cyan-600/60 transition-all";
 
 // ── Structured AI data ────────────────────────────────────────────────────────
 interface AiStructuredData {
@@ -257,6 +258,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
   const t = useT();
   const { lang } = useI18n();
   const { requestNavigate } = useNavigationGuard();
+  const isDark = useIsDark();
 
   const [dateFrom, setDateFrom] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
@@ -506,10 +508,10 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
   }, [selectedOrder, demoOrders, aiStructuredData, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gray-950">
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-gray-950">
 
       {/* ── Top filter bar ── */}
-      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-2 flex items-end gap-3 relative">
+      <div className="shrink-0 border-b border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 flex items-end gap-3 relative">
 
         {/* Icon + title */}
         <div className="flex items-center gap-2 shrink-0 pb-1">
@@ -517,18 +519,18 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
             style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
             <Video size={12} className="text-white" />
           </div>
-          <span className="text-sm font-bold text-white tracking-wide whitespace-nowrap">{t("tldv_title")}</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-white tracking-wide whitespace-nowrap">{t("tldv_title")}</span>
         </div>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-gray-700 shrink-0 mb-1" />
+        <div className="h-5 w-px bg-slate-200 dark:bg-gray-700 shrink-0 mb-1" />
 
         {/* Render filters in layout order */}
         {filterLayout.map((item) => {
           if (!item.visible) return null;
           if (item.id === "date") return (
             <div key="date" className="flex flex-col gap-0.5 shrink-0">
-              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <Calendar size={9} className="shrink-0" />{t("filter_creation_date")}
               </p>
               <DateRangePicker
@@ -541,7 +543,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
           );
           if (item.id === "manager" && knownManagers.length > 0) return (
             <div key="manager" className="flex flex-col gap-0.5 shrink-0">
-              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <User size={9} className="shrink-0" />{t("filter_manager")}
               </p>
               <div style={{ width: 160 }}>
@@ -551,28 +553,28 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
           );
           if (item.id === "project") return (
             <div key="project" className="flex flex-col gap-0.5 shrink-0">
-              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <Building2 size={9} className="shrink-0" />{t("tldv_filter_project")}
               </p>
               <div className="relative" style={{ width: 160 }}>
                 <input type="text" value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)}
                   className={DARK_INPUT + " w-full pr-6"} />
                 {projectSearch && (
-                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"><X size={11} /></button>
+                  <button onClick={() => setProjectSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"><X size={11} /></button>
                 )}
               </div>
             </div>
           );
           if (item.id === "order-num") return (
             <div key="order-num" className="flex flex-col gap-0.5 shrink-0">
-              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <Hash size={9} className="shrink-0" />{t("tldv_filter_order_num")}
               </p>
               <div className="relative" style={{ width: 160 }}>
                 <input type="text" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
                   className={DARK_INPUT + " w-full pr-6"} />
                 {orderSearch && (
-                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"><X size={11} /></button>
+                  <button onClick={() => setOrderSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"><X size={11} /></button>
                 )}
               </div>
             </div>
@@ -590,14 +592,14 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
         <div className="relative shrink-0 mb-0.5" ref={gearRef}>
           <button
             onClick={() => setFilterConfigOpen((v) => !v)}
-            className={`p-1.5 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-gray-800" : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"}`}
+            className={`p-1.5 rounded transition-colors ${filterConfigOpen ? "text-cyan-400 bg-slate-100 dark:bg-gray-800" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-800"}`}
             title={t("filter_config_title")}
           >
             <Settings2 size={13} />
           </button>
           {filterConfigOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 bg-gray-800 border border-gray-700 rounded-lg p-3 w-56 shadow-xl">
-              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider mb-2">{t("filter_config_title")}</p>
+            <div className="absolute top-full right-0 mt-1 z-50 bg-slate-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 w-56 shadow-xl">
+              <p className="text-[9px] font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider mb-2">{t("filter_config_title")}</p>
               {filterLayout.map((item, i) => {
                 const def = TLDV_FILTER_DEFS.find((f) => f.id === item.id)!;
                 const canHide = filterLayoutVisibleCount > 1 || !item.visible;
@@ -619,8 +621,8 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                     }}
                     className="flex items-center gap-2 py-1 cursor-grab active:cursor-grabbing select-none"
                   >
-                    <GripVertical size={12} className="text-gray-600 shrink-0" />
-                    <span className={`text-xs flex-1 ${item.visible ? "text-gray-300" : "text-gray-600"}`}>
+                    <GripVertical size={12} className="text-gray-500 dark:text-gray-600 shrink-0" />
+                    <span className={`text-xs flex-1 ${item.visible ? "text-gray-700 dark:text-gray-300" : "text-gray-500 dark:text-gray-600"}`}>
                       {t(def.labelKey as Parameters<typeof t>[0])}
                     </span>
                     <button
@@ -631,7 +633,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                         setFilterLayout(next);
                         saveTldvFilterLayout(next);
                       }}
-                      className="p-0.5 rounded text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-0.5 rounded text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       {item.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                     </button>
@@ -644,7 +646,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                   setFilterLayout(next);
                   saveTldvFilterLayout(next);
                 }}
-                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-2 w-full transition-colors border-t border-gray-700 pt-2"
+                className="text-[10px] text-cyan-500 hover:text-cyan-400 text-right mt-2 w-full transition-colors border-t border-gray-200 dark:border-gray-700 pt-2"
               >
                 {t("filter_config_reset")}
               </button>
@@ -671,12 +673,12 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Left panel (meetings list only) ── */}
-        <div className="w-[320px] shrink-0 flex flex-col border-r border-gray-800 bg-gray-900">
+        <div className="w-[320px] shrink-0 flex flex-col border-r border-gray-800 bg-white dark:bg-gray-900">
 
           {/* Order list */}
           <div className="flex-1 overflow-y-auto px-3 pb-3 pt-2 flex flex-col gap-1.5">
             {filteredDemos.length === 0 && !loading && demoOrders.length > 0 && (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700 select-none">
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 dark:text-gray-700 select-none">
               <Video size={28} className="opacity-30" />
               <p className="text-xs">{t("tldv_no_meetings")}</p>
             </div>
@@ -693,28 +695,28 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                       ? demo.invalidUrl
                         ? "bg-yellow-950/40 border-yellow-700/60 shadow-[0_0_14px_rgba(234,179,8,0.07)]"
                         : "bg-blue-950/60 border-cyan-700/50 shadow-[0_0_18px_rgba(6,182,212,0.09)]"
-                      : "bg-gray-800/50 border-gray-700/40 hover:border-gray-600/70 hover:bg-gray-800/80"
+                      : "bg-slate-100/50 dark:bg-gray-800/50 border-gray-200/40 dark:border-gray-700/40 hover:border-gray-300 dark:hover:border-gray-600/70 hover:bg-slate-100/80 dark:hover:bg-gray-800/80"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 flex flex-col gap-1">
                       <div className="flex items-center gap-1.5">
-                        <Building2 size={11} className="text-gray-600 shrink-0" />
-                        <p className="text-sm font-semibold text-gray-100 truncate">{demo.projectName}</p>
+                        <Building2 size={11} className="text-gray-500 dark:text-gray-600 shrink-0" />
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{demo.projectName}</p>
                       </div>
                       <div className="flex items-center gap-2.5 flex-nowrap overflow-hidden">
                         <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
-                          <Calendar size={10} className="text-gray-600" />
+                          <Calendar size={10} className="text-gray-500 dark:text-gray-600" />
                           {formatDemoDate(demo.demoDate)}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-gray-600 shrink-0 ml-auto">
-                          <Hash size={10} className="text-gray-700" />
+                        <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-600 shrink-0 ml-auto">
+                          <Hash size={10} className="text-gray-400 dark:text-gray-700" />
                           {demo.orderNumber}
                         </span>
                       </div>
                       {managerName && (
                         <span className="flex items-center gap-1 text-xs text-gray-500 truncate min-w-0">
-                          <User size={10} className="text-gray-600 shrink-0" />
+                          <User size={10} className="text-gray-500 dark:text-gray-600 shrink-0" />
                           {managerName}
                         </span>
                       )}
@@ -727,7 +729,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                     </div>
                     {demo.invalidUrl
                       ? <AlertTriangle size={13} className="text-yellow-500/70 shrink-0 mt-0.5" />
-                      : <Video size={12} className={`shrink-0 mt-0.5 transition-colors ${isSelected ? "text-cyan-400" : "text-gray-700"}`} />
+                      : <Video size={12} className={`shrink-0 mt-0.5 transition-colors ${isSelected ? "text-cyan-400" : "text-gray-400 dark:text-gray-700"}`} />
                     }
                   </div>
                 </button>
@@ -737,12 +739,12 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
 
           {/* Sticky count footer */}
           {demoOrders.length > 0 && (
-            <div className="shrink-0 px-4 py-2 border-t border-gray-800/60 bg-gray-900/80">
-              <span className="text-[10px] text-gray-600">
+            <div className="shrink-0 px-4 py-2 border-t border-gray-800/60 bg-white/80 dark:bg-gray-900/80">
+              <span className="text-[10px] text-gray-500 dark:text-gray-600">
                 Total demos encontradas:{" "}
-                <span className="text-gray-400 font-semibold">{filteredDemos.length}</span>
+                <span className="text-gray-600 dark:text-gray-400 font-semibold">{filteredDemos.length}</span>
                 {demoOrders.length !== filteredDemos.length && (
-                  <span className="text-gray-700"> / {demoOrders.length}</span>
+                  <span className="text-gray-400 dark:text-gray-700"> / {demoOrders.length}</span>
                 )}
               </span>
             </div>
@@ -750,7 +752,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: "#0c0e14" }}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: isDark ? "#0c0e14" : undefined }}>
           {loading ? (
             <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
           ) : !selectedOrder ? (
@@ -762,11 +764,11 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
           ) : (
             <>
               {/* Header */}
-              <div className="shrink-0 px-6 pt-5 pb-0 bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
+              <div className="shrink-0 px-6 pt-5 pb-0 bg-white/70 dark:bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
                 <div className="flex items-start justify-between gap-4 pb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base font-bold text-white truncate">{selectedOrder.projectName}</h3>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{selectedOrder.projectName}</h3>
                       {selectedOrder.invalidUrl && (
                         <span className="flex items-center gap-1 bg-yellow-900/35 border border-yellow-700/45 text-yellow-400 text-xs font-semibold px-2 py-0.5 rounded-full shrink-0">
                           <AlertTriangle size={10} />
@@ -776,38 +778,38 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                     </div>
                     <div className="flex flex-wrap items-center gap-3 mt-1.5">
                       {selectedOrder.customerName && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                           <UserCircle size={12} className="text-gray-500 shrink-0" />
-                          <span className="text-gray-600">{t("tldv_customer_label")}</span> {selectedOrder.customerName}
+                          <span className="text-gray-500 dark:text-gray-600">{t("tldv_customer_label")}</span> {selectedOrder.customerName}
                         </span>
                       )}
-                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                        <Calendar size={11} className="text-gray-600 shrink-0" />
-                        <span className="text-gray-600">{t("tldv_demo_date")}</span> {formatDemoDate(selectedOrder.demoDate)}
+                      <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                        <Calendar size={11} className="text-gray-500 dark:text-gray-600 shrink-0" />
+                        <span className="text-gray-500 dark:text-gray-600">{t("tldv_demo_date")}</span> {formatDemoDate(selectedOrder.demoDate)}
                       </span>
                       {selectedOrder.mqlOrder && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <Tag size={11} className="text-gray-600 shrink-0" />
-                          <span className="text-gray-600">MQL:</span> {formatMql(selectedOrder.mqlOrder).replace("MQL = ", "")}
+                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                          <Tag size={11} className="text-gray-500 dark:text-gray-600 shrink-0" />
+                          <span className="text-gray-500 dark:text-gray-600">MQL:</span> {formatMql(selectedOrder.mqlOrder).replace("MQL = ", "")}
                         </span>
                       )}
                       {selectedOrder.statusCode && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                          <CircleDot size={11} className="text-gray-600 shrink-0" />
-                          <span className="text-gray-600">{t("tldv_status_label")}</span> {statusLabels[selectedOrder.statusCode] || selectedOrder.statusCode}
+                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                          <CircleDot size={11} className="text-gray-500 dark:text-gray-600 shrink-0" />
+                          <span className="text-gray-500 dark:text-gray-600">{t("tldv_status_label")}</span> {statusLabels[selectedOrder.statusCode] || selectedOrder.statusCode}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <a href={`https://base.simla.com/orders/${selectedOrder.orderId}/edit`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
+                      className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800"
                     >
                       <ExternalLink size={12} /> {t("tldv_open_crm")}
                     </a>
                     {!selectedOrder.invalidUrl && (
                       <a href={tldvMeetingUrl(selectedOrder.meetingId)} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
+                        className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-600 hover:text-cyan-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800"
                       >
                         <Video size={12} /> TLDV
                       </a>
@@ -823,7 +825,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                         className={`px-4 pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                           activeTab === tab
                             ? "border-cyan-500 text-cyan-400"
-                            : "border-transparent text-gray-600 hover:text-gray-400"
+                            : "border-transparent text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"
                         }`}
                       >
                         {tab === "ai_report" && <Bot size={13} />}
@@ -854,7 +856,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                       <div className="bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2.5">
                         <p className="text-xs text-yellow-700 font-mono break-all">{selectedOrder.tldvUrl}</p>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-500 dark:text-gray-600">
                         Formato válido:{" "}
                         <span className="font-mono text-gray-500">https://tldv.io/app/meetings/&lt;id&gt;</span>
                       </p>
@@ -868,13 +870,13 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                   <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Sub-tab bar */}
                     {transcript.length > 0 && (
-                      <div className="shrink-0 flex gap-0.5 px-6 border-b border-gray-800/60 bg-gray-900/40">
+                      <div className="shrink-0 flex gap-0.5 px-6 border-b border-gray-800/60 bg-slate-50/40 dark:bg-gray-900/40">
                         {(["chat", "metrics"] as const).map((sub) => (
                           <button key={sub} onClick={() => setTranscriptSubTab(sub)}
                             className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
                               transcriptSubTab === sub
                                 ? "border-violet-500 text-violet-400"
-                                : "border-transparent text-gray-600 hover:text-gray-400"
+                                : "border-transparent text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"
                             }`}
                           >
                             {sub === "chat" ? t("tldv_tab_chat") : t("tldv_tab_metrics")}
@@ -893,14 +895,14 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                             <p className="text-red-400 text-sm">{transcriptError}</p>
                             <button
                               onClick={() => setTranscriptRetryKey((k) => k + 1)}
-                              className="self-start text-xs text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 rounded px-2 py-1 transition-colors"
+                              className="self-start text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 rounded px-2 py-1 transition-colors"
                             >
                               {t("tldv_retry")}
                             </button>
                           </div>
                         )}
                         {!transcriptLoading && !transcriptError && transcript.length === 0 && (
-                          <p className="text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
+                          <p className="text-gray-400 dark:text-gray-700 text-sm">{t("tldv_no_transcript")}</p>
                         )}
                         {transcript.map((seg, i) => {
                           const idx = speakerIndex[seg.speaker] ?? 0;
@@ -916,9 +918,9 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                                 <p className={`text-[10px] font-semibold px-1 ${palette.name}`}>{seg.speaker}</p>
                               )}
                               <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 ${palette.bubble} ${isRight ? "rounded-tr-sm" : "rounded-tl-sm"} ${errorDesc ? "ring-1 ring-red-500/60" : ""}`}>
-                                <p className="text-sm text-gray-200 leading-relaxed">{seg.text}</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{seg.text}</p>
                                 <div className="flex items-end justify-between gap-2 mt-1.5">
-                                  {ts && <p className="text-[10px] text-gray-600 tabular-nums font-mono">{ts}</p>}
+                                  {ts && <p className="text-[10px] text-gray-500 dark:text-gray-600 tabular-nums font-mono">{ts}</p>}
                                   {errorDesc && (
                                     <div className="flex items-center gap-1 text-[10px] text-red-400 font-medium">
                                       <AlertTriangle size={9} />
@@ -950,17 +952,17 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                   <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
                     {/* Sticky header: model bar + sub-tabs */}
-                    <div className="shrink-0 px-6 pt-3 border-b border-gray-800/60 bg-gray-900/40">
+                    <div className="shrink-0 px-6 pt-3 border-b border-gray-800/60 bg-slate-50/40 dark:bg-gray-900/40">
                       <div className="flex items-center justify-between gap-2 pb-2.5">
                         <div className="flex items-center gap-2">
                           <Bot size={13} className="text-violet-400" />
                           <span className="text-xs text-gray-500">
-                            <span className="text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
+                            <span className="text-gray-500 dark:text-gray-600">{t("tldv_model_used")}</span> {openaiModel}
                           </span>
                           <button
                             onClick={() => requestNavigate("/admin?tab=integraciones")}
                             title={t("tldv_configure_settings")}
-                            className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-violet-400 transition-colors p-0.5 rounded hover:bg-gray-800"
+                            className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-violet-400 transition-colors p-0.5 rounded hover:bg-slate-100 dark:hover:bg-gray-800"
                           >
                             <Settings2 size={12} />
                           </button>
@@ -968,7 +970,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                         {aiReport !== null && !aiReportLoading && openaiApiKey && (
                           <button
                             onClick={() => handleGenerateAiReport(true)}
-                            className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-violet-400 transition-colors"
+                            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-700 hover:text-violet-400 transition-colors"
                           >
                             <RefreshCw size={11} /> {t("tldv_ai_regenerate")}
                           </button>
@@ -982,7 +984,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                               className={`px-3 pb-2 text-xs font-medium border-b-2 transition-colors ${
                                 aiSubTab === sub
                                   ? "border-violet-500 text-violet-400"
-                                  : "border-transparent text-gray-600 hover:text-gray-400"
+                                  : "border-transparent text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"
                               }`}
                             >
                               {sub === "summary" ? t("tldv_ai_tab_summary") : t("tldv_ai_tab_analysis")}
@@ -1002,11 +1004,11 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                           <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center ${
                             openaiIsDisabled
                               ? "bg-orange-950/30 border-orange-800/40"
-                              : "bg-gray-800/50 border-gray-700/50"
+                              : "bg-slate-100/50 dark:bg-gray-800/50 border-gray-700/50"
                           }`}>
                             <Bot size={26} className={openaiIsDisabled ? "text-orange-400/70" : "text-violet-400/60"} />
                           </div>
-                          <p className={`text-sm max-w-xs ${openaiIsDisabled ? "text-orange-400/80" : "text-gray-400"}`}>
+                          <p className={`text-sm max-w-xs ${openaiIsDisabled ? "text-orange-400/80" : "text-gray-600 dark:text-gray-400"}`}>
                             {openaiIsDisabled ? t("tldv_ai_disabled") : t("tldv_ai_no_key")}
                           </p>
                         </div>
@@ -1015,12 +1017,12 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                       {/* Has API key but no report yet */}
                       {openaiApiKey && !aiReportLoading && aiReport === null && (
                         <div className="flex flex-col items-center justify-center gap-5 py-16">
-                          <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-2xl bg-slate-100/50 dark:bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
                             <Bot size={26} className="text-violet-400/60" />
                           </div>
                           <div className="text-center">
-                            <p className="text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
-                            <p className="text-gray-600 text-sm mb-5 max-w-xs">
+                            <p className="text-gray-700 dark:text-gray-300 font-semibold mb-1">{t("tldv_ai_report_tab")}</p>
+                            <p className="text-gray-500 dark:text-gray-600 text-sm mb-5 max-w-xs">
                               {transcript.length === 0 ? t("tldv_ai_no_transcript") : t("tldv_ai_ready")}
                             </p>
                             <button
@@ -1129,6 +1131,7 @@ function buildTalkTimeline(segments: TldvTranscriptSegment[]): { speaker: string
 
 function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
   const t = useT();
+  const isDark = useIsDark();
   const stats = useMemo(() => computeSpeakerStats(segments), [segments]);
   const timeline = useMemo(() => buildTalkTimeline(segments), [segments]);
   const totalWords = stats.reduce((s, sp) => s + sp.words, 0);
@@ -1149,8 +1152,8 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "#1f2937",
-      borderColor: "#374151",
+      backgroundColor: isDark ? "#1f2937" : "#f1f5f9",
+      borderColor: isDark ? "#374151" : "#e2e8f0",
       textStyle: { color: "#d1d5db", fontSize: 11 },
       formatter: (params: { name: string; value: number }[]) => {
         const p = params[0];
@@ -1161,8 +1164,8 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
     grid: { left: 0, right: 20, top: 6, bottom: 0, containLabel: true },
     xAxis: {
       type: "value",
-      splitLine: { lineStyle: { color: "#1f2937" } },
-      axisLabel: { color: "#4b5563", fontSize: 10 },
+      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f1f5f9" } },
+      axisLabel: { color: isDark ? "#4b5563" : "#94a3b8", fontSize: 10 },
     },
     yAxis: {
       type: "category",
@@ -1187,15 +1190,15 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "#1f2937",
-      borderColor: "#374151",
+      backgroundColor: isDark ? "#1f2937" : "#f1f5f9",
+      borderColor: isDark ? "#374151" : "#e2e8f0",
       textStyle: { color: "#d1d5db", fontSize: 11 },
     },
     grid: { left: 0, right: 20, top: 6, bottom: 0, containLabel: true },
     xAxis: {
       type: "value",
-      splitLine: { lineStyle: { color: "#1f2937" } },
-      axisLabel: { color: "#4b5563", fontSize: 10 },
+      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f1f5f9" } },
+      axisLabel: { color: isDark ? "#4b5563" : "#94a3b8", fontSize: 10 },
     },
     yAxis: {
       type: "category",
@@ -1220,8 +1223,8 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "item",
-      backgroundColor: "#1f2937",
-      borderColor: "#374151",
+      backgroundColor: isDark ? "#1f2937" : "#f1f5f9",
+      borderColor: isDark ? "#374151" : "#e2e8f0",
       textStyle: { color: "#d1d5db", fontSize: 11 },
       formatter: (p: { name: string; value: number[] }) => `${p.name}<br/>${fmtTime(p.value[0])} → ${fmtTime(p.value[1])}`,
     },
@@ -1231,7 +1234,7 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
       min: 0,
       max: duration,
       splitLine: { show: false },
-      axisLabel: { color: "#4b5563", fontSize: 9, formatter: (v: number) => fmtTime(v) },
+      axisLabel: { color: isDark ? "#4b5563" : "#94a3b8", fontSize: 9, formatter: (v: number) => fmtTime(v) },
     },
     yAxis: {
       type: "category",
@@ -1272,19 +1275,19 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
           { icon: <RefreshCw size={12} />, label: t("tldv_metrics_turns"), value: totalTurns, color: "text-teal-400" },
           { icon: <HelpCircle size={12} />, label: t("tldv_metrics_questions"), value: totalQuestions, color: "text-amber-400" },
         ] as const).map(({ icon, label, value, color }) => (
-          <div key={label} className="flex flex-col gap-1 bg-gray-900/50 rounded-lg px-3 py-2.5 border border-gray-700/30">
+          <div key={label} className="flex flex-col gap-1 bg-white/50 dark:bg-gray-900/50 rounded-lg px-3 py-2.5 border border-gray-700/30">
             <div className={`flex items-center gap-1 ${color}`}>{icon}<span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span></div>
-            <p className="text-base font-bold text-gray-100">{String(value)}</p>
+            <p className="text-base font-bold text-gray-900 dark:text-gray-100">{String(value)}</p>
           </div>
         ))}
       </div>
 
       {/* Word distribution */}
-      <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+      <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
           <span className="w-1 h-4 rounded-full bg-cyan-500 shrink-0" />
-          <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_metrics_words")}</p>
-          <span className="text-[10px] text-gray-600 ml-auto">{totalWords.toLocaleString()} {t("tldv_metrics_total_words")}</span>
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_metrics_words")}</p>
+          <span className="text-[10px] text-gray-500 dark:text-gray-600 ml-auto">{totalWords.toLocaleString()} {t("tldv_metrics_total_words")}</span>
         </div>
         <div className="px-4 pt-3 pb-4 flex flex-col gap-3">
           <ReactECharts option={wordChartOption} style={{ height: Math.max(60, stats.length * 32) }} notMerge />
@@ -1294,13 +1297,13 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
               return (
                 <div key={sp.name} className="flex items-center gap-3 text-xs">
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                  <span className="text-gray-300 w-28 truncate">{sp.name}</span>
-                  <div className="flex-1 h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
+                  <span className="text-gray-700 dark:text-gray-300 w-28 truncate">{sp.name}</span>
+                  <div className="flex-1 h-1.5 bg-slate-200/40 dark:bg-gray-700/40 rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                   </div>
                   <span className="text-gray-500 w-8 text-right">{pct}%</span>
-                  <span className="text-gray-700 w-16 text-right">{sp.words.toLocaleString()} {t("tldv_metrics_words_abbr")}</span>
-                  <span className="text-gray-700 w-16 text-right">{sp.turns} {t("tldv_metrics_turns_abbr")}</span>
+                  <span className="text-gray-400 dark:text-gray-700 w-16 text-right">{sp.words.toLocaleString()} {t("tldv_metrics_words_abbr")}</span>
+                  <span className="text-gray-400 dark:text-gray-700 w-16 text-right">{sp.turns} {t("tldv_metrics_turns_abbr")}</span>
                   {sp.questions > 0 && <span className="text-amber-600 text-[10px]">{sp.questions}?</span>}
                 </div>
               );
@@ -1310,15 +1313,15 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
       </div>
 
       {/* Per-speaker detail table */}
-      <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+      <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
           <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
-          <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_metrics_detail")}</p>
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_metrics_detail")}</p>
         </div>
         <div className="px-4 py-3 overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-[10px] text-gray-600 uppercase tracking-wider">
+              <tr className="text-[10px] text-gray-500 dark:text-gray-600 uppercase tracking-wider">
                 <th className="text-left pb-2 font-semibold">{t("tldv_metrics_participants")}</th>
                 <th className="text-right pb-2 font-semibold">{t("tldv_metrics_words")}</th>
                 <th className="text-right pb-2 font-semibold">{t("tldv_metrics_turns_abbr")}</th>
@@ -1328,15 +1331,15 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
                 <th className="text-right pb-2 font-semibold">?</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700/20">
+            <tbody className="divide-y divide-gray-200/20 dark:divide-gray-700/20">
               {stats.map((sp, i) => (
                 <tr key={sp.name}>
                   <td className="py-1.5 flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    <span className="text-gray-300 truncate max-w-[100px]">{sp.name}</span>
+                    <span className="text-gray-700 dark:text-gray-300 truncate max-w-[100px]">{sp.name}</span>
                   </td>
-                  <td className="py-1.5 text-right text-gray-400">{sp.words.toLocaleString()}</td>
-                  <td className="py-1.5 text-right text-gray-400">{sp.turns}</td>
+                  <td className="py-1.5 text-right text-gray-600 dark:text-gray-400">{sp.words.toLocaleString()}</td>
+                  <td className="py-1.5 text-right text-gray-600 dark:text-gray-400">{sp.turns}</td>
                   <td className="py-1.5 text-right text-gray-500">{sp.avgTurnWords} {t("tldv_metrics_words_abbr")}</td>
                   <td className="py-1.5 text-right text-gray-500">{sp.maxTurnWords} {t("tldv_metrics_words_abbr")}</td>
                   {totalWordsPerMin != null && <td className="py-1.5 text-right text-gray-500">{sp.wordsPerMin ?? "—"}</td>}
@@ -1350,11 +1353,11 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
 
       {/* Talk speed chart */}
       {speedChartOption && (
-        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
             <span className="w-1 h-4 rounded-full bg-teal-500 shrink-0" />
-            <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_metrics_talk_speed")}</p>
-            <span className="text-[10px] text-gray-600 ml-auto">{totalWordsPerMin} {t("tldv_metrics_words_abbr")}/min total</span>
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_metrics_talk_speed")}</p>
+            <span className="text-[10px] text-gray-500 dark:text-gray-600 ml-auto">{totalWordsPerMin} {t("tldv_metrics_words_abbr")}/min total</span>
           </div>
           <div className="px-4 pt-3 pb-4">
             <ReactECharts option={speedChartOption} style={{ height: Math.max(60, stats.length * 32) }} notMerge />
@@ -1364,10 +1367,10 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
 
       {/* Talk timeline */}
       {timelineChartOption && duration != null && (
-        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
             <span className="w-1 h-4 rounded-full bg-amber-500 shrink-0" />
-            <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_metrics_talk_ratio")}</p>
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_metrics_talk_ratio")}</p>
           </div>
           <div className="px-4 pt-3 pb-4">
             <ReactECharts option={timelineChartOption} style={{ height: Math.max(80, speakers.length * 36) }} notMerge />
@@ -1377,11 +1380,11 @@ function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
 
       {/* Engagement */}
       {stats.length >= 2 && (
-        <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 px-4 py-3">
+        <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 px-4 py-3">
           <div className="flex items-center gap-3">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t("tldv_metrics_engagement")}</p>
             <div className="flex items-center gap-2 flex-1">
-              <div className="flex-1 h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-slate-200/40 dark:bg-gray-700/40 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all" style={{ width: `${engagement}%`, backgroundColor: engagementColor }} />
               </div>
               <span className="text-xs font-semibold shrink-0" style={{ color: engagementColor }}>{engagement}% — {engagementLabel}</span>
@@ -1406,25 +1409,25 @@ function ProbabilityCard({ probability }: { probability: number }) {
     : "#ef4444";
 
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+    <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
         <span className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_probability_title")}</p>
+        <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_probability_title")}</p>
       </div>
       <div className="px-4 py-4 flex items-center gap-5">
         <div className="relative w-16 h-16 shrink-0">
           <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
-            <circle cx="28" cy="28" r="22" fill="none" stroke="#1f2937" strokeWidth="6" />
+            <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" className="text-slate-200 dark:text-gray-800" strokeWidth="6" />
             <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="6"
               strokeLinecap="round" strokeDasharray={2 * Math.PI * 22}
               strokeDashoffset={2 * Math.PI * 22 * (1 - probability / 100)}
               style={{ transition: "stroke-dashoffset 0.6s ease" }} />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white">{probability}%</span>
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900 dark:text-white">{probability}%</span>
         </div>
         <div>
           <p className="text-lg font-bold" style={{ color }}>{label}</p>
-          <div className="w-48 h-2 bg-gray-700/40 rounded-full overflow-hidden mt-2">
+          <div className="w-48 h-2 bg-slate-200/40 dark:bg-gray-700/40 rounded-full overflow-hidden mt-2">
             <div className="h-full rounded-full transition-all" style={{ width: `${probability}%`, backgroundColor: color }} />
           </div>
         </div>
@@ -1439,11 +1442,11 @@ function AdvisorChecklist({ items, lang }: { items: AiStructuredData["advisorChe
   const passed = items.filter((i) => i.passed).length;
   const avgScore = items.length > 0 ? Math.round(items.reduce((s, c) => s + (c.score ?? (c.passed ? 80 : 20)), 0) / items.length) : 0;
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+    <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
         <div className="flex items-center gap-2.5">
           <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
-          <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_checklist_title")}</p>
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_checklist_title")}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500">{passed}/{items.length}</span>
@@ -1466,7 +1469,7 @@ function AdvisorChecklist({ items, lang }: { items: AiStructuredData["advisorChe
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <p className={`text-xs ${item.passed ? "text-gray-300" : score >= 40 ? "text-gray-400" : "text-gray-500"}`}>
+                  <p className={`text-xs ${item.passed ? "text-gray-700 dark:text-gray-300" : score >= 40 ? "text-gray-600 dark:text-gray-400" : "text-gray-500"}`}>
                     {translateCriterion(item.criterion, lang)}
                   </p>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -1474,10 +1477,10 @@ function AdvisorChecklist({ items, lang }: { items: AiStructuredData["advisorChe
                     <span className="text-[10px] font-semibold" style={{ color: barColor }}>{score}%</span>
                   </div>
                 </div>
-                <div className="w-full h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-slate-200/40 dark:bg-gray-700/40 rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: barColor }} />
                 </div>
-                {item.notes && <p className="text-[10px] text-gray-600 mt-0.5 italic">{item.notes}</p>}
+                {item.notes && <p className="text-[10px] text-gray-500 dark:text-gray-600 mt-0.5 italic">{item.notes}</p>}
               </div>
             </div>
           );
@@ -1493,13 +1496,13 @@ function ErrorMomentsList({ moments }: { moments: AiStructuredData["errorMoments
   const severityConfig = {
     high:   { label: t("tldv_errors_severity_high"), color: "#ef4444", bg: "bg-red-950/40 border-red-800/40" },
     medium: { label: t("tldv_errors_severity_med"),  color: "#f59e0b", bg: "bg-amber-950/40 border-amber-800/40" },
-    low:    { label: t("tldv_errors_severity_low"),  color: "#6b7280", bg: "bg-gray-800/60 border-gray-700/40" },
+    low:    { label: t("tldv_errors_severity_low"),  color: "#6b7280", bg: "bg-slate-100/60 dark:bg-gray-800/60 border-gray-700/40" },
   };
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+    <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
         <span className="w-1 h-4 rounded-full bg-red-500 shrink-0" />
-        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_errors_title")}</p>
+        <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_errors_title")}</p>
         <span className="text-[10px] text-gray-500 ml-auto">{moments.length}</span>
       </div>
       <div className="px-4 py-3 flex flex-col gap-2">
@@ -1510,17 +1513,17 @@ function ErrorMomentsList({ moments }: { moments: AiStructuredData["errorMoments
               <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
                 <AlertTriangle size={13} style={{ color: cfg.color }} />
                 {e.startTime != null && (
-                  <span className="text-[9px] font-mono text-gray-600">{fmtTime(e.startTime)}</span>
+                  <span className="text-[9px] font-mono text-gray-500 dark:text-gray-600">{fmtTime(e.startTime)}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-semibold text-gray-400 truncate">{e.speaker}</span>
+                  <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 truncate">{e.speaker}</span>
                   <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: cfg.color, backgroundColor: `${cfg.color}18` }}>
                     {cfg.label}
                   </span>
                 </div>
-                <p className="text-xs text-gray-300 leading-snug">{e.description}</p>
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-snug">{e.description}</p>
               </div>
             </div>
           );
@@ -1533,13 +1536,14 @@ function ErrorMomentsList({ moments }: { moments: AiStructuredData["errorMoments
 // ── Manager performance chart ─────────────────────────────────────────────────
 function ManagerPerformanceChart({ data, managerName }: { data: Array<{ label: string; probability: number; passRate: number; avgScore: number; isCurrent: boolean }>; managerName: string }) {
   const t = useT();
+  const isDark = useIsDark();
   const chartOption = {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "#1f2937",
-      borderColor: "#374151",
+      backgroundColor: isDark ? "#1f2937" : "#f1f5f9",
+      borderColor: isDark ? "#374151" : "#e2e8f0",
       textStyle: { color: "#d1d5db", fontSize: 11 },
     },
     legend: {
@@ -1553,14 +1557,14 @@ function ManagerPerformanceChart({ data, managerName }: { data: Array<{ label: s
       data: data.map((d) => d.label),
       axisLabel: { color: "#6b7280", fontSize: 10, rotate: data.length > 4 ? 30 : 0 },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: "#374151" } },
+      axisLine: { lineStyle: { color: isDark ? "#374151" : "#e2e8f0" } },
     },
     yAxis: {
       type: "value",
       min: 0,
       max: 100,
-      splitLine: { lineStyle: { color: "#1f2937" } },
-      axisLabel: { color: "#4b5563", fontSize: 10, formatter: (v: number) => `${v}%` },
+      splitLine: { lineStyle: { color: isDark ? "#1f2937" : "#f1f5f9" } },
+      axisLabel: { color: isDark ? "#4b5563" : "#94a3b8", fontSize: 10, formatter: (v: number) => `${v}%` },
     },
     series: [
       {
@@ -1595,15 +1599,15 @@ function ManagerPerformanceChart({ data, managerName }: { data: Array<{ label: s
   };
 
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+    <div className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
         <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
-        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{t("tldv_manager_perf_title")}</p>
+        <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{t("tldv_manager_perf_title")}</p>
         <span className="text-[10px] text-gray-500 ml-auto">{managerName}</span>
       </div>
       <div className="px-4 pt-3 pb-4">
         <ReactECharts option={chartOption} style={{ height: 200 }} notMerge />
-        <p className="text-[10px] text-gray-700 text-center mt-1">
+        <p className="text-[10px] text-gray-400 dark:text-gray-700 text-center mt-1">
           {data.find(d => d.isCurrent)?.label && "▮ demo actual"}
         </p>
       </div>
@@ -1655,10 +1659,10 @@ function AiLoadingAnimation() {
 
       {/* Cycling step text */}
       <div className="text-center min-h-[2.5rem]">
-        <p key={step} className="text-gray-300 text-sm font-medium animate-[fadeIn_0.4s_ease]">
+        <p key={step} className="text-gray-700 dark:text-gray-300 text-sm font-medium animate-[fadeIn_0.4s_ease]">
           {t(AI_STEPS[step] as Parameters<typeof t>[0])}
         </p>
-        <p className="text-gray-600 text-xs mt-1">{t("tldv_ai_step_writing")}…</p>
+        <p className="text-gray-500 dark:text-gray-600 text-xs mt-1">{t("tldv_ai_step_writing")}…</p>
       </div>
 
       {/* Three bouncing dots */}
@@ -1696,11 +1700,11 @@ function AiReportRenderer({ text }: { text: string }) {
   return (
     <div className="flex flex-col gap-3 text-sm leading-relaxed">
       {sections.map((sec, si) => (
-        <div key={si} className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+        <div key={si} className="rounded-xl border border-gray-700/50 bg-slate-100/40 dark:bg-gray-800/40 overflow-hidden">
           {sec.heading && (
-            <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+            <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-slate-100/60 dark:bg-gray-800/60">
               <span className="w-1 h-4 rounded-full bg-violet-500 shrink-0" />
-              <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">{sec.heading}</p>
+              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wide">{sec.heading}</p>
             </div>
           )}
           <div className="px-4 py-3 flex flex-col gap-1">
@@ -1708,7 +1712,7 @@ function AiReportRenderer({ text }: { text: string }) {
               if (!line.trim()) return null;
               if (line.startsWith("- ") || line.startsWith("* "))
                 return (
-                  <div key={i} className="flex gap-2 text-gray-300">
+                  <div key={i} className="flex gap-2 text-gray-700 dark:text-gray-300">
                     <span className="text-violet-400 shrink-0 mt-[3px] text-[10px]">▸</span>
                     <span>{formatInline(line.slice(2))}</span>
                   </div>
@@ -1717,13 +1721,13 @@ function AiReportRenderer({ text }: { text: string }) {
                 const match = line.match(/^(\d+)\.\s(.+)/);
                 if (match)
                   return (
-                    <div key={i} className="flex gap-2 text-gray-300">
+                    <div key={i} className="flex gap-2 text-gray-700 dark:text-gray-300">
                       <span className="text-violet-400 shrink-0 font-mono text-[10px] mt-[3px] w-4 text-right">{match[1]}.</span>
                       <span>{formatInline(match[2])}</span>
                     </div>
                   );
               }
-              return <p key={i} className="text-gray-300">{formatInline(line)}</p>;
+              return <p key={i} className="text-gray-700 dark:text-gray-300">{formatInline(line)}</p>;
             })}
           </div>
         </div>
@@ -1736,7 +1740,7 @@ function formatInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) =>
     part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i} className="text-gray-100 font-semibold">{part.slice(2, -2)}</strong>
+      ? <strong key={i} className="text-gray-900 dark:text-gray-100 font-semibold">{part.slice(2, -2)}</strong>
       : part
   );
 }
@@ -1840,12 +1844,12 @@ function EmptyState() {
       {/* Text */}
       <div className="flex flex-col items-center gap-1.5">
         <p
-          className="text-sm font-semibold text-gray-400"
+          className="text-sm font-semibold text-gray-600 dark:text-gray-400"
           style={{ animation: "textFade 3s ease-in-out infinite" }}
         >
           Selecciona una reunión
         </p>
-        <p className="text-xs text-gray-700">para ver la transcripción y el análisis</p>
+        <p className="text-xs text-gray-400 dark:text-gray-700">para ver la transcripción y el análisis</p>
       </div>
     </div>
   );
@@ -1895,7 +1899,7 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
       {/* Video-frame analyzer */}
       <div className="flex flex-col items-center gap-3">
         <div
-          className="relative rounded-xl overflow-hidden bg-gray-800/60 border border-gray-700/60"
+          className="relative rounded-xl overflow-hidden bg-slate-100/60 dark:bg-gray-800/60 border border-gray-700/60"
           style={{ width: 304, height: 180 }}
         >
           {/* Viewfinder corner marks */}
@@ -1942,7 +1946,7 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
             <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
           </div>
         </div>
-        <p className="text-xs text-gray-600 tracking-wide">Buscando grabaciones de demos…</p>
+        <p className="text-xs text-gray-500 dark:text-gray-600 tracking-wide">Buscando grabaciones de demos…</p>
       </div>
 
       {/* Circular progress ring */}
@@ -1956,7 +1960,7 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
               : { transform: "rotate(-90deg)" }
             }
           >
-            <circle cx="60" cy="60" r={R} fill="none" stroke="#1f2937" strokeWidth="10" />
+            <circle cx="60" cy="60" r={R} fill="none" stroke="currentColor" className="text-slate-200 dark:text-gray-800" strokeWidth="10" />
             <circle cx="60" cy="60" r={R} fill="none"
               stroke="url(#tldv-ring)"
               strokeWidth="10"
@@ -1973,13 +1977,13 @@ function SearchAnimation({ page, total }: { page: number; total: number }) {
             </defs>
           </svg>
           {!indeterminate && (
-            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
+            <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-900 dark:text-white">
               {pct}%
             </span>
           )}
         </div>
         <div className="flex flex-col gap-0.5">
-          <p className="text-white font-semibold text-base leading-tight">
+          <p className="text-gray-900 dark:text-white font-semibold text-base leading-tight">
             {indeterminate ? "Iniciando…" : `Página ${page} de ${total}`}
           </p>
           <p className="text-gray-500 text-sm">
@@ -1997,10 +2001,10 @@ function TranscriptSkeleton() {
   return (
     <div className="flex flex-col gap-2.5 animate-pulse">
       {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="rounded-xl border border-gray-700/40 px-4 py-3 bg-gray-800/30">
-          <div className="h-2 w-16 bg-gray-700/60 rounded mb-3" />
-          <div className={`h-2 ${widths[i * 2 % widths.length]} bg-gray-700/40 rounded mb-1.5`} />
-          <div className={`h-2 ${widths[(i * 2 + 1) % widths.length]} bg-gray-700/40 rounded`} />
+        <div key={i} className="rounded-xl border border-gray-700/40 px-4 py-3 bg-slate-100/30 dark:bg-gray-800/30">
+          <div className="h-2 w-16 bg-slate-200/60 dark:bg-gray-700/60 rounded mb-3" />
+          <div className={`h-2 ${widths[i * 2 % widths.length]} bg-slate-200/40 dark:bg-gray-700/40 rounded mb-1.5`} />
+          <div className={`h-2 ${widths[(i * 2 + 1) % widths.length]} bg-slate-200/40 dark:bg-gray-700/40 rounded`} />
         </div>
       ))}
     </div>
