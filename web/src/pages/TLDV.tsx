@@ -65,7 +65,7 @@ function isValidTldvMeetingUrl(url: string): boolean {
 }
 
 const AI_REPORT_CACHE_PREFIX  = "simla_ai_report_v1_";
-const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v1_";
+const DEMO_LIST_CACHE_PREFIX  = "simla_tldv_demos_v2_";
 const TLDV_FILTER_LAYOUT_KEY  = "simla_tldv_filter_layout";
 
 const TLDV_FILTER_DEFS = [
@@ -749,7 +749,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#0c0e14" }}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden" style={{ background: "#0c0e14" }}>
           {loading ? (
             <SearchAnimation page={loadProgress?.page ?? 0} total={loadProgress?.total ?? 0} />
           ) : !selectedOrder ? (
@@ -864,7 +864,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
 
                 {/* Transcript tab */}
                 {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                  <div className="flex-1 min-h-0 flex flex-col">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Sub-tab bar */}
                     {transcript.length > 0 && (
                       <div className="shrink-0 flex gap-0.5 px-6 border-b border-gray-800/60 bg-gray-900/40">
@@ -934,7 +934,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
 
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
-                  <div className="flex-1 min-h-0 flex flex-col">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
                     {/* Sticky header: model bar + sub-tabs */}
                     <div className="shrink-0 px-6 pt-3 border-b border-gray-800/60 bg-gray-900/40">
