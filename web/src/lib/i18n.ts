@@ -191,6 +191,7 @@ const es = {
   // Profile tabs
   profile_tab_profile: "Perfil",
   profile_tab_prefs: "Preferencias",
+  prefs_auto_saved: "Las preferencias se guardan automáticamente al seleccionarlas.",
   prefs_language: "Idioma",
   prefs_lang_es: "Español",
   prefs_lang_en: "Inglés",
@@ -505,6 +506,7 @@ const en: Record<TranslationKey, string> = {
   admin_api_error: "Invalid API Key or no connection. Check and try again.",
   profile_tab_profile: "Profile",
   profile_tab_prefs: "Preferences",
+  prefs_auto_saved: "Preferences are saved automatically when selected.",
   prefs_language: "Language",
   prefs_lang_es: "Spanish",
   prefs_lang_en: "English",
@@ -815,6 +817,7 @@ const ru: Record<TranslationKey, string> = {
   admin_api_error: "Недействительный API ключ или нет подключения. Проверьте и попробуйте снова.",
   profile_tab_profile: "Профиль",
   profile_tab_prefs: "Настройки",
+  prefs_auto_saved: "Настройки сохраняются автоматически при выборе.",
   prefs_language: "Язык",
   prefs_lang_es: "Испанский",
   prefs_lang_en: "Английский",
