@@ -202,8 +202,6 @@ export function TLDV({ managerSdMap }: Props) {
 
   const [demoOrders, setDemoOrders] = useState<DemoOrder[]>([]);
   const [managerFilter, setManagerFilter] = useState<string[]>([]);
-  // knownManagers persists across re-loads so the filter doesn't disappear while searching
-  const [knownManagers, setKnownManagers] = useState<{ value: string; label: string }[]>([]);
   const [projectSearch, setProjectSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [filterLayout, setFilterLayout] = useState<TldvFilterLayoutItem[]>(() => loadTldvFilterLayout());
@@ -268,17 +266,6 @@ export function TLDV({ managerSdMap }: Props) {
 
   function applyDemos(demos: DemoOrder[]) {
     setDemoOrders(demos);
-    setKnownManagers((prev) => {
-      const map = new Map(prev.map((m) => [m.value, m.label]));
-      for (const d of demos) {
-        if (d.managerSd && !map.has(d.managerSd)) {
-          map.set(d.managerSd, d.managerSdLabel || managerSdMap[d.managerSd] || d.managerSd);
-        }
-      }
-      return Array.from(map.entries())
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => a.label.localeCompare(b.label));
-    });
   }
 
   async function handleLoadOrders() {
@@ -371,6 +358,19 @@ export function TLDV({ managerSdMap }: Props) {
     () => filterLayout.filter((f) => f.visible).length,
     [filterLayout],
   );
+
+  // Derived from demoOrders + managerSdMap so labels update when the API map loads
+  const knownManagers = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of demoOrders) {
+      if (d.managerSd && !map.has(d.managerSd)) {
+        map.set(d.managerSd, d.managerSdLabel || managerSdMap[d.managerSd] || d.managerSd);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [demoOrders, managerSdMap]);
 
   const speakerIndex = useMemo(() => {
     const idx: Record<string, number> = {};
