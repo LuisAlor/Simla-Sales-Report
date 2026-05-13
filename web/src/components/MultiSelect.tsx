@@ -42,26 +42,34 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
   return (
     <div ref={containerRef} className="relative">
       <div
-        className={`flex flex-wrap gap-1 items-center rounded-md px-2 py-1 min-h-[30px] cursor-text border ${
+        className={`flex items-center gap-1 rounded-md px-2 h-[30px] cursor-text border overflow-hidden ${
           isDark
             ? "bg-navy-border border-navy-border"
             : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600"
         }`}
         onClick={() => setOpen(true)}
       >
-        {selectedOptions.map((o) => (
-          <span key={o.value} className="flex items-center gap-0.5 bg-brand-blue text-white text-[10px] px-1.5 py-0.5 rounded">
-            {o.label}
-            <button
-              onClick={(e) => { e.stopPropagation(); toggle(o.value); }}
-              className="hover:opacity-70"
-            >
-              <X size={9} />
-            </button>
-          </span>
-        ))}
+        {/* Show first selected tag; remaining count as a badge */}
+        {selectedOptions.length > 0 && (
+          <>
+            <span className="flex items-center gap-0.5 bg-brand-blue text-white text-[10px] px-1.5 py-0.5 rounded shrink-0 max-w-[90px]">
+              <span className="truncate">{selectedOptions[0].label}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); toggle(selectedOptions[0].value); }}
+                className="hover:opacity-70 shrink-0"
+              >
+                <X size={9} />
+              </button>
+            </span>
+            {selectedOptions.length > 1 && (
+              <span className="text-[10px] text-blue-300 bg-blue-900/40 px-1.5 py-0.5 rounded shrink-0">
+                +{selectedOptions.length - 1}
+              </span>
+            )}
+          </>
+        )}
         <input
-          className={`flex-1 min-w-[50px] text-xs bg-transparent outline-none ${
+          className={`flex-1 min-w-[30px] text-xs bg-transparent outline-none ${
             isDark ? "text-white placeholder-slate-500" : "text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
           }`}
           placeholder={selected.length === 0 ? placeholder : ""}
