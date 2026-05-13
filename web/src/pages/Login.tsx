@@ -50,10 +50,13 @@ function LoginBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
       <style>{`
-        @keyframes waveDrift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes waveDrift {
+          from { transform: translate3d(0, 0, 0); }
+          to   { transform: translate3d(-50%, 0, 0); }
+        }
         @keyframes nodeFloat {
-          0%, 100% { transform: translateY(0px);    opacity: var(--op-lo); }
-          50%       { transform: translateY(-14px);  opacity: var(--op-hi); }
+          0%, 100% { transform: translate3d(0, 0px, 0);   opacity: 0.35; }
+          50%       { transform: translate3d(0, -14px, 0); opacity: 0.7;  }
         }
         @keyframes edgePulse {
           0%, 100% { opacity: 0.04; }
@@ -64,8 +67,8 @@ function LoginBackground() {
           50%       { opacity: 0.065; }
         }
         @keyframes glowPulse {
-          0%, 100% { r: var(--gr-lo); opacity: 0.12; }
-          50%       { r: var(--gr-hi); opacity: 0.25; }
+          0%, 100% { opacity: 0.10; }
+          50%       { opacity: 0.28; }
         }
       `}</style>
 
@@ -82,23 +85,24 @@ function LoginBackground() {
         <rect width="100%" height="100%" fill="url(#lg-dot-grid)" />
       </svg>
 
-      {/* Sine waves */}
-      <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#7c3aed" stopOpacity="0" />
-            <stop offset="20%"  stopColor="#8b5cf6" stopOpacity="1" />
-            <stop offset="60%"  stopColor="#6366f1" stopOpacity="1" />
-            <stop offset="80%"  stopColor="#3b82f6" stopOpacity="1" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {WAVES.map((w, i) => (
-          <g key={i} style={{ animation: `waveDrift ${w.speed} linear ${w.delay} infinite` }}>
-            <path d={paths[i]} fill="none" stroke="url(#waveGrad)" strokeWidth={w.strokeW} opacity={w.opacity} />
-          </g>
-        ))}
-      </svg>
+      {/* Sine waves — each in its own div for GPU compositing */}
+      {WAVES.map((w, i) => (
+        <div key={i} className="absolute inset-0"
+          style={{ animation: `waveDrift ${w.speed} linear ${w.delay} infinite`, willChange: "transform" }}>
+          <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id={`waveGrad${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stopColor="#7c3aed" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#8b5cf6" stopOpacity="1" />
+                <stop offset="60%"  stopColor="#6366f1" stopOpacity="1" />
+                <stop offset="80%"  stopColor="#3b82f6" stopOpacity="1" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={paths[i]} fill="none" stroke={`url(#waveGrad${i})`} strokeWidth={w.strokeW} opacity={w.opacity} />
+          </svg>
+        </div>
+      ))}
 
       {/* Data graph nodes + edges */}
       <svg className="absolute inset-0 w-full h-full">
@@ -116,20 +120,17 @@ function LoginBackground() {
           />
         ))}
         {NODES.map((n, i) => (
-          <g key={i} style={{
-            ["--op-lo" as string]: "0.35",
-            ["--op-hi" as string]: "0.7",
-            animation: `nodeFloat ${n.dur} ease-in-out ${n.delay} infinite`,
-            transformOrigin: `${n.cx} ${n.cy}`,
-          }}>
+          <g key={i}>
             <circle cx={n.cx} cy={n.cy} r={n.glowR} fill="url(#nodeGlow)"
+              style={{ animation: `glowPulse ${n.dur} ease-in-out ${n.delay} infinite` }}
+            />
+            <circle cx={n.cx} cy={n.cy} r={n.r} fill="#a78bfa" opacity="0.9"
               style={{
-                ["--gr-lo" as string]: `${n.glowR}`,
-                ["--gr-hi" as string]: `${n.glowR * 1.6}`,
-                animation: `glowPulse ${n.dur} ease-in-out ${n.delay} infinite`,
+                animation: `nodeFloat ${n.dur} ease-in-out ${n.delay} infinite`,
+                transformOrigin: `${n.cx} ${n.cy}`,
+                willChange: "transform",
               }}
             />
-            <circle cx={n.cx} cy={n.cy} r={n.r} fill="#a78bfa" opacity="0.9" />
           </g>
         ))}
       </svg>
@@ -242,51 +243,56 @@ export function Login() {
         </div>
       </div>
 
-      {/* Reset password modal */}
+      {/* Reset password — full-screen overlay with same animated background */}
       {showReset && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900/90 border border-slate-700/50 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-bold text-white mb-4">{t("login_reset_title")}</h2>
-            {resetSuccess ? (
-              <div>
-                <p className="text-green-400 text-sm mb-4">{t("login_password_updated")}</p>
-                <button onClick={() => setShowReset(false)}
-                  className="w-full text-white font-semibold py-2 rounded-lg text-sm"
-                  style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
-                  {t("login_close")}
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleReset} className="flex flex-col gap-3">
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_email")}</label>
-                  <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder={t("login_email_placeholder")} required className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_new_password")}</label>
-                  <input type="password" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)}
-                    placeholder="••••••••" required className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_confirm_password")}</label>
-                  <input type="password" value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)}
-                    placeholder="••••••••" required className={inputCls} />
-                </div>
-                {resetError && <p className="text-red-400 text-sm">{resetError}</p>}
-                <div className="flex gap-2 mt-1">
-                  <button type="button" onClick={() => setShowReset(false)}
-                    className="flex-1 border border-slate-600 text-slate-300 py-2 rounded-lg text-sm hover:bg-slate-800 transition-colors">
-                    {t("login_cancel")}
-                  </button>
-                  <button type="submit"
-                    className="flex-1 text-white font-semibold py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <LoginBackground />
+          <div className="relative z-10 w-full max-w-sm mx-4">
+            <div className="h-px rounded-t-xl" style={{ background: "linear-gradient(90deg, transparent, #06b6d4, #3b82f6, transparent)" }} />
+            <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/40 rounded-b-xl rounded-tr-xl shadow-2xl p-8"
+              style={{ boxShadow: "0 0 60px rgba(6,182,212,0.10), 0 25px 50px rgba(0,0,0,0.6)" }}>
+              <h2 className="text-xl font-bold text-white mb-5">{t("login_reset_title")}</h2>
+              {resetSuccess ? (
+                <div className="flex flex-col gap-4">
+                  <p className="text-green-400 text-sm">{t("login_password_updated")}</p>
+                  <button onClick={() => setShowReset(false)}
+                    className="w-full text-white font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
                     style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
-                    {t("login_save")}
+                    {t("login_close")}
                   </button>
                 </div>
-              </form>
-            )}
+              ) : (
+                <form onSubmit={handleReset} className="flex flex-col gap-4">
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_email")}</label>
+                    <input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder={t("login_email_placeholder")} required className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_new_password")}</label>
+                    <input type="password" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="••••••••" required className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 text-xs font-medium mb-1.5 uppercase tracking-wider">{t("login_confirm_password")}</label>
+                    <input type="password" value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)}
+                      placeholder="••••••••" required className={inputCls} />
+                  </div>
+                  {resetError && <p className="text-red-400 text-sm">{resetError}</p>}
+                  <div className="flex gap-2 mt-1">
+                    <button type="button" onClick={() => setShowReset(false)}
+                      className="flex-1 border border-slate-600 text-slate-300 py-2.5 rounded-lg text-sm hover:bg-slate-800 transition-colors">
+                      {t("login_cancel")}
+                    </button>
+                    <button type="submit"
+                      className="flex-1 text-white font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity active:scale-[0.98]"
+                      style={{ background: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)", boxShadow: "0 0 20px rgba(6,182,212,0.30)" }}>
+                      {t("login_save")}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

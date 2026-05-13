@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
-import { Sun, Moon, Monitor, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Sun, Moon, Monitor, LogOut, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT, useI18n } from "@/contexts/I18nContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
+import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
@@ -65,6 +66,7 @@ export function Profile() {
   const t = useT();
   const { lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
+  const { setIsDirty } = useNavigationGuard();
   const [tab, setTab] = useState<"profile" | "prefs">("profile");
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
@@ -76,11 +78,20 @@ export function Profile() {
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [pendingLang, setPendingLang] = useState<Lang>(lang);
+  const [pendingTheme, setPendingTheme] = useState<Theme>(theme);
+  const [prefsSuccess, setPrefsSuccess] = useState(false);
+
   const profileDirty =
     firstName.trim() !== (user?.firstName ?? "") ||
     lastName.trim() !== (user?.lastName ?? "") ||
     email.trim() !== (user?.email ?? "") ||
     currentPassword !== "" || newPassword !== "" || confirmPassword !== "";
+
+  const prefsDirty = pendingLang !== lang || pendingTheme !== theme;
+
+  useEffect(() => { setIsDirty(profileDirty || prefsDirty); }, [profileDirty, prefsDirty]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => setIsDirty(false), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return null;
 
@@ -112,6 +123,13 @@ export function Profile() {
     updateUser({ ...safeUser, firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), ...(newPassword ? { password: newPassword } : {}) });
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     setSuccess(true);
+  }
+
+  function handleSavePrefs() {
+    setLang(pendingLang);
+    setTheme(pendingTheme);
+    setPrefsSuccess(true);
+    setTimeout(() => setPrefsSuccess(false), 2000);
   }
 
   return (
@@ -210,7 +228,6 @@ export function Profile() {
 
       {tab === "prefs" && (
         <div className="flex flex-col gap-5">
-          <p className="text-xs text-slate-400 dark:text-slate-500 -mb-2">{t("prefs_auto_saved")}</p>
           {/* Language */}
           <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">{t("prefs_language")}</p>
@@ -218,18 +235,18 @@ export function Profile() {
               {LANG_OPTIONS.map(({ value, FlagComponent, nativeName, key }) => (
                 <button
                   key={value}
-                  onClick={() => setLang(value)}
+                  onClick={() => setPendingLang(value)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                    lang === value
+                    pendingLang === value
                       ? "border-brand-blue bg-blue-50 dark:bg-blue-900/20"
                       : "border-slate-200 dark:border-gray-600 hover:border-slate-300 dark:hover:border-gray-500"
                   }`}
                 >
                   <FlagComponent />
-                  <span className={`text-xs font-semibold ${lang === value ? "text-brand-blue" : "text-slate-600 dark:text-slate-300"}`}>
+                  <span className={`text-xs font-semibold ${pendingLang === value ? "text-brand-blue" : "text-slate-600 dark:text-slate-300"}`}>
                     {nativeName}
                   </span>
-                  <span className={`text-[10px] ${lang === value ? "text-blue-500" : "text-slate-400 dark:text-slate-500"}`}>
+                  <span className={`text-[10px] ${pendingLang === value ? "text-blue-500" : "text-slate-400 dark:text-slate-500"}`}>
                     {t(key)}
                   </span>
                 </button>
@@ -244,21 +261,35 @@ export function Profile() {
               {THEME_OPTIONS.map(({ value, icon: Icon, key }) => (
                 <button
                   key={value}
-                  onClick={() => setTheme(value)}
+                  onClick={() => setPendingTheme(value)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                    theme === value
+                    pendingTheme === value
                       ? "border-brand-blue bg-blue-50 dark:bg-blue-900/20"
                       : "border-slate-200 dark:border-gray-600 hover:border-slate-300 dark:hover:border-gray-500"
                   }`}
                 >
-                  <Icon size={22} className={theme === value ? "text-brand-blue" : "text-slate-500 dark:text-slate-400"} />
-                  <span className={`text-xs font-semibold ${theme === value ? "text-brand-blue" : "text-slate-600 dark:text-slate-300"}`}>
+                  <Icon size={22} className={pendingTheme === value ? "text-brand-blue" : "text-slate-500 dark:text-slate-400"} />
+                  <span className={`text-xs font-semibold ${pendingTheme === value ? "text-brand-blue" : "text-slate-600 dark:text-slate-300"}`}>
                     {t(key)}
                   </span>
                 </button>
               ))}
             </div>
           </div>
+
+          {prefsSuccess && <p className="text-green-500 text-sm">{t("profile_success")}</p>}
+
+          <button
+            onClick={handleSavePrefs}
+            className={`w-full font-semibold py-2 rounded-md text-sm transition-all flex items-center justify-center gap-2 ${
+              prefsDirty
+                ? "bg-brand-blue hover:bg-blue-700 text-white ring-2 ring-blue-400/40"
+                : "bg-brand-blue hover:bg-blue-700 text-white opacity-60"
+            }`}
+          >
+            <Save size={14} />
+            {prefsDirty ? `● ${t("profile_save")}` : t("profile_save")}
+          </button>
         </div>
       )}
     </div>
