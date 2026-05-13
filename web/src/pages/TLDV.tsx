@@ -828,7 +828,8 @@ export function TLDV({ managerSdMap }: Props) {
 
                 {/* Invalid URL warning panel */}
                 {selectedOrder.invalidUrl && (
-                  <div className="flex-1 min-h-0 overflow-y-auto p-6">
+                  <div className="relative flex-1 min-h-0">
+                  <div className="absolute inset-0 overflow-y-auto p-6">
                     <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
@@ -848,11 +849,12 @@ export function TLDV({ managerSdMap }: Props) {
                       </p>
                     </div>
                   </div>
+                  </div>
                 )}
 
                 {/* Transcript tab */}
                 {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col">
                     {/* Sub-tab bar */}
                     {transcript.length > 0 && (
                       <div className="shrink-0 flex gap-0.5 px-6 border-b border-gray-800/60 bg-gray-900/40">
@@ -871,7 +873,8 @@ export function TLDV({ managerSdMap }: Props) {
                     )}
                     {/* Chat sub-tab */}
                     {(transcriptSubTab === "chat" || transcript.length === 0) && (
-                      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+                      <div className="relative flex-1 min-h-0">
+                      <div className="absolute inset-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">
                         {transcriptLoading && <TranscriptSkeleton />}
                         {transcriptError && <p className="text-red-400 text-sm">{transcriptError}</p>}
                         {!transcriptLoading && !transcriptError && transcript.length === 0 && (
@@ -906,11 +909,14 @@ export function TLDV({ managerSdMap }: Props) {
                           );
                         })}
                       </div>
+                      </div>
                     )}
                     {/* Metrics sub-tab */}
                     {transcriptSubTab === "metrics" && transcript.length > 0 && (
-                      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-                        <CallMetricsPanel segments={transcript} />
+                      <div className="relative flex-1 min-h-0">
+                        <div className="absolute inset-0 overflow-y-auto px-5 py-4">
+                          <CallMetricsPanel segments={transcript} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -918,7 +924,7 @@ export function TLDV({ managerSdMap }: Props) {
 
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
-                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col">
 
                     {/* Sticky header: model bar + sub-tabs */}
                     <div className="shrink-0 px-6 pt-3 border-b border-gray-800/60 bg-gray-900/40">
@@ -964,7 +970,8 @@ export function TLDV({ managerSdMap }: Props) {
                     </div>
 
                     {/* Scrollable content */}
-                    <div className="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col gap-4">
+                    <div className="relative flex-1 min-h-0">
+                    <div className="absolute inset-0 overflow-y-auto p-6 flex flex-col gap-4">
                       {/* No API key / disabled */}
                       {!openaiApiKey && (
                         <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
@@ -1034,6 +1041,7 @@ export function TLDV({ managerSdMap }: Props) {
                           )}
                         </>
                       )}
+                    </div>
                     </div>
                   </div>
                 )}
