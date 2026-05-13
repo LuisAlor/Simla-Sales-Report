@@ -44,7 +44,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
       <div
         className={`flex items-center gap-1 rounded-md px-2 h-[30px] cursor-text border overflow-hidden ${
           isDark
-            ? "bg-navy-border border-navy-border"
+            ? "bg-gray-800/60 border-gray-700/60"
             : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 hover:border-slate-300 dark:hover:border-gray-600"
         }`}
         onClick={() => setOpen(true)}
@@ -81,7 +81,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
 
       {open && (
         <div className={`absolute top-full left-0 right-0 mt-1 border rounded-md max-h-48 overflow-y-auto z-50 shadow-lg ${
-          isDark ? "bg-[#1a2233] border-navy-border" : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700"
+          isDark ? "bg-gray-900 border-gray-700/60" : "bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700"
         }`}>
           {filtered.length === 0 ? (
             <p className={`text-xs px-2 py-1.5 italic ${isDark ? "text-slate-500" : "text-slate-400"}`}>
@@ -94,7 +94,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = "Buscar
                 onClick={() => { toggle(o.value); setSearch(""); }}
                 className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
                   isDark
-                    ? "text-slate-300 hover:bg-navy-border"
+                    ? "text-slate-300 hover:bg-gray-800"
                     : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-gray-700"
                 }`}
               >
