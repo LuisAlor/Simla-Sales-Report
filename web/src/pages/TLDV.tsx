@@ -757,7 +757,7 @@ export function TLDV({ managerSdMap }: Props) {
           ) : (
             <>
               {/* Header */}
-              <div className="px-6 pt-5 pb-0 bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
+              <div className="shrink-0 px-6 pt-5 pb-0 bg-gray-900/70 border-b border-gray-800 backdrop-blur-sm">
                 <div className="flex items-start justify-between gap-4 pb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -824,7 +824,7 @@ export function TLDV({ managerSdMap }: Props) {
               </div>
 
               {/* Content */}
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
                 {/* Invalid URL warning panel */}
                 {selectedOrder.invalidUrl && (
@@ -852,7 +852,7 @@ export function TLDV({ managerSdMap }: Props) {
 
                 {/* Transcript tab */}
                 {!selectedOrder.invalidUrl && activeTab === "transcript" && (
-                  <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Sub-tab bar */}
                     {transcript.length > 0 && (
                       <div className="shrink-0 flex gap-0.5 px-6 border-b border-gray-800/60 bg-gray-900/40">
@@ -860,7 +860,7 @@ export function TLDV({ managerSdMap }: Props) {
                           <button key={sub} onClick={() => setTranscriptSubTab(sub)}
                             className={`px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
                               transcriptSubTab === sub
-                                ? "border-cyan-500 text-cyan-400"
+                                ? "border-violet-500 text-violet-400"
                                 : "border-transparent text-gray-600 hover:text-gray-400"
                             }`}
                           >
@@ -918,7 +918,7 @@ export function TLDV({ managerSdMap }: Props) {
 
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
-                  <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
                     {/* Sticky header: model bar + sub-tabs */}
                     <div className="shrink-0 px-6 pt-3 border-b border-gray-800/60 bg-gray-900/40">
