@@ -547,7 +547,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                 <User size={9} className="shrink-0" />{t("filter_manager")}
               </p>
               <div style={{ width: 160 }}>
-                <MultiSelect variant="dark" options={knownManagers} selected={managerFilter} onChange={setManagerFilter} placeholder={t("filter_all")} />
+                <MultiSelect options={knownManagers} selected={managerFilter} onChange={setManagerFilter} placeholder={t("filter_all")} />
               </div>
             </div>
           );
@@ -693,8 +693,8 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                   className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all ${
                     isSelected
                       ? demo.invalidUrl
-                        ? "bg-yellow-950/40 border-yellow-700/60 shadow-[0_0_14px_rgba(234,179,8,0.07)]"
-                        : "bg-blue-950/60 border-cyan-700/50 shadow-[0_0_18px_rgba(6,182,212,0.09)]"
+                        ? "bg-yellow-50 dark:bg-yellow-950/40 border-yellow-300 dark:border-yellow-700/60 shadow-[0_0_14px_rgba(234,179,8,0.07)]"
+                        : "bg-blue-50 dark:bg-blue-950/60 border-cyan-400 dark:border-cyan-700/50 shadow-[0_0_18px_rgba(6,182,212,0.09)]"
                       : "bg-slate-100/50 dark:bg-gray-800/50 border-gray-200/40 dark:border-gray-700/40 hover:border-gray-300 dark:hover:border-gray-600/70 hover:bg-slate-100/80 dark:hover:bg-gray-800/80"
                   }`}
                 >
@@ -843,18 +843,18 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                 {selectedOrder.invalidUrl && (
                   <div className="relative flex-1 min-h-0">
                   <div className="absolute inset-0 overflow-y-auto p-6">
-                    <div className="bg-yellow-950/25 border border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
+                    <div className="bg-yellow-50 dark:bg-yellow-950/25 border border-yellow-200 dark:border-yellow-800/40 rounded-2xl p-6 flex flex-col gap-3.5">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={18} className="text-yellow-500 shrink-0" />
-                        <p className="text-yellow-300 font-semibold text-sm">Enlace de grabación inválido</p>
+                        <p className="text-yellow-700 dark:text-yellow-300 font-semibold text-sm">Enlace de grabación inválido</p>
                       </div>
-                      <p className="text-yellow-400/70 text-sm leading-relaxed">
+                      <p className="text-yellow-600 dark:text-yellow-400/70 text-sm leading-relaxed">
                         El vendedor registró un enlace que no corresponde a una reunión de TLDV.
                         Revisa el pedido y corrige el campo{" "}
-                        <span className="font-mono text-yellow-300 bg-yellow-950/50 px-1 py-0.5 rounded">record_of_meeting_demo</span>.
+                        <span className="font-mono text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-950/50 px-1 py-0.5 rounded">record_of_meeting_demo</span>.
                       </p>
-                      <div className="bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2.5">
-                        <p className="text-xs text-yellow-700 font-mono break-all">{selectedOrder.tldvUrl}</p>
+                      <div className="bg-yellow-100/60 dark:bg-black/30 border border-yellow-200 dark:border-yellow-900/30 rounded-xl px-4 py-2.5">
+                        <p className="text-xs text-yellow-700 dark:text-yellow-600 font-mono break-all">{selectedOrder.tldvUrl}</p>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-600">
                         Formato válido:{" "}
