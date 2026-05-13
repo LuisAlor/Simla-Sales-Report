@@ -885,7 +885,8 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                     {/* Chat sub-tab */}
                     {(transcriptSubTab === "chat" || transcript.length === 0) && (
                       <div className="relative flex-1 min-h-0">
-                      <div className="absolute inset-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+                      <div className="absolute inset-0 overflow-y-auto px-5 py-4">
+                      <div className="flex flex-col gap-3">
                         {transcriptLoading && <TranscriptSkeleton />}
                         {transcriptError && (
                           <div className="flex flex-col gap-2">
@@ -929,6 +930,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                             </div>
                           );
                         })}
+                      </div>
                       </div>
                       </div>
                     )}
@@ -992,7 +994,8 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
 
                     {/* Scrollable content */}
                     <div className="relative flex-1 min-h-0">
-                    <div className="absolute inset-0 overflow-y-auto p-6 flex flex-col gap-4">
+                    <div className="absolute inset-0 overflow-y-auto p-6">
+                    <div className="flex flex-col gap-4">
                       {/* No API key / disabled */}
                       {!openaiApiKey && (
                         <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
@@ -1062,6 +1065,7 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                           )}
                         </>
                       )}
+                    </div>
                     </div>
                     </div>
                   </div>
