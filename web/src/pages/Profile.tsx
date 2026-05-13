@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT, useI18n } from "@/contexts/I18nContext";
-import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/auth";
@@ -66,8 +65,6 @@ export function Profile() {
   const t = useT();
   const { lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
-  const { setIsDirty: setGuardDirty } = useNavigationGuard();
-
   const [tab, setTab] = useState<"profile" | "prefs">("profile");
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
@@ -84,9 +81,6 @@ export function Profile() {
     lastName.trim() !== (user?.lastName ?? "") ||
     email.trim() !== (user?.email ?? "") ||
     currentPassword !== "" || newPassword !== "" || confirmPassword !== "";
-
-  useEffect(() => { setGuardDirty(profileDirty); }, [profileDirty, setGuardDirty]);
-  useEffect(() => () => setGuardDirty(false), [setGuardDirty]);
 
   if (!user) return null;
 
@@ -117,7 +111,6 @@ export function Profile() {
     }
     updateUser({ ...safeUser, firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), ...(newPassword ? { password: newPassword } : {}) });
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-    setGuardDirty(false);
     setSuccess(true);
   }
 
@@ -203,8 +196,12 @@ export function Profile() {
               {error   && <p className="text-red-500 text-sm">{error}</p>}
               {success && <p className="text-green-500 text-sm">{t("profile_success")}</p>}
 
-              <button type="submit" className="w-full bg-brand-blue hover:bg-blue-700 text-white font-semibold py-2 rounded-md text-sm transition-colors">
-                {t("profile_save")}
+              <button type="submit" className={`w-full font-semibold py-2 rounded-md text-sm transition-all ${
+                profileDirty
+                  ? "bg-brand-blue hover:bg-blue-700 text-white ring-2 ring-blue-400/40"
+                  : "bg-brand-blue hover:bg-blue-700 text-white"
+              }`}>
+                {profileDirty ? `● ${t("profile_save")}` : t("profile_save")}
               </button>
             </form>
           </div>
@@ -213,6 +210,7 @@ export function Profile() {
 
       {tab === "prefs" && (
         <div className="flex flex-col gap-5">
+          <p className="text-xs text-slate-400 dark:text-slate-500 -mb-2">{t("prefs_auto_saved")}</p>
           {/* Language */}
           <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">{t("prefs_language")}</p>
