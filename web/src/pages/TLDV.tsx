@@ -707,17 +707,17 @@ export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
                           <Calendar size={10} className="text-gray-600" />
                           {formatDemoDate(demo.demoDate)}
                         </span>
-                        {managerName && (
-                          <span className="flex items-center gap-1 text-xs text-gray-500 truncate min-w-0">
-                            <User size={10} className="text-gray-600 shrink-0" />
-                            {managerName}
-                          </span>
-                        )}
                         <span className="flex items-center gap-1 text-xs text-gray-600 shrink-0 ml-auto">
                           <Hash size={10} className="text-gray-700" />
                           {demo.orderNumber}
                         </span>
                       </div>
+                      {managerName && (
+                        <span className="flex items-center gap-1 text-xs text-gray-500 truncate min-w-0">
+                          <User size={10} className="text-gray-600 shrink-0" />
+                          {managerName}
+                        </span>
+                      )}
                       {demo.invalidUrl && (
                         <div className="flex items-center gap-1 bg-yellow-900/25 border border-yellow-700/35 rounded-md px-2 py-0.5 w-fit mt-0.5">
                           <AlertTriangle size={9} className="text-yellow-500 shrink-0" />
