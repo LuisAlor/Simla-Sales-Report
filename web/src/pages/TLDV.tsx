@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import ReactECharts from "echarts-for-react";
 import {
   Video,
   ExternalLink,
@@ -17,6 +18,9 @@ import {
   EyeOff,
   X,
   GripVertical,
+  MessageSquare,
+  HelpCircle,
+  Clock,
 } from "lucide-react";
 import { useNavigationGuard } from "@/contexts/NavigationGuardContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,6 +42,7 @@ interface DemoOrder {
   orderNumber: string;
   projectName: string;
   managerSd: string;
+  managerSdLabel: string;
   demoDate: string;
   tldvUrl: string;
   meetingId: string;
@@ -154,11 +159,19 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
   const meetingId = valid ? extractMeetingId(tldvUrl) : `invalid_${order.id}`;
   const firstName = order.customer?.firstName ?? "";
   const lastName = order.customer?.lastName ?? "";
+  const managerSd = cfCode(order.customFields as Record<string, unknown> | undefined, "manager_sd");
+  const managerSdRaw = order.customFields?.["manager_sd"];
+  let managerSdLabel = managerSd;
+  if (typeof managerSdRaw === "object" && managerSdRaw !== null) {
+    const obj = managerSdRaw as Record<string, string>;
+    managerSdLabel = toTitleCase(obj["name"] ?? obj["code"] ?? managerSd);
+  }
   return {
     orderId: order.id,
     orderNumber: order.number,
     projectName: (order.customFields?.["name_komp_z"] as string) || "Proyecto sin nombre",
-    managerSd: cfCode(order.customFields as Record<string, unknown> | undefined, "manager_sd"),
+    managerSd,
+    managerSdLabel,
     demoDate,
     tldvUrl,
     meetingId,
@@ -259,7 +272,7 @@ export function TLDV({ managerSdMap }: Props) {
       const map = new Map(prev.map((m) => [m.value, m.label]));
       for (const d of demos) {
         if (d.managerSd && !map.has(d.managerSd)) {
-          map.set(d.managerSd, managerSdMap[d.managerSd] ?? d.managerSd);
+          map.set(d.managerSd, d.managerSdLabel || managerSdMap[d.managerSd] || d.managerSd);
         }
       }
       return Array.from(map.entries())
@@ -369,7 +382,7 @@ export function TLDV({ managerSdMap }: Props) {
   }, [transcript]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-0px)] overflow-hidden bg-gray-950">
+    <div className="flex flex-col h-full overflow-hidden bg-gray-950">
 
       {/* ── Top filter bar ── */}
       <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-2 flex items-end gap-3 relative">
@@ -417,7 +430,7 @@ export function TLDV({ managerSdMap }: Props) {
               <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <Building2 size={9} className="shrink-0" />{t("tldv_filter_project")}
               </p>
-              <div className="relative" style={{ width: 140 }}>
+              <div className="relative" style={{ width: 160 }}>
                 <input type="text" value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)}
                   className={DARK_INPUT + " w-full pr-6"} />
                 {projectSearch && (
@@ -431,7 +444,7 @@ export function TLDV({ managerSdMap }: Props) {
               <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider flex items-center gap-1">
                 <Hash size={9} className="shrink-0" />{t("tldv_filter_order_num")}
               </p>
-              <div className="relative" style={{ width: 120 }}>
+              <div className="relative" style={{ width: 160 }}>
                 <input type="text" value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)}
                   className={DARK_INPUT + " w-full pr-6"} />
                 {orderSearch && (
@@ -446,13 +459,8 @@ export function TLDV({ managerSdMap }: Props) {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Errors / warnings */}
+        {/* Errors */}
         {loadError && <p className="text-red-400 text-xs shrink-0 mb-1">{loadError}</p>}
-        {!simlaApiKey && (
-          <p className="text-[10px] text-orange-400/80 max-w-[160px] leading-tight shrink-0 mb-1">
-            {simlaIsDisabled ? t("tldv_simla_disabled") : t("tldv_simla_missing")}
-          </p>
-        )}
 
         {/* Gear button + dropdown */}
         <div className="relative shrink-0 mb-0.5" ref={gearRef}>
@@ -551,9 +559,7 @@ export function TLDV({ managerSdMap }: Props) {
           )}
           {filteredDemos.map((demo) => {
               const isSelected = demo.meetingId === selectedId;
-              const managerName = demo.managerSd
-                ? (managerSdMap[demo.managerSd] ?? demo.managerSd)
-                : null;
+              const managerName = demo.managerSdLabel || (demo.managerSd ? (managerSdMap[demo.managerSd] ?? demo.managerSd) : null);
               return (
                 <button
                   key={demo.meetingId}
@@ -758,6 +764,9 @@ export function TLDV({ managerSdMap }: Props) {
                 {/* AI Analysis */}
                 {!selectedOrder.invalidUrl && activeTab === "ai_report" && (
                   <div className="p-6 flex flex-col gap-4">
+                    {/* Call metrics (always shown when transcript is available) */}
+                    {transcript.length > 0 && <CallMetricsPanel segments={transcript} />}
+
                     {/* No API key / disabled */}
                     {!openaiApiKey && (
                       <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
@@ -837,6 +846,154 @@ export function TLDV({ managerSdMap }: Props) {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Call metrics panel ───────────────────────────────────────────────────────
+const CHART_COLORS = ["#06b6d4", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#3b82f6"];
+
+interface SpeakerStats {
+  name: string;
+  turns: number;
+  words: number;
+  questions: number;
+}
+
+function computeSpeakerStats(segments: TldvTranscriptSegment[]): SpeakerStats[] {
+  const map = new Map<string, { turns: number; words: number; questions: number }>();
+  for (const seg of segments) {
+    if (!map.has(seg.speaker)) map.set(seg.speaker, { turns: 0, words: 0, questions: 0 });
+    const e = map.get(seg.speaker)!;
+    e.turns++;
+    e.words += seg.text.split(/\s+/).filter(Boolean).length;
+    e.questions += (seg.text.match(/\?/g) ?? []).length;
+  }
+  return Array.from(map.entries())
+    .map(([name, d]) => ({ name, ...d }))
+    .sort((a, b) => b.words - a.words);
+}
+
+function CallMetricsPanel({ segments }: { segments: TldvTranscriptSegment[] }) {
+  const stats = useMemo(() => computeSpeakerStats(segments), [segments]);
+  const totalWords = stats.reduce((s, sp) => s + sp.words, 0);
+  const totalTurns = stats.reduce((s, sp) => s + sp.turns, 0);
+  const totalQuestions = stats.reduce((s, sp) => s + sp.questions, 0);
+
+  // Engagement: words spoken by non-first speaker (client side)
+  const clientWords = stats.slice(1).reduce((s, sp) => s + sp.words, 0);
+  const engagement = totalWords > 0 ? Math.round((clientWords / totalWords) * 100) : 0;
+  const engagementLabel = engagement >= 50 ? "Alta" : engagement >= 30 ? "Media" : "Baja";
+  const engagementColor = engagement >= 50 ? "#10b981" : engagement >= 30 ? "#f59e0b" : "#ef4444";
+
+  const duration = segments[segments.length - 1]?.startTime;
+
+  const chartOption = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      backgroundColor: "#1f2937",
+      borderColor: "#374151",
+      textStyle: { color: "#d1d5db", fontSize: 11 },
+      formatter: (params: { name: string; value: number }[]) => {
+        const p = params[0];
+        const pct = totalWords > 0 ? Math.round((p.value / totalWords) * 100) : 0;
+        return `${p.name}<br/>${p.value.toLocaleString()} palabras (${pct}%)`;
+      },
+    },
+    grid: { left: 0, right: 20, top: 6, bottom: 0, containLabel: true },
+    xAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "#1f2937" } },
+      axisLabel: { color: "#4b5563", fontSize: 10 },
+    },
+    yAxis: {
+      type: "category",
+      data: stats.map((s) => s.name),
+      axisLabel: { color: "#9ca3af", fontSize: 11 },
+      axisTick: { show: false },
+      axisLine: { show: false },
+    },
+    series: [{
+      type: "bar",
+      data: stats.map((s, i) => ({
+        value: s.words,
+        itemStyle: {
+          color: CHART_COLORS[i % CHART_COLORS.length],
+          borderRadius: [0, 4, 4, 0],
+        },
+      })),
+      barMaxWidth: 22,
+    }],
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-700/40 bg-gray-800/60">
+        <span className="w-1 h-4 rounded-full bg-cyan-500 shrink-0" />
+        <p className="text-xs font-semibold text-gray-200 uppercase tracking-wide">Métricas de la llamada</p>
+      </div>
+
+      <div className="px-4 pt-3 pb-4 flex flex-col gap-4">
+        {/* Summary chips */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { icon: <MessageSquare size={12} />, label: "Participantes", value: stats.length, color: "text-cyan-400" },
+            { icon: <Clock size={12} />, label: "Duración", value: duration != null ? fmtTime(duration) : "—", color: "text-violet-400" },
+            { icon: <RefreshCw size={12} />, label: "Turnos", value: totalTurns, color: "text-teal-400" },
+            { icon: <HelpCircle size={12} />, label: "Preguntas", value: totalQuestions, color: "text-amber-400" },
+          ].map(({ icon, label, value, color }) => (
+            <div key={label} className="flex flex-col gap-1 bg-gray-900/50 rounded-lg px-3 py-2.5 border border-gray-700/30">
+              <div className={`flex items-center gap-1 ${color}`}>{icon}<span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span></div>
+              <p className="text-base font-bold text-gray-100">{String(value)}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Speaking distribution */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Distribución de palabras</p>
+            <span className="text-[10px] text-gray-600">{totalWords.toLocaleString()} palabras totales</span>
+          </div>
+          <ReactECharts option={chartOption} style={{ height: Math.max(60, stats.length * 32) }} notMerge />
+        </div>
+
+        {/* Per-speaker detail */}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Detalle por participante</p>
+          {stats.map((sp, i) => {
+            const pct = totalWords > 0 ? Math.round((sp.words / totalWords) * 100) : 0;
+            return (
+              <div key={sp.name} className="flex items-center gap-3 text-xs">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                <span className="text-gray-300 w-28 truncate">{sp.name}</span>
+                <div className="flex-1 h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                </div>
+                <span className="text-gray-500 w-8 text-right">{pct}%</span>
+                <span className="text-gray-700 w-16 text-right">{sp.words.toLocaleString()} pal.</span>
+                <span className="text-gray-700 w-16 text-right">{sp.turns} turnos</span>
+                {sp.questions > 0 && <span className="text-amber-600 text-[10px]">{sp.questions}?</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Engagement indicator */}
+        {stats.length >= 2 && (
+          <div className="flex items-center gap-3 border-t border-gray-700/30 pt-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Engagement del cliente</p>
+            <div className="flex items-center gap-2">
+              <div className="w-24 h-1.5 bg-gray-700/40 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${engagement}%`, backgroundColor: engagementColor }} />
+              </div>
+              <span className="text-xs font-semibold" style={{ color: engagementColor }}>{engagement}% — {engagementLabel}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
