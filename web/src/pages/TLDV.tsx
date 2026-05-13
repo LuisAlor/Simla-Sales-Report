@@ -12,6 +12,7 @@ import {
   Play,
   UserCircle,
   Tag,
+  CircleDot,
   Bot,
   Settings2,
   Eye,
@@ -35,6 +36,7 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 
 interface Props {
   managerSdMap: Record<string, string>;
+  statusLabels?: Record<string, string>;
 }
 
 interface DemoOrder {
@@ -50,6 +52,7 @@ interface DemoOrder {
   customerName: string;
   crmField: string;
   mqlOrder: string;
+  statusCode: string;
 }
 
 function isValidTldvMeetingUrl(url: string): boolean {
@@ -179,6 +182,7 @@ function orderToDemoOrder(order: RawOrder): DemoOrder | null {
     customerName: toTitleCase([firstName, lastName].filter(Boolean).join(" ")),
     crmField: "",
     mqlOrder: (order.customFields?.["mql_order"] as string) || "",
+    statusCode: order.status || "",
   };
 }
 
@@ -248,7 +252,7 @@ function translateCriterion(criterion: string, lang: string): string {
   return CRITERION_MAP[criterion.toLowerCase().trim()]?.[lang] ?? criterion;
 }
 
-export function TLDV({ managerSdMap }: Props) {
+export function TLDV({ managerSdMap, statusLabels = {} }: Props) {
   const { user } = useAuth();
   const t = useT();
   const { lang } = useI18n();
@@ -784,6 +788,12 @@ export function TLDV({ managerSdMap }: Props) {
                         <span className="flex items-center gap-1.5 text-xs text-gray-400">
                           <Tag size={11} className="text-gray-600 shrink-0" />
                           <span className="text-gray-600">MQL:</span> {formatMql(selectedOrder.mqlOrder).replace("MQL = ", "")}
+                        </span>
+                      )}
+                      {selectedOrder.statusCode && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <CircleDot size={11} className="text-gray-600 shrink-0" />
+                          <span className="text-gray-600">{t("tldv_status_label")}</span> {statusLabels[selectedOrder.statusCode] || selectedOrder.statusCode}
                         </span>
                       )}
                     </div>
